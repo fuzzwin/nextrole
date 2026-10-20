@@ -1,0 +1,40 @@
+{
+  "name": "Alex Student",
+  "email": "alex@example.com",
+  "phone": "555-0100",
+  "location": "Long Beach, CA",
+  "summary": "University student with experience supporting campus events and serving customers. Interested in a part-time campus role.",
+  "education": [
+    "B.S. Computer Science, California State University, Long Beach - expected 2028"
+  ],
+  "skills": [
+    "Customer service",
+    "Teamwork",
+    "Cash handling",
+    "Python",
+    "Microsoft Excel",
+    "Event support"
+  ],
+  "experience": [
+    {
+      "organization": "Example Campus Club",
+      "role": "Event Volunteer",
+      "dates": "2025 - present",
+      "bullets": [
+        "Welcomed attendees and answered event questions.",
+        "Helped set up tables and coordinate volunteer shifts."
+      ]
+    },
+    {
+      "organization": "Example Cafe",
+      "role": "Team Member",
+      "dates": "2024 - 2025",
+      "bullets": [
+        "Served customers and processed cash and card payments.",
+        "Collaborated with teammates to keep the service area organized."
+      ]
+    }
+  ],
+  "availability": "Part-time; schedule to be discussed.",
+  "is_example": true
+}

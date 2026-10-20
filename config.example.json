@@ -1,0 +1,42 @@
+{
+  "timezone": "America/Los_Angeles",
+  "interval_minutes": 10,
+  "weekdays": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "start_hour": 7,
+  "end_hour": 21,
+  "database": "data/agent.db",
+  "artifacts": "artifacts",
+  "profile": "profile.example.json",
+  "ai_provider": "local",
+  "first_run": "baseline",
+  "max_jobs_per_scan": 25,
+  "sources": [
+    {
+      "id": "asi",
+      "name": "Associated Students, Inc.",
+      "url": "https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=3090cb32-5fca-4594-bd5a-4c8997024d3b&ccId=19000101_000001&type=MP&lang=en_US",
+      "kind": "adp",
+      "allowed_hosts": [
+        "workforcenow.adp.com",
+        "www.asicsulb.org",
+        "asicsulb.org"
+      ]
+    },
+    {
+      "id": "beach-shops",
+      "name": "Beach Shops",
+      "url": "https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=354c5317-250f-48b6-9cdc-fba106d1e6f9&ccId=19000101_000001&lang=en_US",
+      "kind": "adp",
+      "allowed_hosts": [
+        "workforcenow.adp.com",
+        "www.csulb.edu"
+      ]
+    }
+  ]
+}

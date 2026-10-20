@@ -1,0 +1,282 @@
+{
+  "version": "0.7.0",
+  "platform": "macOS",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4367,
+      "sha256": "af514f3ede99697145ff77443396184a8ecaa3945bf312a8883e6c69b1eba049",
+      "mode": "0o644"
+    },
+    {
+      "path": "START HERE.txt",
+      "bytes": 4322,
+      "sha256": "05b38cd57384dcde65504dd46eb40154ae941136adc84d16847fabe88a83baa3",
+      "mode": "0o644"
+    },
+    {
+      "path": "START HERE.html",
+      "bytes": 35295,
+      "sha256": "1354f4d4e63959fe5a9ae78e69e62ed44ac80ecadd80910a1cb7bb5deea11416",
+      "mode": "0o644"
+    },
+    {
+      "path": "CODEX SETUP PROMPT.txt",
+      "bytes": 2429,
+      "sha256": "47013b64e031b3586a52b96fbf7de49f46ecba5f09dac00609eed81e9c15b28d",
+      "mode": "0o644"
+    },
+    {
+      "path": "Start Job Seeker.command",
+      "bytes": 818,
+      "sha256": "3220fea868fa2a6cff96a7d1d12230161beee151feadf7d0df019f0d0ddd5d14",
+      "mode": "0o755"
+    },
+    {
+      "path": "Start NextRole.command",
+      "bytes": 816,
+      "sha256": "ff59b577e465e744c5ff3bd2b4f97770af42552134cfa843f79c45857f726d80",
+      "mode": "0o755"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 927,
+      "sha256": "a2ad82bed5fa8ce943f953d0832ef3a3d3e54d4310404cabc9ef4435dd750486",
+      "mode": "0o644"
+    },
+    {
+      "path": "PRIVACY.md",
+      "bytes": 1543,
+      "sha256": "3b970e1f8e78498ff87842ac88a4277bb67013a8e323bfb950e1db80f0f5e1a6",
+      "mode": "0o644"
+    },
+    {
+      "path": "launcher.py",
+      "bytes": 6208,
+      "sha256": "20f15829b64647d57aafe7557bfc6deaa6c2e4c1b046ccca8f347361824b81d0",
+      "mode": "0o644"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 898,
+      "sha256": "7f004208c130e765d6683910f9e60dcdc90381ff902251f222f6b92a9d58b6e8",
+      "mode": "0o644"
+    },
+    {
+      "path": "requirements-lock.txt",
+      "bytes": 1097,
+      "sha256": "af79c20200139ed3c5cedddb7f5a82554416c5f356a360e29e531e72f144482f",
+      "mode": "0o644"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 281,
+      "sha256": "a27a146d796e11e7b17a6a62f6d62e361bfb5ebd690a845b53a65950cbb0f68b",
+      "mode": "0o644"
+    },
+    {
+      "path": ".env.example",
+      "bytes": 242,
+      "sha256": "bdd3757aa21de46f8d8e9cf548ddb2342e8a5be8bdff3922faf9b13338b03d11",
+      "mode": "0o644"
+    },
+    {
+      "path": "config.example.json",
+      "bytes": 1084,
+      "sha256": "17c3c1a675e2151c9a3f3ac49ff571444406e12b78c052d62282e812fcc1375c",
+      "mode": "0o644"
+    },
+    {
+      "path": "profile.example.json",
+      "bytes": 1150,
+      "sha256": "08f763f80be739a673a238708dcd2b30c792f4476d4aef0ba191b54fbafcb18b",
+      "mode": "0o644"
+    },
+    {
+      "path": "examples/jobs.json",
+      "bytes": 1235,
+      "sha256": "b5b178a245341178a2b0e6c8546b845284a0e2aad9f4ca564aff664564b5a6c5",
+      "mode": "0o644"
+    },
+    {
+      "path": "Start-Demo.command",
+      "bytes": 2452,
+      "sha256": "7b2a7d3148ea9b78837045d49eaffd1c09ef961b1dd06c6fe58e6acbcbc8b6fd",
+      "mode": "0o755"
+    },
+    {
+      "path": "docs/USER-GUIDE.md",
+      "bytes": 26308,
+      "sha256": "3865df5a7ff7d2e87b201f803926194d8e5d041a5b1fe5f637e57ae56dbf0b7b",
+      "mode": "0o644"
+    },
+    {
+      "path": "docs/LEGACY-CLI.md",
+      "bytes": 23151,
+      "sha256": "2396ffd84fbca523373c77c49bffac3941498110936f8d29af2e1a5d1e1685dd",
+      "mode": "0o644"
+    },
+    {
+      "path": "scripts/build_release.py",
+      "bytes": 5532,
+      "sha256": "3b4eb62b6b2065b00c2e83b5f8738d3654cffd3b896f72ab9c2c1900a630351b",
+      "mode": "0o644"
+    },
+    {
+      "path": "scripts/build_guide.py",
+      "bytes": 9598,
+      "sha256": "15bfc00268ab73ee41a9bca2978e8c03f3e794b09a10060f4e8ed7b9ba534c89",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/__init__.py",
+      "bytes": 80,
+      "sha256": "37f10cad373aae5ec5945cbba7bff3fdb77f92c7cbe0458a24fa93624059996d",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/__main__.py",
+      "bytes": 29,
+      "sha256": "cf7390a2508a0fcad4777a4a629fc5212ab655cb45845975995f835676a834e3",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/applications.py",
+      "bytes": 10479,
+      "sha256": "8837566db00b2b0ec7174d4132496579c3cc682fba68d306daf2d15a4f41ee62",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/cli.py",
+      "bytes": 6396,
+      "sha256": "88c367f171b315d3ff1825a1d554c649c2df7f6dd63c560b3442121a7d001671",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/connectors.py",
+      "bytes": 8919,
+      "sha256": "58cdfa3ac173f9ed1dbb6de74611494b26f7303858983852e2e001d4f84efa61",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/dashboard.html",
+      "bytes": 18477,
+      "sha256": "2e884f22b7acfe32438556a7afd01a7997f1f486c08b9eee34bec373652516df",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/documents.py",
+      "bytes": 5461,
+      "sha256": "b43be2488b1454e49cc1eb88dfcc02fa9ce44ff73ece9efc8f74ff4d08661d1c",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/fit.py",
+      "bytes": 18643,
+      "sha256": "f3aff94f3f4d1309cccf75feeebe21a4e6ae645255fef1d3eb36f17cbf739eb1",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/listing_info.py",
+      "bytes": 3245,
+      "sha256": "f9f38dba2a30e0dbbd70f3bc2abef17cdd6dcda29e5ff87410fb96959b6ccc9a",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/listing_view.py",
+      "bytes": 8197,
+      "sha256": "580c761e7138d790062c02012d13e4f9ac7b1077b32c53e1a71d43b98ac49941",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/locations.py",
+      "bytes": 4035,
+      "sha256": "972b99c4fb28346f55107aa9fef43e9421a86366bd2be8d5971bb3c036d972f2",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/mail.py",
+      "bytes": 4396,
+      "sha256": "fdf8fa63f1207a14def1f38f11490427b159c28bded588f2fcc2911afabefe48",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/mcp_server.py",
+      "bytes": 1633,
+      "sha256": "faf3f998fba92dfa43e9baa0196946817d84f08a835b9d7541d2103f1f885176",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/models.py",
+      "bytes": 4527,
+      "sha256": "25668986f713fc318cd4b8eaafdf70436ca1201a974a8eb0406af8c464b1a064",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/morning.py",
+      "bytes": 19071,
+      "sha256": "006ca788c1d000d40be258057da1a554955afeed568844f05f26175c9f0507dc",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/packet_checks.py",
+      "bytes": 7389,
+      "sha256": "db5aa15f6a5cb7e6f34e4378d6be1d7ecd67a8918fb8606382c273e5dd1492f8",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/pipeline.py",
+      "bytes": 6646,
+      "sha256": "04d3f9a98a8039d423861e1c4906f86fc9bf094bc68026f0311b23b0cf0d8b87",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/role_types.py",
+      "bytes": 9107,
+      "sha256": "55a98d6b2ec91a05eff3d4a38ea2419378b21d9cf63a48f2a1295c5f2e6cb5bc",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/sources.py",
+      "bytes": 12801,
+      "sha256": "0f3cf84b76e8cbc1b6b2177296572281d09c659f77c062f701e34ee0605423bc",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/store.py",
+      "bytes": 4783,
+      "sha256": "13b84c5d4fe84f396a660bde9d4dd946c58374ab2271f0dedf660911ebba4549",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/tailor.py",
+      "bytes": 6866,
+      "sha256": "1a17fab776b526bb62d599a904ce90782b64b8f89ebc0404a5c979f7da064fea",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/web.py",
+      "bytes": 3286,
+      "sha256": "93834a27a57d5a996986850ca705cb4ad7c21a5a3359581b513b4f4f0ce8044c",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/workspace.html",
+      "bytes": 103069,
+      "sha256": "6e6a40267268a00866702a7cd9512bd73cbb586bea470661fd80b6c172421794",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/workspace.py",
+      "bytes": 46984,
+      "sha256": "924404fa8ccf75c9cd3cfa6bc0f705307a1f7b4e512cdfe7790b61f1020ddaf3",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/workspace_web.py",
+      "bytes": 10504,
+      "sha256": "22ae0d68ed14d04eee67e7fbd6c557d0ff9e2faf411a935f2babc5a5966477d7",
+      "mode": "0o644"
+    }
+  ]
+}

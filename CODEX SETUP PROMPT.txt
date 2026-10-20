@@ -1,0 +1,13 @@
+Set up this NextRole ZIP on my Mac. I am not technical: use plain English, explain what I should see, and guide me through anything that needs my input.
+
+Locate the ZIP I attached, confirm a suitable local project folder with me, and unpack it there. Do not overwrite an existing installation or personal workspace. If the folder is already extracted, reuse the correct folder containing launcher.py and Start NextRole.command. If you cannot access the attachment or write to the intended folder, help me choose a permitted local location. Read START HERE.txt, docs/USER-GUIDE.md and the launcher instructions before making changes.
+
+Check Python 3.12 or later, the project dependencies and Codex CLI. Help install missing requirements from official sources, keep Python packages in the project's .venv, and launch with the supplied launcher. Do not create API keys or ask me to paste passwords or tokens into chat.
+
+Check whether my existing Gmail, Google Drive and search connections are available in this local Codex setup. Reuse authorized connections where available; guide me through connecting anything missing. I will complete sign-in and consent screens myself. Confirm my accounts and explain unavailable tools rather than promising they will work.
+
+Use my attached current resume to draft my profile. If I named a Drive file instead, help find it and confirm the correct document with me before importing it. If versions conflict, ask which is current. Treat cover-letter examples as style references, not proof of additional experience. Show me extracted contact details, employment dates, skills, qualifications and factual bullets for review before saving my confirmed profile. Preserve prototype, proposal, deployment and unmeasured-outcome qualifiers. Do not use the sample profile as my information or invent missing details.
+
+Help me choose role types and location, run one manual search, and review one suitable role and its resume and cover-letter PDFs. Keep automatic sending, extra daytime discovery, standout alerts and application-email tracking off during setup. Do not create schedules, email packets, upload generated PDFs or submit employer applications. Let me review my profile and sample packet first.
+
+Finish by telling me the exact folder and launcher to open tomorrow, which windows to keep open, and how to stop the app. Reuse this chat for future help; I should not need a new chat every day.

@@ -1,0 +1,26 @@
+[
+  {
+    "source_id": "asi",
+    "employer": "Associated Students, Inc.",
+    "title": "Student Events Assistant",
+    "url": "https://example.com/campus/jobs/events-101",
+    "description": "Demo opening, not a live vacancy. Support campus event setup, customer service, volunteer coordination, and teamwork. Help welcome attendees and keep event spaces organized.",
+    "location": "Long Beach, CA"
+  },
+  {
+    "source_id": "beach-shops",
+    "employer": "Beach Shops",
+    "title": "Dining Hall Team Member",
+    "url": "https://example.com/campus/jobs/dining-202",
+    "description": "Demo opening, not a live vacancy. Provide customer service in campus dining. Cash handling, teamwork, and maintaining an organized service area are useful skills. Part-time student schedules.",
+    "location": "Long Beach, CA"
+  },
+  {
+    "source_id": "asi",
+    "employer": "Associated Students, Inc.",
+    "title": "Technology Support Student Assistant",
+    "url": "https://example.com/campus/jobs/tech-303",
+    "description": "Demo opening, not a live vacancy. Assist with Microsoft Excel reports and Python data cleanup. Work with teammates on campus events and provide friendly customer service.",
+    "location": "Long Beach, CA"
+  }
+]

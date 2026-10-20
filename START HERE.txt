@@ -1,0 +1,74 @@
+JOB SEEKER FOR MAC — START HERE
+
+RECOMMENDED: GIVE CODEX THE ZIP + YOUR CURRENT RESUME
+No coding knowledge needed. Codex can unpack the project, check requirements,
+help with connections and launch it. Use START HERE.html for detailed steps
+and checkpoints. The same setup message is in CODEX SETUP PROMPT.txt.
+
+STEP 1 — OPEN A LOCAL CODEX CHAT
+Open Codex on your Mac and sign into your own ChatGPT account. Choose Codex
+if the desktop app has a ChatGPT/Codex selector. Start a chat working locally
+on this Mac. If asked where to work, choose/create an empty local setup folder.
+For installation help: https://learn.chatgpt.com/docs/quickstart.
+A web-only chat without local file/command access cannot launch this Mac app.
+
+STEP 2 — ATTACH THE ZIP
+Open Finder (the blue smiling face), then Downloads. Drag
+NextRole-Mac-0.7.0.zip into the Codex message box, or use its attachment
+control. Wait until the attachment appears. You do not need to unzip it first.
+If your browser already extracted it, use the original ZIP or the fallback below.
+
+STEP 3 — ATTACH YOUR CURRENT RESUME
+Drag your latest resume PDF or Word (.docx) file into the SAME message.
+Optional: add cover-letter style examples. If you include several resume
+versions, tell Codex which one is current. Alternatively, tell it the name
+of your preferred resume in your own Drive and ask it to confirm the right file.
+Only attach documents you want to share with this Codex chat.
+Keep your resume OUT of the clean ZIP you share with other people.
+
+STEP 4 — COPY THE SETUP MESSAGE, PASTE AND SEND
+Open CODEX SETUP PROMPT.txt, click the text, press Command+A, then Command+C.
+Click the Codex message box with your attachments, press Command+V, then send.
+START HERE.html has the same message with a Copy setup prompt button.
+Codex should confirm where it will unpack the project and keep existing data safe.
+
+STEP 5 — FOLLOW THE SETUP CHAT
+Codex checks Python 3.12+, the project dependencies and Codex CLI. It helps
+install missing requirements from official sources and verifies your existing
+Gmail, Drive and search tools before asking you to connect anything missing.
+Complete your own sign-in and consent screens. Keep passwords/codes out of chat.
+Tool availability depends on your account; existing ChatGPT connections need
+checking in Codex. Python packages install automatically; first run needs internet.
+
+STEP 6 — CONFIRM YOUR PROFILE AND TRY ONE JOB
+Codex should draft your profile from the attached resume or chosen Drive file.
+Review contact details, dates, skills, qualifications and factual bullets before
+saving. Resolve old/new version differences; do not invent missing details.
+Choose roles/location, run a manual search, review Why this match, then prepare
+one suitable packet. Read both PDFs. Automatic sending and tracking stay OFF.
+No schedules, generated-PDF uploads, email sends or employer applications during setup.
+
+STEP 7 — TOMORROW
+Use the NextRole folder and launcher Codex identified during setup.
+Double-click Start NextRole.command. Open Codex for connected features and
+assistant schedules. You do not need a new chat each day. Keep the launcher
+Terminal window open. Control+C stops the site; closing a browser tab alone does not.
+Your Mac cannot search while shut down. Schedules are optional and set up separately.
+
+MANUAL-FOLDER FALLBACK — ONLY IF ATTACHMENTS DO NOT WORK
+Double-click the ZIP in Downloads. Move the whole extracted NextRole-Mac-0.7.0
+folder to Documents. In Codex open THAT folder as a local project and start a
+chat. It must contain launcher.py and Start NextRole.command. Attach your resume
+or name the Drive file. Paste the same prompt and add:
+The project is already extracted in this selected folder. Use it instead of unpacking a ZIP.
+
+STUCK?
+Return to the SAME setup chat and say: I am stuck. Please check my folder,
+explain what should be on screen now, and give me the next click in plain English.
+Keep my saved profile/jobs. Do not reset records, send mail, upload PDFs or create schedules.
+
+HOW IT WORKS
+Python runs the site. Codex supplies connected tools. Matching and packet
+tailoring use local rules and confirmed facts, with no LLM inference calls in
+the connected workspace. A separate Codex chat uses its configured model.
+Full guide: START HERE.html / docs/USER-GUIDE.md.
