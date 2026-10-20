@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.7.0.zip**, the download you received.
+2. Find **NextRole-Mac-0.8.0.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -83,7 +83,7 @@ Check whether my existing Gmail, Google Drive and search connections are availab
 
 Use my attached current resume to draft my profile. If I named a Drive file instead, help find it and confirm the correct document with me before importing it. If versions conflict, ask which is current. Treat cover-letter examples as style references, not proof of additional experience. Show me extracted contact details, employment dates, skills, qualifications and factual bullets for review before saving my confirmed profile. Preserve prototype, proposal, deployment and unmeasured-outcome qualifiers. Do not use the sample profile as my information or invent missing details.
 
-Help me choose role types and location, run one manual search, and review one suitable role and its resume and cover-letter PDFs. Keep automatic sending, extra daytime discovery, standout alerts and application-email tracking off during setup. Do not create schedules, email packets, upload generated PDFs or submit employer applications. Let me review my profile and sample packet first.
+Help me choose role types and location, run one manual search, then open Document style so I can choose a layout, tone and length. Generate a local sample for a fully read role and show me both PDFs. I will review both documents and click their review boxes and Approve myself; do not approve on my behalf. Keep automatic sending, extra daytime discovery, standout alerts and application-email tracking off during setup. Do not create schedules, email packets, upload generated PDFs or submit employer applications. Let me review my profile and sample packet first.
 
 Finish by telling me the exact folder and launcher to open tomorrow, which windows to keep open, and how to stop the app. Reuse this chat for future help; I should not need a new chat every day.
 ```
@@ -218,6 +218,38 @@ site. **Reset appearance** restores system mode, Violet and standard contrast.
 Appearance changes affect the site; résumé and cover-letter PDFs keep their
 black-text document rules. Search schedules and filters stay as they were.
 
+## Preview, adjust and approve before automatic emails
+
+1. Save your own confirmed facts in **Profile & sources**. Check dates, contact
+   details, qualifiers and optional referees before continuing.
+2. Open **Document style** in the left menu. Choose Classic, Compact or
+   Comfortable spacing; a maximum of 2 or 3 résumé pages; Professional, Warm or
+   Direct letter tone; Standard or Brief letter detail; and relevant or original
+   fact order. PDFs remain black text on A4. All confirmed résumé facts stay in.
+3. Choose a saved role with a fully read listing and confirmed employer, then
+   click **Generate sample résumé & cover letter**. This saves the choices and
+   makes a local sample. It sends nothing and does not replace an existing packet.
+4. Open both PDF links or scroll through their rendered page previews. Check the facts, tone, page breaks,
+   readability, length and contact details. If you want a change, adjust the
+   choices or your confirmed profile, then generate another sample.
+5. When you are happy, tick **both review boxes** and click **Approve this sample
+   for automatic emails** yourself. Approval is saved for these exact PDF files,
+   your current profile, your style choices and the current document rules.
+6. Only then review **Search settings** and opt in to automatic emails if wanted.
+   Approval does not enable emails, create schedules or resume a paused schedule.
+
+Automatic morning, afternoon and standout sends, including digest receipts,
+are blocked without current approval. Existing installations are also required
+ to approve a sample; earlier email opt-in does not count as style approval.
+Profile/style changes, a new sample, changed/missing sample PDFs or updated
+rules hold automatic delivery until the sample is approved again. Old job
+packets must be regenerated if they use an earlier style or ruleset.
+
+A page limit is a check, not permission to omit experience. If a sample exceeds
+it, choose more space/pages or edit your own profile facts intentionally. The
+app never silently removes confirmed résumé facts to make a shorter document.
+You can still turn email delivery off while approval is pending.
+
 ## See the document guardrails
 
 Inside a role, open **Résumé & cover-letter guardrails**. The panel shows the
@@ -236,7 +268,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.7.0** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.8.0** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,

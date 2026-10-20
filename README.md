@@ -24,6 +24,11 @@ project delivery and service delivery roles. It explains experience/requirement
 matches, supports Auto top listings, and prepares checked résumé/letter PDFs.
 Saved roles use paginated lists (10/20/50), combined filters, sorting and a clear
 result count. Each role explains the document guardrails and its check status.
+Before automatic delivery, **Document style** lets each user choose PDF layout,
+page limit, letter tone/detail and fact order, then preview and approve a sample
+résumé and cover letter. Automatic emails remain blocked until current approval
+is saved. Changes to profile/style/sample files invalidate approval. Sample
+approval never enables an email preference or resumes a schedule by itself.
 No employer applications are submitted.
 
 ## How GPT / Codex fit in
@@ -59,7 +64,7 @@ The Mac must be awake/online for local scheduled runs.
 python3 scripts/build_release.py
 ```
 
-Output: `dist/NextRole-Mac-0.7.0.zip`, a SHA-256 file and a file manifest.
+Output: `dist/NextRole-Mac-0.8.0.zip`, a SHA-256 file and a file manifest.
 The builder uses an explicit source allowlist and audits paths, symlinks and
 common credential patterns. It does not read private workspace data. Share this
 clean ZIP, not a used folder: your workspace, profile, PDFs, account state,

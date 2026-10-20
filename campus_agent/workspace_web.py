@@ -47,13 +47,38 @@ def create_workspace_app(workspace: Workspace):
 
     @app.get("/api/state")
     def state():
-        return {"role_type_options": ROLE_TYPES, "kind": "job-workspace", "path": str(workspace.root), "jobs": workspace.jobs(),
+        return {"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES, "kind": "job-workspace", "path": str(workspace.root), "jobs": workspace.jobs(),
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
             "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
             "applications": workspace.get_meta('applications', []), "application_sync": workspace.get_meta('application_sync'),
             "morning_schedule": workspace.get_meta("morning_schedule"), "alert_search": workspace.get_meta("job_alert_search")}
+
+    @app.post('/api/document-style')
+    async def document_style(request: Request):
+        return workspace.save_document_style(await request.json())
+
+    @app.post('/api/document-style/sample')
+    async def style_sample(request: Request):
+        data = await request.json()
+        if not isinstance(data.get('job_id'), str):
+            raise ValueError('Choose a saved, fully read role for your sample')
+        return workspace.task('Prepare style sample', lambda: workspace.generate_style_sample(data['job_id']))
+
+    @app.post('/api/document-style/approve')
+    async def approve_style(request: Request):
+        data = await request.json()
+        return workspace.approve_document_style(data.get('sample_id'), data.get('fingerprint'),
+                    data.get('reviewed_resume'), data.get('reviewed_cover'))
+
+    @app.get('/api/document-style/samples/{sample_id}/{kind}')
+    def sample_pdf(sample_id: str, kind: str):
+        return FileResponse(workspace.sample_file(sample_id, kind), media_type='application/pdf')
+
+    @app.get('/api/document-style/samples/{sample_id}/{kind}/pages/{number}')
+    def sample_page(sample_id: str, kind: str, number: int):
+        return FileResponse(workspace.sample_preview_file(sample_id, kind, number), media_type='image/png')
 
     @app.post("/api/connect")
     def connect():
@@ -84,6 +109,9 @@ def create_workspace_app(workspace: Workspace):
     @app.post("/api/settings")
     async def settings(request: Request):
         preferences = Preferences.model_validate(await request.json())
+        if ((preferences.morning_enabled and not workspace.preferences.morning_enabled)
+                or (preferences.standout_enabled and not workspace.preferences.standout_enabled)):
+            workspace.require_style_approval()
         if preferences.morning_enabled:
             account = workspace.require_account("gmail")
             preferences = preferences.model_copy(update={"morning_recipient": account["email"]})

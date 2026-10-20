@@ -14,7 +14,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, KeepTogether
 from .models import Job, Profile
 
-DOCUMENT_STYLE_VERSION = "a4-black-refs-v3"
+DOCUMENT_STYLE_VERSION = "a4-black-style-v4"
 def font_names():
     candidates = [
         (os.getenv("CAMPUS_FONT_REGULAR", ""), os.getenv("CAMPUS_FONT_BOLD", "")),
@@ -33,13 +33,19 @@ def font_names():
 def generate_documents(directory: Path, job: Job, profile: Profile, prepared: dict, timezone: str = "America/Los_Angeles"):
     directory.mkdir(parents=True, exist_ok=True)
     regular, bold = font_names()
+    from .document_style import DocumentStyle
+    choice = DocumentStyle.model_validate(prepared.get('document_preferences', {}))
+    size = 11 if choice.layout == 'comfortable' else 10
+    leading = 16 if choice.layout == 'comfortable' else 13 if choice.layout == 'compact' else 15
+    gap = 5 if choice.layout == 'compact' else 8
+
     styles = {
         "name":ParagraphStyle("name", fontName=bold, fontSize=23, leading=29, textColor=colors.black, spaceAfter=6),
         "contact":ParagraphStyle("contact", fontName=regular, fontSize=9, leading=14, textColor=colors.black, spaceAfter=12),
         "section":ParagraphStyle("section", fontName=bold, fontSize=10, leading=15, textColor=colors.black, spaceBefore=12, spaceAfter=6, keepWithNext=True),
-        "body":ParagraphStyle("body", fontName=regular, fontSize=10, leading=15, textColor=colors.black, spaceAfter=8),
+        "body":ParagraphStyle("body", fontName=regular, fontSize=size, leading=leading, textColor=colors.black, spaceAfter=gap),
         "role":ParagraphStyle("role", fontName=bold, fontSize=10, leading=15, textColor=colors.black, spaceBefore=8, spaceAfter=2, keepWithNext=True),
-        "bullet":ParagraphStyle("bullet", fontName=regular, fontSize=10, leading=15, leftIndent=11, firstLineIndent=-8, spaceAfter=4),
+        "bullet":ParagraphStyle("bullet", fontName=regular, fontSize=size, leading=leading, leftIndent=11, firstLineIndent=-8, spaceAfter=2 if choice.layout == 'compact' else 4),
     }
     def para(value, style="body"):
         return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles[style])

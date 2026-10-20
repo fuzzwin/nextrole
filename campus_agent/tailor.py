@@ -9,17 +9,26 @@ from .models import Job, Profile
 
 def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
     """Build prose from fixed transitions and exact confirmed source statements."""
+    from .document_style import DocumentStyle
+    choice = DocumentStyle.model_validate(prepared.get('document_preferences', {}))
     summary = "I am an " + profile.summary if profile.summary.startswith("IT ") else profile.summary
     summary = summary.replace(". Supports ", ". I support ").replace(". Builds ", ". I build ")
     verbs = {"created", "delivered", "built", "supported", "simplified", "map", "implemented", "manage", "administer", "deploy", "investigated", "run", "led", "recreated"}
-    facts = [b for e in prepared["experience"] if e["organization"] for b in e["bullets"]][:4]
+    facts = [b for e in prepared["experience"] if e["organization"] for b in e["bullets"]][:(2 if choice.letter_length == 'brief' else 4)]
     prose = ["I " + b[0].lower() + b[1:] if b.split()[0].lower() in verbs else b for b in facts]
     opening = f"I am applying for the {job.title} role at {job.employer}."
     if prepared.get("cover_style") == "supplied_opening":
         opening += " I help colleagues turn unfamiliar technology into practical ways of working."
+    if choice.tone == 'warm':
+        opening = f"I would welcome the opportunity to join {job.employer} as {job.title}."
+    elif choice.tone == 'direct':
+        opening = f"Please consider my application for {job.title} at {job.employer}."
     paragraphs = [f"Dear {job.employer} hiring team,", opening, summary]
     paragraphs += [" ".join(prose[i:i + 2]) for i in range(0, len(prose), 2)]
-    paragraphs += ["Thank you for considering my application. I would welcome the opportunity to discuss how my experience could support your team.",
+    closing = {'professional': "Thank you for considering my application. I would welcome the opportunity to discuss how my experience could support your team.",
+               'warm': "Thank you for your time and consideration. I would appreciate the chance to discuss the role with your team.",
+               'direct': "Thank you for considering my application. I would welcome a discussion about the role."}[choice.tone]
+    paragraphs += [closing,
                    f"Kind regards,\n{profile.name}"]
     return paragraphs
 

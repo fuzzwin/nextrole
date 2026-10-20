@@ -126,6 +126,7 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
         raise ValueError('Standout alerts are paused. Enable them in Search settings.')
     if not workspace.profile or workspace.profile.is_example:
         raise ValueError('A confirmed résumé profile is required')
+    workspace.require_style_approval()
     # A process lock also protects against simultaneous standalone and dashboard runs.
     with (workspace.data / 'morning.lock').open('a') as lock:
         try:
@@ -199,7 +200,7 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
                 try:
                     workspace.prepare(job_id)
                     # Sending to the user's inbox is authorized by this routine; employer submission is separate.
-                    sent = workspace.gmail_packet(job_id, send=True, standout=session == 'standout')
+                    sent = workspace.gmail_packet(job_id, send=True, standout=session == 'standout', automatic=True)
                     packet = {'job_id': job_id, 'title': job.title, 'employer': job.employer, 'url': str(job.url), 'email': sent}
                     report['packets'].append(packet)
                     sent_signatures.add(signature(job))
@@ -232,6 +233,7 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
             lines += ['Issue: ' + e for e in report['errors'] + report['search'].get('errors', [])]
             report['summary_pending'] = True
             persist()
+            workspace.require_style_approval()
             summary = workspace.bridge.call('gmail.send_email', {
                 'to': account['email'], 'subject': f'Job Agent {session} check: {date} — {len(report["packets"])} packets',
                 'payload': {'mime_type': 'text/plain', 'charset': 'utf-8', 'body': {'content': '\n\n'.join(lines)}},

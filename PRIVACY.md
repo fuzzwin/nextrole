@@ -2,7 +2,10 @@
 
 NextRole starts with a blank local workspace. Each user supplies their own profile,
 source documents, connected accounts and optional schedules. Automatic discovery,
-sending and application tracking are off until configured.
+sending and application tracking are off until configured. Automatic delivery also
+requires explicit approval of a local sample résumé and cover letter. Style
+choices, sample PDFs and approval records stay in the private workspace and are
+excluded from the clean source release.
 
 Never publish a used installation as a folder ZIP. Use `scripts/build_release.py`,
 which exports only listed source files and rejects runtime paths, symlinks, private

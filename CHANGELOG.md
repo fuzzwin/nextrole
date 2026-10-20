@@ -1,5 +1,15 @@
 # Changes
 
+## 0.8.0 — Preview, adjust and approve
+
+- Added document style choices and side-by-side sample PDF previews.
+- Both review confirmations and approval of the exact sample are required before any automatic email.
+- Approval is bound to current profile, preferences, document rules and PDF hashes.
+- Profile/style changes, a new sample or modified sample PDFs require renewed approval.
+- Morning, afternoon, standout packets and digest receipts enforce the gate in the backend.
+- Samples stay local, preserve résumé facts and do not replace existing job packets.
+- Automatic email opt-in and existing paused schedules remain separate.
+
 ## 0.7.0 — NextRole
 
 - Name and Mac launcher updated to NextRole; existing module IDs and launcher remain compatible.

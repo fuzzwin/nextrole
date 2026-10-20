@@ -13,7 +13,7 @@ from pypdf.generic import ContentStream
 from .documents import DOCUMENT_STYLE_VERSION
 from .tailor import grounded_cover
 
-RULESET_VERSION = 'packet-rules-v3'
+RULESET_VERSION = 'packet-rules-v4'
 
 
 def check_content(job, profile, prepared):
@@ -79,9 +79,11 @@ def _black_text(reader, page):
     return True
 
 
-def check_pdfs(directory, job, profile):
+def check_pdfs(directory, job, profile, style=None):
+    from .document_style import DocumentStyle
+    style = DocumentStyle.model_validate(style or {})
     errors, files = [], {}
-    for filename, limit in [('Resume.pdf', 3), ('Cover Letter.pdf', 1)]:
+    for filename, limit in [('Resume.pdf', style.resume_pages), ('Cover Letter.pdf', 1)]:
         path = directory / filename
         reader = PdfReader(path)
         text = '\n'.join(page.extract_text() or '' for page in reader.pages)
@@ -112,7 +114,7 @@ def check_pdfs(directory, job, profile):
 
 def validate_packet(directory, job, profile, prepared, write_report=True):
     report = check_content(job, profile, prepared)
-    pdfs = check_pdfs(directory, job, profile)
+    pdfs = check_pdfs(directory, job, profile, prepared.get('document_preferences'))
     report['errors'] += pdfs['errors']
     report['files'] = pdfs['files']
     report['passed'] = not report['errors']

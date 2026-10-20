@@ -253,6 +253,18 @@ def test_bridge_refuses_unexposed_tools_and_provider_errors(tmp_path):
 
 
 
+def approve_sample_style(workspace):
+    """Exercise the real review/approval path with synthetic, archived sample data."""
+    sample_job = Job(source_id='opportunity', title='IT Support Specialist', employer='Example Employer',
+        url='https://example.com/job/style-sample', location='Melbourne',
+        description='Apply in Melbourne Australia. Python automation, Microsoft Excel reporting and SharePoint support.')
+    workspace.add_job(sample_job, full=True)
+    state = workspace.generate_style_sample(sample_job.identity)
+    workspace.approve_document_style(state['sample']['id'], state['fingerprint'], True, True)
+    with workspace.store.connect() as db:
+        db.execute("UPDATE job_details SET stage='archived' WHERE job_id=?", (sample_job.identity,))
+
+
 def morning_profile(workspace):
     from campus_agent.models import Experience
     profile = workspace.profile.model_copy(update={
@@ -261,6 +273,7 @@ def morning_profile(workspace):
             'Built Python automation for monthly Microsoft Excel reporting.',
             'Supported SharePoint systems and process automation for colleagues.'])]})
     workspace.save_profile(profile)
+    approve_sample_style(workspace)
     workspace.save_preferences(workspace.preferences.model_copy(update={
         'morning_enabled': True, 'morning_recipient': 'owner@example.com', 'morning_save_drive': False}))
     return profile
@@ -650,6 +663,7 @@ def strong_alert_profile(workspace):
             'Administer Microsoft 365 accounts and resolve ServiceNow incidents.',
             'Created an AI Hub guide and supported AI adoption for colleagues.'])]})
     workspace.save_profile(p)
+    approve_sample_style(workspace)
     workspace.save_preferences(workspace.preferences.model_copy(update={'morning_enabled':True,'standout_enabled':True,'morning_recipient':'owner@example.com','morning_save_drive':False}))
     return p
 
@@ -983,3 +997,165 @@ def test_unverified_product_mention_is_held_with_edit_instructions(workspace,rol
     with pytest.raises(ValueError,match='Edit details & notes'):
         workspace.prepare(job.identity)
     assert workspace.store.get(job.identity)['packet_dir']==''
+
+
+@pytest.mark.parametrize('session', ['morning', 'afternoon', 'standout'])
+def test_style_approval_blocks_all_automatic_sessions_before_any_connector_or_ledger(workspace, session):
+    from campus_agent.morning import run_morning
+    workspace.preferences = workspace.preferences.model_copy(update={
+        'morning_enabled': True, 'standout_enabled': True, 'morning_recipient': 'owner@example.com'})
+    workspace.bridge.calls.clear()
+    with pytest.raises(ValueError, match='approve a current sample'):
+        run_morning(workspace, session=session)
+    assert workspace.bridge.calls == []
+    assert workspace.get_meta('last_morning') is None
+
+
+def test_document_style_sample_is_local_and_does_not_replace_real_packet(workspace, role):
+    workspace.add_job(role, full=True)
+    workspace.prepare(role.identity)
+    before = workspace.store.get(role.identity)
+    workspace.bridge.calls.clear()
+    state = workspace.generate_style_sample(role.identity)
+    assert state['sample_current'] and not state['approved']
+    assert workspace.store.get(role.identity)['packet_dir'] == before['packet_dir']
+    assert workspace.bridge.calls == []
+    assert workspace.sample_file(state['sample']['id'], 'resume').is_file()
+    assert 'directory' not in state['sample']
+    with pytest.raises(ValueError, match='both'):
+        workspace.approve_document_style(state['sample']['id'], state['fingerprint'], True, False)
+    with pytest.raises(ValueError, match='outdated'):
+        workspace.approve_document_style('old-sample', state['fingerprint'], True, True)
+    result = workspace.approve_document_style(state['sample']['id'], state['fingerprint'], True, True)
+    assert result['approved'] and workspace.require_style_approval()['approved']
+    assert workspace.bridge.calls == []
+
+
+@pytest.mark.parametrize('change', ['profile', 'style', 'sample', 'pdf'])
+def test_style_approval_cannot_survive_changed_inputs_or_sample_files(workspace, role, change):
+    workspace.add_job(role, full=True)
+    state = workspace.generate_style_sample(role.identity)
+    workspace.approve_document_style(state['sample']['id'], state['fingerprint'], True, True)
+    if change == 'profile':
+        workspace.save_profile(workspace.profile.model_copy(update={'phone':'0400 000 001'}))
+    elif change == 'style':
+        workspace.save_document_style({'tone':'warm'})
+    elif change == 'sample':
+        workspace.generate_style_sample(role.identity)
+    else:
+        with workspace.sample_file(state['sample']['id'], 'cover').open('ab') as stream:
+            stream.write(b'\n%modified sample')
+    assert not workspace.document_style_state()['approved']
+    workspace.bridge.calls.clear()
+    with pytest.raises(ValueError, match='Automatic emails are blocked'):
+        workspace.gmail_packet(role.identity, send=True, automatic=True)
+    assert workspace.bridge.calls == []
+
+
+def test_style_choices_change_pdf_rendering_and_letter_without_changing_facts(workspace, role):
+    from pypdf import PdfReader
+    workspace.add_job(role, full=True)
+    workspace.save_document_style({'layout':'comfortable','tone':'warm','letter_length':'brief','fact_order':'original','resume_pages':2})
+    sample = workspace.generate_style_sample(role.identity)['sample']
+    directory = workspace.sample_file(sample['id'], 'resume').parent
+    prepared = json.loads((directory/'tailoring.json').read_text())
+    assert prepared['experience'] == [e.model_dump() for e in workspace.profile.experience]
+    assert prepared['skills'] == workspace.profile.skills
+    text=' '.join(p.extract_text() for p in PdfReader(directory/'Cover Letter.pdf').pages)
+    assert 'I would welcome the opportunity to join' in text
+    assert len(PdfReader(directory/'Resume.pdf').pages) <= 2
+    assert sample['quality']['delivery_ready']
+
+
+def test_unapproved_style_cannot_enable_delivery_and_schema_rejects_unconstrained_instructions(workspace):
+    with pytest.raises(ValueError, match='Automatic emails are blocked'):
+        workspace.save_preferences(workspace.preferences.model_copy(update={'morning_enabled':True}))
+    with pytest.raises(ValueError):
+        workspace.save_document_style({'tone':'invent achievements'})
+    with pytest.raises(ValueError):
+        workspace.save_document_style({'custom_prompt':'claim a qualification'})
+
+
+def test_style_approval_refuses_wrong_fingerprint_and_modified_pdf(workspace, role):
+    workspace.add_job(role, full=True)
+    state=workspace.generate_style_sample(role.identity)
+    with pytest.raises(ValueError, match='outdated'):
+        workspace.approve_document_style(state['sample']['id'], 'wrong', True, True)
+    with workspace.sample_file(state['sample']['id'],'resume').open('ab') as f:
+        f.write(b'\n%changed')
+    with pytest.raises(ValueError, match='changed'):
+        workspace.approve_document_style(state['sample']['id'], state['fingerprint'], True, True)
+    assert not workspace.document_style_state()['approved']
+
+
+def test_style_api_csrf_review_flags_and_inline_pdf_boundaries(workspace, role):
+    workspace.add_job(role, full=True)
+    client = TestClient(create_workspace_app(workspace), base_url='http://127.0.0.1:8877')
+    page=client.get('/')
+    token=re.search(r'const token="([^"]+)"',page.text)[1]
+    headers={'origin':'http://127.0.0.1:8877','x-workspace-token':token}
+    assert client.post('/api/document-style',json={'tone':'warm'}).status_code==403
+    assert client.post('/api/document-style',headers=headers,json={'tone':'warm'}).status_code==200
+    sample=workspace.generate_style_sample(role.identity)
+    url='/api/document-style/samples/'+sample['sample']['id']+'/resume'
+    response=client.get(url)
+    assert response.status_code==200 and response.content.startswith(b'%PDF-')
+    assert "frame-ancestors 'none'" in response.headers['content-security-policy']
+    assert "frame-ancestors 'none'" in page.headers['content-security-policy']
+    assert client.get(url.replace('/resume','/unknown')).status_code==400
+    preview=client.get(url+'/pages/1')
+    assert preview.status_code==200 and preview.content.startswith(b'\x89PNG')
+    assert preview.headers['cache-control']=='no-store'
+    assert client.get(url+'/pages/0').status_code==400
+    assert client.get(url+'/pages/100').status_code==400
+    body={'sample_id':sample['sample']['id'],'fingerprint':sample['fingerprint'],'reviewed_resume':True,'reviewed_cover':False}
+    assert client.post('/api/document-style/approve',headers=headers,json=body).status_code==400
+    body['reviewed_cover']=True
+    assert client.post('/api/document-style/approve',headers=headers,json=body).json()['approved']
+    assert client.get('/api/state').json()['document_style']['approved']
+
+
+def test_style_page_limit_holds_sample_without_discarding_source_facts(workspace, role):
+    from campus_agent.models import Experience
+    bullets=['Confirmed support responsibility '+str(i)+' with Microsoft Excel, Python and many colleagues across local operations. '*4 for i in range(45)]
+    workspace.save_profile(workspace.profile.model_copy(update={'experience':[Experience(organization='Example Employer',role='IT Support',dates='2020-2026',bullets=bullets)]}))
+    workspace.add_job(role, full=True)
+    workspace.save_document_style({'layout':'comfortable','resume_pages':2})
+    with pytest.raises(ValueError,match='page review limit'):
+        workspace.generate_style_sample(role.identity)
+    assert workspace.profile.experience[0].bullets==bullets
+    assert workspace.get_meta('document_style_sample') is None
+    assert not workspace.document_style_state()['approved']
+
+
+def test_style_change_during_automatic_run_blocks_the_receipt(workspace, monkeypatch):
+    from campus_agent.morning import run_morning
+    morning_profile(workspace)
+    monkeypatch.setattr(workspace,'discover',lambda extended=False:{'found':0,'errors':[]})
+    def alerts():
+        workspace.save_document_style({'tone':'direct'})
+        return {'message_ids':[]}
+    monkeypatch.setattr(workspace,'alerts',alerts)
+    workspace.bridge.calls.clear()
+    with pytest.raises(ValueError, match='Automatic emails are blocked'):
+        run_morning(workspace)
+    assert not any(name=='gmail.send_email' for name,_ in workspace.bridge.calls)
+    assert workspace.get_meta('last_morning')['status']=='needs_review'
+
+
+def test_style_preview_image_changes_invalidate_approval(workspace, role):
+    workspace.add_job(role,full=True)
+    state=workspace.generate_style_sample(role.identity)
+    workspace.approve_document_style(state['sample']['id'],state['fingerprint'],True,True)
+    image=workspace.sample_preview_file(state['sample']['id'],'resume',1)
+    image.write_bytes(image.read_bytes()+b'modified')
+    assert not workspace.document_style_state()['approved']
+    with pytest.raises(ValueError, match='changed'):
+        workspace.sample_preview_file(state['sample']['id'],'resume',1)
+
+
+def test_legacy_style_sample_is_stale_and_can_be_reported_without_crashing(workspace):
+    workspace.set_meta('document_style_sample',{'id':'legacy','fingerprint':'old','job_id':'old','job_title':'Old role','employer':'Example','created_at':'2026-10-01','quality':{'passed':True}})
+    state=workspace.document_style_state()
+    assert not state['sample_current'] and not state['approved']
+    assert state['sample']['preview_pages'] is None

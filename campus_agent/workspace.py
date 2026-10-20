@@ -225,6 +225,9 @@ class Workspace:
             db.execute("INSERT INTO workspace_meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value)))
 
     def save_preferences(self, preferences):
+        if ((preferences.morning_enabled and not self.preferences.morning_enabled)
+                or (preferences.standout_enabled and not self.preferences.standout_enabled)):
+            self.require_style_approval()
         ZoneInfo(preferences.timezone)
         validate_types(preferences.role_types)
         if preferences.use_custom_keywords and (not preferences.keywords or len(preferences.keywords) > 3 or not all(k.strip() for k in preferences.keywords)):
@@ -233,14 +236,134 @@ class Workspace:
         self.set_meta("preferences", preferences.model_dump())
 
     def save_profile(self, profile):
-        if profile.is_example:
-            raise ValueError("Use your confirmed profile, rather than an example profile")
-        target = self.data / "profile.json"
-        temporary = target.with_suffix(".tmp")
-        temporary.write_text(profile.model_dump_json(indent=2))
-        temporary.chmod(0o600)
-        temporary.replace(target)
-        self.profile = profile
+        with self.write_lock:
+            if profile.is_example:
+                raise ValueError("Use your confirmed profile, rather than an example profile")
+            if self.profile and profile != self.profile:
+                self.set_meta('document_style_approval', None)
+            target = self.data / "profile.json"
+            temporary = target.with_suffix(".tmp")
+            temporary.write_text(profile.model_dump_json(indent=2))
+            temporary.chmod(0o600)
+            temporary.replace(target)
+            self.profile = profile
+
+    def document_style(self):
+        from .document_style import DocumentStyle
+        return DocumentStyle.model_validate(self.get_meta('document_style', {}))
+
+    def save_document_style(self, value):
+        from .document_style import DocumentStyle
+        with self.write_lock:
+            style = DocumentStyle.model_validate(value)
+            if style != self.document_style():
+                self.set_meta('document_style_approval', None)
+            self.set_meta('document_style', style.model_dump())
+            return self.document_style_state()
+
+    def _style_fingerprint(self):
+        from .document_style import style_fingerprint
+        return style_fingerprint(self.profile, self.document_style())
+
+    def _sample_hashes(self, sample):
+        directory = Path(sample['directory']).resolve()
+        if not directory.is_relative_to((self.artifacts / 'style-samples').resolve()):
+            raise ValueError('Sample directory is invalid')
+        result = {}
+        for name in ('Resume.pdf', 'Cover Letter.pdf'):
+            path = (directory / name).resolve()
+            if not path.is_relative_to(directory) or not path.is_file():
+                raise ValueError('Sample PDF is missing; generate a new sample')
+            result[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        for kind, count in sample.get('preview_pages', {}).items():
+            for number in range(1, count + 1):
+                name = f'{kind}-page-{number}.png'
+                path = directory / name
+                if not path.is_file():
+                    raise ValueError('Sample page preview is missing; generate a new sample')
+                result[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        return result
+
+    def document_style_state(self):
+        fingerprint = self._style_fingerprint()
+        sample = self.get_meta('document_style_sample')
+        approval = self.get_meta('document_style_approval')
+        current = bool(sample and sample.get('fingerprint') == fingerprint)
+        approved = bool(current and approval and approval.get('fingerprint') == fingerprint
+                        and approval.get('sample_id') == sample.get('id'))
+        reason = 'Choose your style, generate a sample and review both PDFs.'
+        if not self.profile:
+            reason = 'Save your confirmed profile in Profile & sources first.'
+        elif sample and not current:
+            reason = 'Your profile, style or document rules changed. Generate and approve a new sample.'
+        elif current:
+            reason = 'Open both sample PDFs, then confirm that you reviewed them.'
+        if approved:
+            try:
+                approved = self._sample_hashes(sample) == approval.get('hashes')
+            except (ValueError, OSError):
+                approved = False
+            reason = ('Sample approved. Automatic emails still require a separate opt-in and schedule.' if approved
+                      else 'Approved sample files changed or are missing. Generate and approve a new sample.')
+        view = None if not sample else {k: sample.get(k) for k in ('id', 'fingerprint', 'job_id', 'job_title', 'employer', 'created_at', 'quality', 'preview_pages')}
+        return {'preferences': self.document_style().model_dump(), 'fingerprint': fingerprint,
+                'sample': view, 'sample_current': current, 'approved': approved,
+                'approved_at': approval.get('approved_at') if approved else None, 'message': reason}
+
+    def generate_style_sample(self, job_id):
+        with self.write_lock:
+            sample_id = uuid.uuid4().hex
+            result = self.prepare(job_id, sample_id=sample_id)
+            _, job = self.job(job_id)
+            sample = {'id': sample_id, 'fingerprint': self._style_fingerprint(), 'job_id': job_id,
+                      'job_title': job.title, 'employer': job.employer, 'job_revision': job.revision,
+                      'directory': result['packet'], 'created_at': utcnow(), 'quality': result['quality']}
+            from .document_style import render_sample_pages
+            sample['preview_pages'] = render_sample_pages(Path(result['packet']))
+            sample['hashes'] = self._sample_hashes(sample)
+            self.set_meta('document_style_sample', sample)
+            return self.document_style_state()
+
+    def sample_file(self, sample_id, kind):
+        sample = self.get_meta('document_style_sample')
+        if kind not in {'resume', 'cover'} or not sample or sample.get('id') != sample_id:
+            raise ValueError('Sample not found. Generate a current sample.')
+        self._sample_hashes(sample)
+        return Path(sample['directory']) / ('Resume.pdf' if kind == 'resume' else 'Cover Letter.pdf')
+
+    def sample_preview_file(self, sample_id, kind, number):
+        sample = self.get_meta('document_style_sample')
+        if (not sample or sample.get('id') != sample_id or kind not in {'resume', 'cover'}
+                or not 1 <= number <= sample.get('preview_pages', {}).get(kind, 0)):
+            raise ValueError('Sample page not found')
+        if self._sample_hashes(sample) != sample.get('hashes'):
+            raise ValueError('Sample files changed; generate a new sample')
+        return Path(sample['directory']) / f'{kind}-page-{number}.png'
+
+    def approve_document_style(self, sample_id, fingerprint, reviewed_resume=False, reviewed_cover=False):
+        with self.write_lock:
+            if reviewed_resume is not True or reviewed_cover is not True:
+                raise ValueError('Review and confirm both the sample résumé and cover letter first')
+            sample = self.get_meta('document_style_sample')
+            if not sample or sample.get('id') != sample_id or sample.get('fingerprint') != self._style_fingerprint() or fingerprint != sample['fingerprint']:
+                raise ValueError('Sample is outdated. Generate and review a new sample before approval')
+            _, job = self.job(sample['job_id'])
+            if job.revision != sample['job_revision']:
+                raise ValueError('Sample listing changed. Generate a new sample')
+            from .packet_checks import require_delivery
+            require_delivery(Path(sample['directory']), job, self.profile)
+            hashes = self._sample_hashes(sample)
+            if hashes != sample['hashes']:
+                raise ValueError('Sample PDFs changed. Generate and review a new sample')
+            self.set_meta('document_style_approval', {'sample_id': sample_id, 'fingerprint': fingerprint,
+                          'hashes': hashes, 'approved_at': utcnow()})
+            return self.document_style_state()
+
+    def require_style_approval(self):
+        status = self.document_style_state()
+        if not status['approved']:
+            raise ValueError('Automatic emails are blocked until you approve a current sample résumé and cover letter in Document style. ' + status['message'])
+        return status
 
     def task(self, kind, operation):
         task_id = uuid.uuid4().hex
@@ -337,6 +460,7 @@ class Workspace:
         from .fit import fit_assessment
         from .applications import application_key
         rows = self.store.jobs()
+        style_preferences = self.document_style().model_dump()
         with self.store.connect() as db:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
             metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%'")}
@@ -381,7 +505,12 @@ class Workspace:
             row['profile_stale'] = bool(row.get('packet_dir') and row.get('status')=='prepared' and self.profile and (
                 not tailoring_path.is_relative_to(self.artifacts) or not tailoring_path.is_file()
                 or json.loads(tailoring_path.read_text()).get('profile')!=self.profile.model_dump()))
+            row['style_stale'] = bool(tailoring_path and tailoring_path.is_file() and
+                (json.loads(tailoring_path.read_text()).get('document_preferences', {}) != style_preferences))
             if row["quality"]:
+                if row['style_stale']:
+                    row['quality']['delivery_ready'] = False
+                    row['quality']['errors'].append('Document style updated; regenerate this packet')
                 if row['profile_stale']:
                     row['quality']['delivery_ready']=False
                     row['quality']['errors'].append('Profile updated; regenerate this packet to include the current referee details and facts')
@@ -507,7 +636,7 @@ class Workspace:
         self.add_job(job, full=True)
         return {"description_chars": len(job.description)}
 
-    def prepare(self, job_id):
+    def prepare(self, job_id, sample_id=None):
         with self.write_lock:
             if not self.profile or self.profile.is_example:
                 raise ValueError("Choose your real résumé in Profile first")
@@ -526,6 +655,10 @@ class Workspace:
             families = matched_types(job, self.preferences.role_types) or matched_types(job)
             role_type = families[0]["id"] if families else None
             prepared = prepare_text(job, self.profile, "local", role_type_id=role_type)
+            prepared['document_preferences'] = self.document_style().model_dump()
+            if prepared['document_preferences']['fact_order'] == 'original':
+                prepared['skills'] = list(self.profile.skills)
+                prepared['experience'] = [item.model_dump() for item in self.profile.experience]
             # Keep source facts complete, and use a concise opening consistent with the supplied letters.
             prepared["source_documents"] = self.sources_info()
             prepared["active_resume_id"] = self.preferences.active_resume_id
@@ -545,6 +678,8 @@ class Workspace:
                 raise ValueError("Packet held by quality rules: " + "; ".join(content["errors"]))
             profile_hash = hashlib.sha256((self.profile.model_dump_json() + json.dumps(prepared, sort_keys=True)).encode()).hexdigest()[:12]
             directory = self.artifacts / job.identity[:16] / (job.revision[:12] + "-" + profile_hash)
+            if sample_id:
+                directory = self.artifacts / 'style-samples' / sample_id
             generate_documents(directory, job, self.profile, prepared, timezone=self.preferences.timezone)
             quality = validate_packet(directory, job, self.profile, prepared)
             if not quality["passed"]:
@@ -553,7 +688,8 @@ class Workspace:
             (directory / "tailoring.json").write_text(json.dumps(prepared, indent=2))
             message = build_email(job, self.profile, prepared, directory)
             save_preview(message, directory)
-            self.store.update(job_id, "prepared", str(directory))
+            if not sample_id:
+                self.store.update(job_id, "prepared", str(directory))
             return {"packet": str(directory), "review_required": True, "quality": quality}
 
     def check_prepare(self, job_id):
@@ -581,6 +717,9 @@ class Workspace:
             from .packet_checks import require_delivery
             if not self.profile:
                 raise ValueError("Confirmed profile is missing")
+            prepared = json.loads((Path(row['packet_dir']) / 'tailoring.json').read_text())
+            if prepared.get('document_preferences', {}) != self.document_style().model_dump():
+                raise ValueError('Document style updated; regenerate this packet before delivery')
             require_delivery(Path(row["packet_dir"]), job, self.profile)
             fingerprint = hashlib.sha256(row["packet_dir"].encode()).hexdigest()[:16]
             revision = job.revision + ":" + fingerprint
@@ -673,8 +812,12 @@ class Workspace:
             return {"id": meta["id"], "name": meta.get("name") or meta.get("title"), "url": meta.get("webViewLink") or meta.get("url") or meta.get("display_url"), "folder_id": folder_id}
         return self.action(job_id, "drive_" + kind, write)
 
-    def gmail_packet(self, job_id, send=False, standout=False):
+    def gmail_packet(self, job_id, send=False, standout=False, automatic=False):
+        if automatic:
+            self.require_style_approval()
         def write(row, job):
+            if automatic:
+                self.require_style_approval()
             account = self.require_account("gmail")
             directory = Path(row["packet_dir"])
             parts = [{"mime_type": "text/html", "charset": "utf-8", "body": {"content": (directory / "notification.html").read_text()}}]
