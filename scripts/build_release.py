@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_guide import build as build_guide
 
 FILES = (
+    'assets/nextrole-banner.png', 'assets/README.md',
     'README.md', 'START HERE.txt', 'START HERE.html', 'CODEX SETUP PROMPT.txt', 'Start Job Seeker.command',
     'Start NextRole.command', 'CHANGELOG.md', 'PRIVACY.md', 'launcher.py', 'pyproject.toml', 'requirements-lock.txt', '.gitignore', '.env.example',
     'config.example.json', 'profile.example.json', 'examples/jobs.json', 'Start-Demo.command',
@@ -36,6 +37,11 @@ SECRET_PATTERNS = (
     r'\bya29\.[A-Za-z0-9_-]{20,}',
     '/' + 'Users' + r'/[^/\s]+/',
 )
+# Binary assets must be visually reviewed and pinned before they can be shared.
+# The banner retains its generic C2PA provenance; no user screenshots are allowed.
+BINARY_SHA256 = {
+    'assets/nextrole-banner.png': '038eb6f8faa0fe026b3c9695e7b18a4045a23b4eaad3671fc01f9afff296563a',
+}
 
 
 def audit(relative, content, private_patterns=()):
@@ -44,6 +50,10 @@ def audit(relative, content, private_patterns=()):
         raise ValueError(f'Private/runtime path refused: {relative}')
     if relative not in RELEASE_FILES:
         raise ValueError(f'File is not on the release allowlist: {relative}')
+    if relative in BINARY_SHA256:
+        if hashlib.sha256(content).hexdigest() != BINARY_SHA256[relative]:
+            raise ValueError(f'Unreviewed binary asset refused: {relative}')
+        return
     text = content.decode('utf-8')
     for pattern in (*SECRET_PATTERNS, *private_patterns):
         if re.search(pattern, text, re.I):

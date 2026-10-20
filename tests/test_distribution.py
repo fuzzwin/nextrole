@@ -66,6 +66,14 @@ def test_release_refuses_embedded_credentials_before_writing_archive(clean_sourc
     assert not list((tmp_path / 'release').glob('*.zip'))
 
 
+def test_release_refuses_changed_binary_before_writing_archive(clean_source, tmp_path):
+    banner = clean_source / 'assets/nextrole-banner.png'
+    banner.write_bytes(banner.read_bytes() + b'PRIVATE SENTINEL')
+    with pytest.raises(ValueError, match='Unreviewed binary asset refused'):
+        build_release.build(clean_source, tmp_path / 'release')
+    assert not list((tmp_path / 'release').glob('*.zip'))
+
+
 def test_launcher_check_does_not_install_or_start_services(monkeypatch, capsys):
     monkeypatch.setattr(sys, 'argv', ['launcher.py', '--check'])
     monkeypatch.setattr(launcher, 'dependency_probe', lambda _: False)

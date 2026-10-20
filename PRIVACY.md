@@ -26,3 +26,8 @@ Review both documents and your factual profile before using them.
 
 No employer applications are submitted. Do not add real documents or private
 configuration to issues, screenshots, pull requests, tests or repository history.
+
+A used local installation does contain its user's private profile and documents.
+The exclusion above applies to the clean source export, not the entire used folder.
+Publishing through a personal GitHub account also exposes that account's public
+username. The generic banner contains no real application or résumé screenshots.

@@ -1,5 +1,7 @@
 # NextRole
 
+![NextRole: Your next role, ready.](assets/nextrole-banner.png)
+
 **Your next role, ready.** A local job-search workspace for Mac.
 
 **Open `START HERE.html` for the offline setup guide.**
@@ -64,7 +66,7 @@ The Mac must be awake/online for local scheduled runs.
 python3 scripts/build_release.py
 ```
 
-Output: `dist/NextRole-Mac-0.8.0.zip`, a SHA-256 file and a file manifest.
+Output: `dist/NextRole-Mac-0.8.1.zip`, a SHA-256 file and a file manifest.
 The builder uses an explicit source allowlist and audits paths, symlinks and
 common credential patterns. It does not read private workspace data. Share this
 clean ZIP, not a used folder: your workspace, profile, PDFs, account state,

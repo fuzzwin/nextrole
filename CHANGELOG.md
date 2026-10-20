@@ -1,5 +1,11 @@
 # Changes
 
+## 0.8.1 — Sharing artwork and privacy review
+
+- Added a NextRole banner to the README and clean Mac ZIP.
+- Binary artwork is pinned to its reviewed hash before release export.
+- Rechecked source history and earlier release packages before public sharing.
+
 ## 0.8.0 — Preview, adjust and approve
 
 - Added document style choices and side-by-side sample PDF previews.
