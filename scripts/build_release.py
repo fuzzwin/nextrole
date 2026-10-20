@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_guide import build as build_guide
 
 FILES = (
+    'LICENSE',
     'assets/nextrole-banner.png', 'assets/README.md',
     'README.md', 'START HERE.txt', 'START HERE.html', 'CODEX SETUP PROMPT.txt', 'Start Job Seeker.command',
     'Start NextRole.command', 'CHANGELOG.md', 'PRIVACY.md', 'launcher.py', 'pyproject.toml', 'requirements-lock.txt', '.gitignore', '.env.example',

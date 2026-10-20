@@ -66,7 +66,7 @@ The Mac must be awake/online for local scheduled runs.
 python3 scripts/build_release.py
 ```
 
-Output: `dist/NextRole-Mac-0.8.1.zip`, a SHA-256 file and a file manifest.
+Output: `dist/NextRole-Mac-0.8.2.zip`, a SHA-256 file and a file manifest.
 The builder uses an explicit source allowlist and audits paths, symlinks and
 common credential patterns. It does not read private workspace data. Share this
 clean ZIP, not a used folder: your workspace, profile, PDFs, account state,
@@ -95,3 +95,9 @@ python3 -m venv .venv
 Read [PRIVACY.md](PRIVACY.md) before sharing a used installation. Tests use
 synthetic identities. Do not commit your workspace, documents, credentials,
 automation configuration or generated application packets.
+
+## Licence
+
+NextRole is available under the [MIT License](LICENSE). Dependencies retain
+their own licences. No third-party job listing, personal document or connected
+account data is licensed by this repository.

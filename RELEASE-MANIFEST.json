@@ -1,7 +1,13 @@
 {
-  "version": "0.8.1",
+  "version": "0.8.2",
   "platform": "macOS",
   "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 1078,
+      "sha256": "a4d69fd1e7fae239d3521fd35d493c6351cca7a7969fcd94b6404a8119346261",
+      "mode": "0o644"
+    },
     {
       "path": "assets/nextrole-banner.png",
       "bytes": 1630535,
@@ -16,8 +22,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4827,
-      "sha256": "afea5db72093e32a8d21a53b877fc380509b930f9cf94f6164bd77d3d88e8fac",
+      "bytes": 5040,
+      "sha256": "c0b29e30f2fadf441a535e9ba33755547da43e9ae5e4e02e4dee9e289b5983f5",
       "mode": "0o644"
     },
     {
@@ -29,7 +35,7 @@
     {
       "path": "START HERE.html",
       "bytes": 37808,
-      "sha256": "80297c8594ba69f118f72e3bca3b0a4f8dfaf1aa2db9c983f5090b4c8bf14e57",
+      "sha256": "a2c264299b19df3e38350eb5a964a45a945aaea611f8e47d9086ea9934469271",
       "mode": "0o644"
     },
     {
@@ -52,8 +58,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 1823,
-      "sha256": "161b7e3091fb63490ca875530def5767528fa2b9bc1933ee420aa11cacfafa73",
+      "bytes": 2004,
+      "sha256": "3c9cd2d2f4e96e8a6f3fb3a352a4b4f9907e555a1bb3546a97ad900ea2137adc",
       "mode": "0o644"
     },
     {
@@ -70,8 +76,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 920,
-      "sha256": "e905d58d831e514b83766c690703e32295b4929402b83d3d23704c808498142f",
+      "bytes": 949,
+      "sha256": "9f3190c17a74ae01cf3cc226b2b85411e7c3007e7a6cf3b3079f569a53664463",
       "mode": "0o644"
     },
     {
@@ -130,14 +136,14 @@
     },
     {
       "path": "scripts/build_release.py",
-      "bytes": 6093,
-      "sha256": "90353746aca224019df27f714ca8749f252b3ae2ac5c7594d25494ef7ba5b2e1",
+      "bytes": 6108,
+      "sha256": "0d5bbfe041d098be4fae4358db78bc4fb52946b3404cfdf4bb2ffa29afb72fd3",
       "mode": "0o644"
     },
     {
       "path": "scripts/build_guide.py",
       "bytes": 9598,
-      "sha256": "1b6d293b63b8353bed64a8bb3d26bae6a0b4538dbf25578474a5540ffc874ae9",
+      "sha256": "37368d666645bfe8d8aac65ba34c87a12e2f54a3221e17cd4da36e0d4fe5e0d1",
       "mode": "0o644"
     },
     {

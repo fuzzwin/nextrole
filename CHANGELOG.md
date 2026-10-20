@@ -1,5 +1,10 @@
 # Changes
 
+## 0.8.2 — MIT licence
+
+- Added the MIT licence to source, package metadata and the clean Mac download.
+- Dependency licences and private or third-party content remain separate.
+
 ## 0.8.1 — Sharing artwork and privacy review
 
 - Added a NextRole banner to the README and clean Mac ZIP.
