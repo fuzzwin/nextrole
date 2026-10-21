@@ -1,6 +1,6 @@
-# NextRole
+# NextRole JobSeeker AI
 
-![NextRole: Your next role, ready.](assets/nextrole-banner.png)
+![NextRole - JobSeeker AI - Codex /ClaudeCode : Your next role, ready.](assets/nextrole-banner.png)
 
 **Your next role, ready.** A local job-search workspace for Mac.
 
