@@ -12,6 +12,7 @@ class DocumentStyle(StrictModel):
     tone: Literal['professional', 'warm', 'direct'] = 'professional'
     letter_length: Literal['standard', 'brief'] = 'standard'
     fact_order: Literal['relevant', 'original'] = 'relevant'
+    resume_focus: Literal['focused', 'complete'] = 'focused'
 
 
 def style_fingerprint(profile, style):
