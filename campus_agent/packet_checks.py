@@ -34,6 +34,7 @@ def check_content(job, profile, prepared):
     from .tailor import prepare_text
     style = DocumentStyle.model_validate(prepared.get('document_preferences', {}))
     expected = prepare_text(job, profile, 'local', role_type_id=prepared.get('role_type_id'))
+    expected['document_preferences'] = style.model_dump()
     if style.fact_order == 'original':
         expected['skills'] = list(profile.skills)
         expected['experience'] = [item.model_dump() for item in profile.experience]
@@ -41,10 +42,6 @@ def check_content(job, profile, prepared):
     for key in ('skills', 'experience', 'technical_projects', 'application_review'):
         if prepared.get(key) != expected.get(key):
             errors.append(f'Tailored {key} differs from ranked, source-backed candidate evidence')
-    if style.resume_focus == 'focused' and not prepared.get('application_review', {}).get('omitted_bullet_ids') and sum(len(e.bullets) for e in profile.experience) > 7:
-        # The algorithm may retain all when the candidate has only a small
-        # number of bullets; the report must still explain the choice.
-        pass
     if prepared.get('application_kind') != application_kind(job):
         errors.append('Application format does not match the employer request; regenerate')
     if prepared.get('cover_letter') != grounded_cover(job, profile, prepared):
