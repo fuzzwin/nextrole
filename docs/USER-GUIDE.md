@@ -250,6 +250,12 @@ it, choose more space/pages or edit your own profile facts intentionally. The
 app never silently removes confirmed résumé facts to make a shorter document.
 You can still turn email delivery off while approval is pending.
 
+## Role-tailored application writing and tips
+
+NextRole now distinguishes a job advertisement requesting a **brief introduction** from a standard cover letter. Both are produced as a compatible one-page PDF called **Cover Letter.pdf**, with the correct heading shown inside. Check the actual employer's application instructions before attaching the file or putting the introduction in your email body. The writer uses only saved candidate facts and preserves qualifiers; it does **not** invent outcomes or prove the facts itself. Review the three body paragraphs for voice, relevance and true role fit. Selection criteria and required portfolio examples still need separate review and preparation.
+
+Read [Role-tailoring and evidence guide](ROLE-TAILORING.md) for end-user guidance about relevance, metrics, personal projects, referee consent and the proof loop. Every change to document rules makes old sample approval stale; approve a **new** sample after this release.
+
 ## See the document guardrails
 
 Inside a role, open **Résumé & cover-letter guardrails**. The panel shows the
