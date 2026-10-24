@@ -659,6 +659,9 @@ class Workspace:
             if prepared['document_preferences']['fact_order'] == 'original':
                 prepared['skills'] = list(self.profile.skills)
                 prepared['experience'] = [item.model_dump() for item in self.profile.experience]
+            from .application_review import focus_application
+            prepared = focus_application(job, self.profile, prepared,
+                                         prepared['document_preferences']['resume_focus'])
             # Keep source facts complete, and use a concise opening consistent with the supplied letters.
             prepared["source_documents"] = self.sources_info()
             prepared["active_resume_id"] = self.preferences.active_resume_id
