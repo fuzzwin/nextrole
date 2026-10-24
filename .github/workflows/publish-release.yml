@@ -1,0 +1,80 @@
+name: Publish NextRole 0.8.3
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install and run tests
+        run: |
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e '.[test]'
+          python -m pytest -q
+      - name: Build clean source distribution
+        run: python scripts/build_release.py
+      - name: Inspect release contents
+        run: |
+          python - <<'PY'
+          import json, pathlib, zipfile
+          name="NextRole-Mac-0.8.3"
+          z=pathlib.Path("dist")/(name+".zip")
+          assert z.exists()
+          with zipfile.ZipFile(z) as archive:
+              assert archive.testzip() is None
+              files=archive.namelist()
+              assert any(x.endswith("/docs/ROLE-TAILORING.md") for x in files)
+              assert not any("/workspace/" in x or "/artifacts/" in x for x in files)
+              m=json.loads(archive.read(name+"/RELEASE-MANIFEST.json"))
+              assert m["version"]=="0.8.3"
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NextRole-Mac-0.8.3-Verified
+          path: |
+            dist/NextRole-Mac-0.8.3.zip
+            dist/NextRole-Mac-0.8.3.zip.sha256
+            dist/NextRole-Mac-0.8.3.manifest.json
+          if-no-files-found: error
+
+  publish-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NextRole-Mac-0.8.3-Verified
+          path: dist
+      - name: Release verified Mac package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view v0.8.3 --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release v0.8.3 already exists; refusing to overwrite artifacts."
+          else
+            gh release create v0.8.3 \
+              dist/NextRole-Mac-0.8.3.zip \
+              dist/NextRole-Mac-0.8.3.zip.sha256 \
+              dist/NextRole-Mac-0.8.3.manifest.json \
+              --repo "$GH_REPO" \
+              --target "$GITHUB_SHA" \
+              --title "NextRole Mac 0.8.3" \
+              --notes "Evidence-first role-tailored resume and cover-letter release. 164+ automated tests, including synthetic rendered-PDF checks. Requires Python 3.12+ and local Mac setup. No application submission or automatic sending is enabled by this release. Existing sample approvals must be reviewed again."
+          fi
