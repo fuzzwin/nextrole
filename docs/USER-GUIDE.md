@@ -151,11 +151,12 @@ Next, work through these buttons in the site, with Codex's help if needed:
    Drive imports are also available here. Correct extraction errors manually.
 3. **References**: choose omit, available on request or named referees. Only
    enter contact details you have permission to share and confirm sharing.
-4. **Opportunities**: open **Change search roles & preferred location**, choose
+4. **Optional headline, projects and interests**: a professional headline does not change your formal employment titles; keep personal technical projects in their own section with honest stages and interests to one line. The job packet explains which items were selected and what was left out.
+5. **Opportunities**: open **Change search roles & preferred location**, choose
    the role types you want, change Melbourne if needed, then **Save my search**.
-5. Click **Find jobs**, then open **View details** and **Why this match** for
+6. Click **Find jobs**, then open **View details** and **Why this match** for
    one role. Check its employer, location, requirements and review flags.
-6. Click **Check & prepare** for a suitable role. Open and read both PDFs.
+7. Click **Check & prepare** for a suitable role. Open and read both PDFs.
    Ask Codex about anything that looks wrong before using email or Drive actions.
 
 Checkpoint: your profile is accurate and you have reviewed a sample resume and
@@ -226,7 +227,7 @@ black-text document rules. Search schedules and filters stay as they were.
    Comfortable spacing; a maximum of 2 or 3 résumé pages; Professional, Warm or
    Direct letter tone; Standard or Brief letter detail; and relevant or original
    fact order. PDFs remain black text on A4. Focused résumé mode selects the strongest relevant evidence from your original profile and reports what was omitted; Complete mode keeps all saved employment bullets.
-3. Choose a saved role with a fully read listing and confirmed employer, then
+3. Choose **Focused** for relevant achievements or **Complete** for the full employment evidence. The job packet displays the selected bullets, omitted examples and evidence gaps. Choose a saved role with a fully read listing and confirmed employer, then
    click **Generate sample résumé & cover letter**. This saves the choices and
    makes a local sample. It sends nothing and does not replace an existing packet.
 4. Open both PDF links or scroll through their rendered page previews. Check the facts, tone, page breaks,
@@ -245,9 +246,7 @@ Profile/style changes, a new sample, changed/missing sample PDFs or updated
 rules hold automatic delivery until the sample is approved again. Old job
 packets must be regenerated if they use an earlier style or ruleset.
 
-A page limit is a check, not permission to omit experience. If a sample exceeds
-it, choose more space/pages or edit your own profile facts intentionally. The
-app never silently removes confirmed résumé facts to make a shorter document.
+A page limit is a readability check, not permission to rewrite history. In **Focused** mode, the app selects relevant original bullets and visibly reports omitted facts while retaining formal job entries, titles and dates. In **Complete** mode, all saved professional bullets remain. If the PDF exceeds your page limit, review the omissions, adjust your selected scope or page count and regenerate; the master evidence is not deleted.
 You can still turn email delivery off while approval is pending.
 
 ## Role-tailored application writing and tips
