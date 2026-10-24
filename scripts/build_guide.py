@@ -111,7 +111,7 @@ nav{display:flex;flex-wrap:wrap;gap:10px}a{color:#6330cc;text-decoration-thickne
 <p>Already set up? Just double-click <strong>Start NextRole.command</strong>. You can keep using the same Codex chat for help.</p>
 <p class="local">After launch, open <a href="http://127.0.0.1:8877/">your local NextRole</a>. This link works only while the launcher is running.</p>
 <nav aria-label="Guide sections"><a href="#step-1-open-a-local-codex-chat">Open Codex</a><a href="#step-3-attach-your-current-resume-or-choose-drive">Add your resume</a><a href="#step-4-copy-this-message-paste-and-send">Copy setup prompt</a><a href="#step-6-open-the-site-and-try-one-job">First job</a><a href="#step-7-tomorrow-just-double-click">Tomorrow</a><a href="#manual-folder-fallback-only-if-attachments-do-not-work">Manual fallback</a><a href="#troubleshooting">I am stuck</a></nav>
-</header><article>''' + body + '''</article><footer>Mac source release 0.8.3 · Keep your used workspace private. Share the original clean ZIP.</footer></main>
+</header><article>''' + body + '''</article><footer>Mac source release 0.8.4 · Keep your used workspace private. Share the original clean ZIP.</footer></main>
 <script>
 document.getElementById('copy-setup-prompt').addEventListener('click', async function () {
   const text = document.getElementById('codex-setup-prompt');
