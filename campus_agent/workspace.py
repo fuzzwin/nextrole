@@ -441,7 +441,13 @@ class Workspace:
         account = self.require_account("gmail")
         profile = resume_profile(source["text"], account.get("email", ""))
         if self.profile:
-            profile = profile.model_copy(update={"references_mode": self.profile.references_mode, "referees": self.profile.referees})
+            profile = profile.model_copy(update={
+                "references_mode": self.profile.references_mode,
+                "referees": self.profile.referees,
+                "headline": self.profile.headline,
+                "interests": self.profile.interests,
+                "technical_projects": self.profile.technical_projects,
+            })
         self.save_profile(profile)
         self.save_preferences(self.preferences.model_copy(update={"active_resume_id": file_id}))
         return profile.model_dump()
