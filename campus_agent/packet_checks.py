@@ -11,9 +11,9 @@ from pypdf import PdfReader
 from pypdf.generic import ContentStream
 
 from .documents import DOCUMENT_STYLE_VERSION
-from .tailor import grounded_cover
+from .tailor import application_kind, grounded_cover
 
-RULESET_VERSION = 'packet-rules-v4'
+RULESET_VERSION = 'packet-rules-v5'
 
 
 def check_content(job, profile, prepared):
@@ -33,6 +33,8 @@ def check_content(job, profile, prepared):
         return Counter((e['organization'], e['role'], e['dates'], b) for e in experiences for b in e['bullets'])
     if facts(prepared.get('experience', [])) != facts([e.model_dump() for e in profile.experience]):
         errors.append('Experience or factual qualifiers differ from the confirmed source')
+    if prepared.get('application_kind') != application_kind(job):
+        errors.append('Application format does not match the employer request; regenerate')
     if prepared.get('cover_letter') != grounded_cover(job, profile, prepared):
         errors.append('Cover letter differs from the grounded writing rules')
     if prepared.get('job_identity') != job.identity or prepared.get('job_revision') != job.revision:
