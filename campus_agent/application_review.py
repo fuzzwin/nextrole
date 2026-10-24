@@ -77,6 +77,9 @@ def focus_application(job: Job, profile: Profile, prepared: dict, mode: str) -> 
     output = dict(prepared)
     ranking = local_selection(job, profile, prepared.get("role_type_id"))
     ranked = dict.fromkeys(ranking.bullet_ids)
+    if prepared.get("document_preferences", {}).get("fact_order") == "original":
+        ranked = dict.fromkeys(f"{i}:{j}" for i, exp in enumerate(profile.experience)
+                               for j in range(len(exp.bullets)))
     selected_ids: list[str] = []
     if mode == "complete":
         selected_ids = [f"{i}:{j}" for i, exp in enumerate(profile.experience) for j in range(len(exp.bullets))]
@@ -111,6 +114,8 @@ def focus_application(job: Job, profile: Profile, prepared: dict, mode: str) -> 
     output["application_review"] = {
         "mode": mode,
         "selected_bullet_ids": selected_ids,
+        "selected_examples": selected_bullets[:10],
+        "omitted_examples": [profile.experience[int(k.split(":")[0])].bullets[int(k.split(":")[1])] for k in unused][:8],
         "omitted_bullet_ids": unused,
         "selected_project_titles": [p["title"] for p in projects],
         "skills_selected": len(output["skills"]),
