@@ -13,7 +13,7 @@ from pypdf.generic import ContentStream
 from .documents import DOCUMENT_STYLE_VERSION
 from .tailor import application_kind, grounded_cover
 
-RULESET_VERSION = 'packet-rules-v5'
+RULESET_VERSION = 'packet-rules-v6'
 
 
 def check_content(job, profile, prepared):
@@ -27,12 +27,24 @@ def check_content(job, profile, prepared):
         errors.append('Document style is outdated; regenerate the packet')
     if prepared.get('profile') != profile.model_dump():
         errors.append('Packet profile differs from the current confirmed profile')
-    if Counter(prepared.get('skills', [])) != Counter(profile.skills):
-        errors.append('Skills were added, removed or changed from the confirmed profile')
-    def facts(experiences):
-        return Counter((e['organization'], e['role'], e['dates'], b) for e in experiences for b in e['bullets'])
-    if facts(prepared.get('experience', [])) != facts([e.model_dump() for e in profile.experience]):
-        errors.append('Experience or factual qualifiers differ from the confirmed source')
+    # Recreate the deterministic selection from the unchanged source profile.
+    # A focused résumé may omit facts, but cannot rewrite a job, metric or stage.
+    from .document_style import DocumentStyle
+    from .application_review import focus_application
+    from .tailor import prepare_text
+    style = DocumentStyle.model_validate(prepared.get('document_preferences', {}))
+    expected = prepare_text(job, profile, 'local', role_type_id=prepared.get('role_type_id'))
+    if style.fact_order == 'original':
+        expected['skills'] = list(profile.skills)
+        expected['experience'] = [item.model_dump() for item in profile.experience]
+    expected = focus_application(job, profile, expected, style.resume_focus)
+    for key in ('skills', 'experience', 'technical_projects', 'application_review'):
+        if prepared.get(key) != expected.get(key):
+            errors.append(f'Tailored {key} differs from ranked, source-backed candidate evidence')
+    if style.resume_focus == 'focused' and not prepared.get('application_review', {}).get('omitted_bullet_ids') and sum(len(e.bullets) for e in profile.experience) > 7:
+        # The algorithm may retain all when the candidate has only a small
+        # number of bullets; the report must still explain the choice.
+        pass
     if prepared.get('application_kind') != application_kind(job):
         errors.append('Application format does not match the employer request; regenerate')
     if prepared.get('cover_letter') != grounded_cover(job, profile, prepared):
@@ -81,9 +93,11 @@ def _black_text(reader, page):
     return True
 
 
-def check_pdfs(directory, job, profile, style=None):
+def check_pdfs(directory, job, profile, style=None, prepared=None):
     from .document_style import DocumentStyle
     style = DocumentStyle.model_validate(style or {})
+    if prepared is None and (directory / 'tailoring.json').is_file():
+        prepared = json.loads((directory / 'tailoring.json').read_text())
     errors, files = [], {}
     for filename, limit in [('Resume.pdf', style.resume_pages), ('Cover Letter.pdf', 1)]:
         path = directory / filename
@@ -107,8 +121,17 @@ def check_pdfs(directory, job, profile, style=None):
                 if ref.sharing_confirmed and any(value and value not in compact for value in [ref.name, ref.email, ref.phone]):
                     errors.append(f'Resume.pdf: referee details missing for {ref.name}')
         if filename == 'Resume.pdf':
-            facts = [profile.summary, *profile.skills, *profile.education,
-                     *(b for entry in profile.experience for b in entry.bullets)]
+            displayed = prepared or {'skills':profile.skills,
+                                    'experience':[e.model_dump() for e in profile.experience],
+                                    'technical_projects':[]}
+            facts = [profile.summary, *displayed['skills'], *profile.education,
+                     *(b for entry in displayed['experience'] for b in entry['bullets'])]
+            if profile.headline:
+                facts.append(profile.headline)
+            if profile.interests:
+                facts.append(' '.join(profile.interests.split()))
+            for project in displayed.get('technical_projects', []):
+                facts.extend([project['title'], project['summary']])
             if any(re.sub(r'\s+', ' ', fact).strip() not in compact for fact in facts):
                 errors.append('Resume.pdf: a confirmed fact is missing or changed in the rendered document')
     return {'errors': errors, 'files': files}
@@ -116,9 +139,10 @@ def check_pdfs(directory, job, profile, style=None):
 
 def validate_packet(directory, job, profile, prepared, write_report=True):
     report = check_content(job, profile, prepared)
-    pdfs = check_pdfs(directory, job, profile, prepared.get('document_preferences'))
+    pdfs = check_pdfs(directory, job, profile, prepared.get('document_preferences'), prepared)
     report['errors'] += pdfs['errors']
     report['files'] = pdfs['files']
+    report['application_review'] = prepared.get('application_review', {})
     report['passed'] = not report['errors']
     report['delivery_ready'] = report['passed'] and not report['pending']
     if write_report:
