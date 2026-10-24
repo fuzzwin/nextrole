@@ -225,7 +225,7 @@ black-text document rules. Search schedules and filters stay as they were.
 2. Open **Document style** in the left menu. Choose Classic, Compact or
    Comfortable spacing; a maximum of 2 or 3 résumé pages; Professional, Warm or
    Direct letter tone; Standard or Brief letter detail; and relevant or original
-   fact order. PDFs remain black text on A4. All confirmed résumé facts stay in.
+   fact order. PDFs remain black text on A4. Focused résumé mode selects the strongest relevant evidence from your original profile and reports what was omitted; Complete mode keeps all saved employment bullets.
 3. Choose a saved role with a fully read listing and confirmed employer, then
    click **Generate sample résumé & cover letter**. This saves the choices and
    makes a local sample. It sends nothing and does not replace an existing packet.
