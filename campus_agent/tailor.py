@@ -41,10 +41,11 @@ def role_focus(job: Job) -> str:
 
 
 def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
-    """A concise, role-aware letter/intro from exact confirmed profile facts.
+    """A three-paragraph letter grounded in source facts, not a list of software.
 
-    Avoid copying claims or instructions out of a job advertisement. The prose
-    never changes a factual bullet's meaning or implies a prototype is live.
+    The first paragraph addresses the role, the second uses one or two selected
+    achievements, and the third uses separate candidate-provided collaboration
+    evidence when available. Do not infer unadvertised facts about the employer.
     """
     from .document_style import DocumentStyle
     choice = DocumentStyle.model_validate(prepared.get("document_preferences", {}))
@@ -56,7 +57,7 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
         summary = "I am an " + summary[0].lower() + summary[1:]
     summary = summary.replace(". Supports ", ". I support ").replace(". Builds ", ". I build ")
     facts = [b.strip() for entry in prepared["experience"] if entry["organization"]
-             for b in entry["bullets"] if b.strip()][:2 if short or choice.letter_length == "brief" else 3]
+             for b in entry["bullets"] if b.strip()][:1 if short else 2]
     verbs = {"created", "delivered", "built", "supported", "simplified", "mapped",
              "implemented", "managed", "administered", "deployed", "investigated",
              "ran", "led", "recreated", "developed", "configured", "coordinated",
@@ -70,29 +71,42 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
             return "I " + first.lower() + bullet[len(first):]
         return bullet
 
+    focus = role_focus(job)
     if choice.tone == "direct":
         opening = f"Please consider my application for {job.title} at {job.employer}."
     elif choice.tone == "warm":
         opening = f"I would welcome the opportunity to join {job.employer} as {job.title}."
     else:
         opening = f"I am applying for the {job.title} role at {job.employer}."
+    if focus:
+        opening += f" Its emphasis on {focus} is especially relevant to my background."
 
-    focus = role_focus(job)
-    link = (f"The role's emphasis on {focus} makes it relevant to the experience above. "
-            if focus else "")
-    closing = ("I would welcome the chance to discuss how I could contribute."
-               if short or choice.letter_length == "brief" else
-               "Thank you for considering my application. I would welcome the opportunity to discuss how my experience could support your team.")
     evidence = " ".join(sentence(fact) for fact in facts)
     if not evidence:
-        evidence = "My background is outlined in the attached résumé."
-    # Exactly three body paragraphs, plus greeting and sign-off. Do not turn
-    # a cover-letter style reference into an additional experience claim.
+        evidence = "My relevant achievements are outlined in the accompanying résumé."
+    # A separate selected source fact supports communication/stakeholder claims.
+    # Do not invent facilitation or management experience if the profile lacks it.
+    people_pattern = re.compile(r"\b(?:stakeholders?|colleagues?|end.users?|user guides?|"
+                                r"training|business teams?|department|worked with|coordinat|"
+                                r"consult|documentation|finance|quality)\b", re.I)
+    people_fact = next(
+        (b.strip() for entry in profile.experience for b in entry.bullets
+         if b.strip() not in facts and people_pattern.search(b)), None
+    )
+    third = sentence(people_fact) + " " if people_fact else ""
+    if focus:
+        third += f"I am interested in contributing to {job.employer}'s work in {focus}. "
+    else:
+        third += f"I would welcome a conversation about the priorities of this role at {job.employer}. "
+    third += ("I would appreciate the opportunity to discuss my application."
+              if short else
+              "Thank you for considering my application. I would welcome the opportunity to discuss how I could contribute.")
+
     return [
         f"Dear {job.employer} hiring team,",
         (opening + " " + summary).strip(),
         evidence,
-        link + closing,
+        third.strip(),
         f"Kind regards,\n{profile.name}",
     ]
 
