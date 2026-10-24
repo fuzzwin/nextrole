@@ -24,6 +24,8 @@ The package starts blank with automatic discovery/sending/tracking disabled.
 NextRole searches Australian IT, automation, AI, business analysis, applications,
 project delivery and service delivery roles. It explains experience/requirement
 matches, supports Auto top listings, and prepares checked résumé/letter PDFs.
+Candidate document choices now include **Focused** versus **Complete** résumé scope. Focused mode selects exact source-backed employment bullets and up to two relevant, separately labelled personal technical projects, preserving job chronology and explaining omitted evidence and outstanding skill gaps. Optional candidate headline and interests stay private in the local profile. Refer to [evidence and review guidance](docs/ROLE-TAILORING.md). Neither mode invents achievements or silently edits historical employer records.
+
 Saved roles use paginated lists (10/20/50), combined filters, sorting and a clear
 result count. Each role explains the document guardrails and its check status.
 Before automatic delivery, **Document style** lets each user choose PDF layout,
