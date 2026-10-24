@@ -56,3 +56,37 @@ def test_letter_example_is_not_authority_for_new_facts():
     assert "turn unfamiliar technology into practical ways of working" not in actual
     assert "saved 40%" not in actual
     assert "production search system" not in actual
+
+
+def test_generated_brief_intro_pdf_is_readable_and_renderable(tmp_path):
+    from pypdf import PdfReader
+    import pypdfium2 as pdfium
+    from campus_agent.documents import generate_documents
+    from campus_agent.packet_checks import check_pdfs
+
+    vacancy=job("Send a brief introduction with your resume, describing AI and automation projects.")
+    candidate=profile()
+    data,paragraphs=draft(vacancy)
+    data["cover_letter"]=paragraphs
+    generate_documents(tmp_path,vacancy,candidate,data,timezone="Australia/Melbourne")
+
+    pages=PdfReader(tmp_path/"Cover Letter.pdf").pages
+    text=" ".join(p.extract_text() or "" for p in pages)
+    assert len(pages)==1
+    assert "BRIEF INTRODUCTION" in text
+    assert vacancy.title.upper() in text
+    assert candidate.email in text
+    assert "ahead of rollout" in text
+    assert "PRODUCTION SEARCH SYSTEM" not in text
+
+    report=check_pdfs(tmp_path,vacancy,candidate,data["document_preferences"])
+    assert report["errors"]==[], report["errors"]
+    pdf=pdfium.PdfDocument(str(tmp_path/"Cover Letter.pdf"))
+    try:
+        image=pdf[0].render(scale=0.6).to_pil()
+        try:
+            assert image.width>300 and image.height>450
+        finally:
+            image.close()
+    finally:
+        pdf.close()
