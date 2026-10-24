@@ -1,3 +1,10 @@
+## 0.8.3 — 24 October 2026 (candidate release)
+
+- Choose brief introductions when job instructions request them; otherwise create grounded three-paragraph cover letters from existing confirmed facts.
+- Add an evidence-stage/user review guide, prominent in-app application tips and synthetic regression tests.
+- Check the requested application type during packet validation; invalidate old approved samples with document/rules version v5.
+- Include the new user guide in the private-data-audited source distribution. This update does not enable sending, schedules or employer applications.
+
 # Changes
 
 ## 0.8.2 — MIT licence
