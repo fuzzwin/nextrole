@@ -20,7 +20,7 @@ FILES = (
     'README.md', 'START HERE.txt', 'START HERE.html', 'CODEX SETUP PROMPT.txt', 'Start Job Seeker.command',
     'Start NextRole.command', 'CHANGELOG.md', 'PRIVACY.md', 'launcher.py', 'pyproject.toml', 'requirements-lock.txt', '.gitignore', '.env.example',
     'config.example.json', 'profile.example.json', 'examples/jobs.json', 'Start-Demo.command',
-    'docs/USER-GUIDE.md', 'docs/LEGACY-CLI.md', 'scripts/build_release.py', 'scripts/build_guide.py',
+    'docs/USER-GUIDE.md', 'docs/ROLE-TAILORING.md', 'docs/LEGACY-CLI.md', 'scripts/build_release.py', 'scripts/build_guide.py',
 )
 MODULES = (
     '__init__.py', '__main__.py', 'applications.py', 'cli.py', 'connectors.py',
