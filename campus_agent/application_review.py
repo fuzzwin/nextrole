@@ -41,6 +41,12 @@ def _ranked_project_indices(job: Job, profile: Profile) -> list[int]:
     for index, project in enumerate(profile.technical_projects):
         tokens = _tokens(project.title + " " + project.summary)
         score = 5 * len(tokens & job_title) + len(tokens & target)
+        # AI roles commonly want applied agent/prototype examples even if the
+        # advertisement doesn't use the exact technology label (MCP/CAD).
+        if re.search(r"\b(?:ai|artificial intelligence|agentic)\b", job.title, re.I) and re.search(
+                r"\b(?:agent|mcp|llm|codex|prototype|ai-assisted)\b",
+                project.title + " " + project.summary, re.I):
+            score += 2
         scored.append((index, score))
     return [index for index, score in sorted(scored, key=lambda row: (-row[1], row[0])) if score > 0][:MAX_PROJECTS]
 
