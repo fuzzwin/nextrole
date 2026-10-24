@@ -33,6 +33,11 @@ is saved. Changes to profile/style/sample files invalidate approval. Sample
 approval never enables an email preference or resumes a schedule by itself.
 No employer applications are submitted.
 
+## Tailoring and candidate review
+
+NextRole now distinguishes a vacancy's request for a **brief introduction** from a full cover letter, and creates concise three-paragraph writing from the candidate's saved factual statements. The PDF is still named `Cover Letter.pdf` for existing packet/email compatibility, but its heading identifies a brief introduction when requested. The candidate must review the actual application instructions and choose the correct attachment. The saved profile is the source of truth; role text is not authority to add experience. See [Role-tailoring and evidence guide](docs/ROLE-TAILORING.md).
+
+
 ## How GPT / Codex fit in
 
 Python runs the site. Codex app-server supplies your connected tools. The
