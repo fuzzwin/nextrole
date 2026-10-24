@@ -108,7 +108,8 @@ def focus_application(job: Job, profile: Profile, prepared: dict, mode: str) -> 
             experiences.append({**exp.model_dump(),
                                 "bullets": [exp.bullets[int(k.split(":")[1])] for k in chosen]})
         output["experience"] = experiences
-        skill_indexes = list(dict.fromkeys(ranking.skill_indices + list(range(len(profile.skills)))))
+        skill_indexes = (list(range(len(profile.skills))) if prepared.get("document_preferences", {}).get("fact_order") == "original"
+                         else list(dict.fromkeys(ranking.skill_indices + list(range(len(profile.skills))))) )
         output["skills"] = [profile.skills[k] for k in skill_indexes[:MAX_FOCUSED_SKILLS]]
     project_indices = _ranked_project_indices(job, profile)
     projects = [profile.technical_projects[i].model_dump() for i in project_indices]
