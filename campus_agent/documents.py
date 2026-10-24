@@ -14,7 +14,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, KeepTogether
 from .models import Job, Profile
 
-DOCUMENT_STYLE_VERSION = "a4-black-style-v5"
+DOCUMENT_STYLE_VERSION = "a4-black-style-v6"
 def font_names():
     candidates = [
         (os.getenv("CAMPUS_FONT_REGULAR", ""), os.getenv("CAMPUS_FONT_BOLD", "")),
@@ -64,14 +64,29 @@ def generate_documents(directory: Path, job: Job, profile: Profile, prepared: di
         document = SimpleDocTemplate(str(directory/name), pagesize=A4, rightMargin=48,leftMargin=48,topMargin=45,bottomMargin=56,
                                      title=f"{profile.name} - {job.title}",author=profile.name)
         document.build(flow,onFirstPage=footer,onLaterPages=footer)
-    resume=header()+[para("PROFILE","section"),para(profile.summary),para("SKILLS","section"),para(" | ".join(prepared["skills"])),para("EXPERIENCE","section")]
+    resume=header()
+    if profile.headline:
+        resume.append(para(profile.headline, "role"))
+    resume += [para("PROFILE","section"),para(profile.summary),para("SKILLS","section"),
+               para(" | ".join(prepared["skills"])),para("EXPERIENCE","section")]
     for exp in prepared["experience"]:
         resume += [para(" - ".join(x for x in [exp["role"],exp["organization"]] if x),"role")]
         if exp["dates"]:
             resume += [para(exp["dates"],"contact")]
         resume += [KeepTogether([para("- "+bullet,"bullet")]) for bullet in exp["bullets"]]
+    projects = prepared.get("technical_projects", [])
+    if projects:
+        resume += [para("SELECTED TECHNICAL PROJECTS", "section")]
+        stage_names = {"proposed":"Proposed concept", "prototype":"Prototype",
+                       "tested":"Built and tested", "private_release":"Privately published",
+                       "in_use":"In use", "paused":"Paused"}
+        for project in projects:
+            resume += [para(project["title"] + " — " + stage_names[project["stage"]], "role"),
+                       para(project["summary"])]
     resume += [para("EDUCATION","section")]
     resume += [para(item) for item in profile.education]
+    if profile.interests:
+        resume += [para("INTERESTS","section"),para(" ".join(profile.interests.split()))]
     if profile.availability:
         resume += [para("AVAILABILITY","section"),para(profile.availability)]
     if profile.references_mode == "on_request":
