@@ -23,7 +23,7 @@ FILES = (
     'docs/USER-GUIDE.md', 'docs/ROLE-TAILORING.md', 'docs/LEGACY-CLI.md', 'scripts/build_release.py', 'scripts/build_guide.py',
 )
 MODULES = (
-    '__init__.py', '__main__.py', 'applications.py', 'cli.py', 'connectors.py',
+    '__init__.py', '__main__.py', 'application_review.py', 'applications.py', 'cli.py', 'connectors.py',
     'dashboard.html', 'document_style.py', 'documents.py', 'fit.py', 'listing_info.py', 'listing_view.py',
     'locations.py', 'mail.py', 'mcp_server.py', 'models.py', 'morning.py', 'packet_checks.py',
     'pipeline.py', 'role_types.py', 'sources.py', 'store.py', 'tailor.py', 'web.py',
