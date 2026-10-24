@@ -35,8 +35,17 @@ class Referee(StrictModel):
     phone: str = ""
     sharing_confirmed: bool = False
 
+class TechnicalProject(StrictModel):
+    """Candidate's private, separately labelled project; never employer work."""
+    title: str = Field(min_length=1, max_length=160)
+    stage: Literal["proposed", "prototype", "tested", "private_release", "in_use", "paused"] = "prototype"
+    summary: str = Field(min_length=10, max_length=2000)
+
 class Profile(StrictModel):
     name: str = Field(min_length=1, max_length=160)
+    headline: str = Field(default="", max_length=160)
+    interests: str = Field(default="", max_length=250)
+    technical_projects: list[TechnicalProject] = Field(default_factory=list)
     email: str
     phone: str = ""
     location: str = ""
