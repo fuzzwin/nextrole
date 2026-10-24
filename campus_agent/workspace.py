@@ -441,7 +441,13 @@ class Workspace:
         account = self.require_account("gmail")
         profile = resume_profile(source["text"], account.get("email", ""))
         if self.profile:
-            profile = profile.model_copy(update={"references_mode": self.profile.references_mode, "referees": self.profile.referees})
+            profile = profile.model_copy(update={
+                "references_mode": self.profile.references_mode,
+                "referees": self.profile.referees,
+                "headline": self.profile.headline,
+                "interests": self.profile.interests,
+                "technical_projects": self.profile.technical_projects,
+            })
         self.save_profile(profile)
         self.save_preferences(self.preferences.model_copy(update={"active_resume_id": file_id}))
         return profile.model_dump()
@@ -659,6 +665,9 @@ class Workspace:
             if prepared['document_preferences']['fact_order'] == 'original':
                 prepared['skills'] = list(self.profile.skills)
                 prepared['experience'] = [item.model_dump() for item in self.profile.experience]
+            from .application_review import focus_application
+            prepared = focus_application(job, self.profile, prepared,
+                                         prepared['document_preferences']['resume_focus'])
             # Keep source facts complete, and use a concise opening consistent with the supplied letters.
             prepared["source_documents"] = self.sources_info()
             prepared["active_resume_id"] = self.preferences.active_resume_id

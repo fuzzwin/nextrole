@@ -1120,7 +1120,7 @@ def test_style_page_limit_holds_sample_without_discarding_source_facts(workspace
     bullets=['Confirmed support responsibility '+str(i)+' with Microsoft Excel, Python and many colleagues across local operations. '*4 for i in range(45)]
     workspace.save_profile(workspace.profile.model_copy(update={'experience':[Experience(organization='Example Employer',role='IT Support',dates='2020-2026',bullets=bullets)]}))
     workspace.add_job(role, full=True)
-    workspace.save_document_style({'layout':'comfortable','resume_pages':2})
+    workspace.save_document_style({'layout':'comfortable','resume_pages':2,'resume_focus':'complete'})
     with pytest.raises(ValueError,match='page review limit'):
         workspace.generate_style_sample(role.identity)
     assert workspace.profile.experience[0].bullets==bullets

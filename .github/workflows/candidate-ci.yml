@@ -28,6 +28,18 @@ jobs:
           python -m pip install -e '.[test]'
       - name: Run complete test suite
         run: python -m pytest -q
+      - name: Check inline browser JavaScript syntax
+        run: |
+          python - <<'PY'
+          import pathlib, re
+          html=pathlib.Path("campus_agent/workspace.html").read_text(encoding="utf-8")
+          scripts=re.findall(r"<script[^>]*>(.*?)</script>",html,flags=re.I|re.S)
+          assert scripts, "No browser scripts found"
+          for i,script in enumerate(scripts):
+              pathlib.Path(f"/tmp/nextrole-script-{i}.js").write_text(script,encoding="utf-8")
+          print("Checking",len(scripts),"inline scripts")
+          PY
+          for script in /tmp/nextrole-script-*.js; do node --check "$script"; done
       - name: Build audited clean Mac ZIP
         run: python scripts/build_release.py
       - name: Verify release metadata and contents
@@ -35,22 +47,22 @@ jobs:
           python - <<'PY'
           import pathlib,zipfile,json
           output=pathlib.Path("dist")
-          zips=list(output.glob("NextRole-Mac-0.8.3.zip"))
+          zips=list(output.glob("NextRole-Mac-0.8.4.zip"))
           assert len(zips)==1, zips
           with zipfile.ZipFile(zips[0]) as archive:
               assert archive.testzip() is None
               paths=archive.namelist()
               assert any(p.endswith("/docs/ROLE-TAILORING.md") for p in paths)
               assert not any("/workspace/" in p for p in paths)
-              manifest=json.loads(archive.read("NextRole-Mac-0.8.3/RELEASE-MANIFEST.json"))
-              assert manifest["version"]=="0.8.3"
+              manifest=json.loads(archive.read("NextRole-Mac-0.8.4/RELEASE-MANIFEST.json"))
+              assert manifest["version"]=="0.8.4"
           PY
       - name: Upload clean release candidate
         uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.8.3-Candidate
+          name: NextRole-Mac-0.8.4-Candidate
           path: |
-            dist/NextRole-Mac-0.8.3.zip
-            dist/NextRole-Mac-0.8.3.zip.sha256
-            dist/NextRole-Mac-0.8.3.manifest.json
+            dist/NextRole-Mac-0.8.4.zip
+            dist/NextRole-Mac-0.8.4.zip.sha256
+            dist/NextRole-Mac-0.8.4.manifest.json
           if-no-files-found: error

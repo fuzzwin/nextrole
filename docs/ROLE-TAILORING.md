@@ -4,14 +4,14 @@ The employer's application instructions take priority. This is Australian-focuse
 
 ## What the app actually does
 
-NextRole ranks and reorders the skills and factual bullets in your saved, confirmed profile for each fully read job advertisement. It retains all confirmed bullet facts rather than silently deleting them to fit a page limit. It creates three body paragraphs from those facts, with a short introduction if the employer explicitly requests a "brief introduction", "short intro" or "brief note". The PDF still uses the compatible filename Cover Letter.pdf; inspect its heading and rename it if the employer requires another attachment name. It does not independently verify career claims, invent metrics, create missing qualifications or prove a profile is current.
+NextRole ranks and reorders the skills and factual bullets in your saved, confirmed profile for each fully read job advertisement. The **Focused** option selects relevant exact facts, reports which entries were omitted, and preserves every formal job title and employment period; **Complete** retains all saved professional bullets. The original master facts are never deleted. It creates three body paragraphs from those facts, with a short introduction if the employer explicitly requests a "brief introduction", "short intro" or "brief note". The PDF still uses the compatible filename Cover Letter.pdf; inspect its heading and rename it if the employer requires another attachment name. It does not independently verify career claims, invent metrics, create missing qualifications or prove a profile is current.
 
 ## Before generating
 
 1. Read the original vacancy, including essential qualifications, responsibilities, employer, submission method and attachments.
 2. Check dates, formal job titles, qualifications, real achievements and the status of each project in Profile & sources.
 3. Use Why this match to review strengths and unproven requirements. A match score estimates overlapping evidence, not offer probability.
-4. Use Document style and inspect both PDFs before approving. Two pages is a useful Australian starting point, not a rule; the current app supports up to two or three résumé pages.
+4. Under Document style, choose **Focused** (strongly relevant examples, with the omissions explained) or **Complete** (every professional bullet). Use a two-page limit as a useful starting point and inspect both final PDFs before approving. Two pages is a useful Australian starting point, not a rule; the current app supports up to two or three résumé pages.
 5. Include separately requested selection criteria, a brief pitch or two or three genuine AI-supported examples. Do not mislabel ordinary automation as AI adoption.
 
 ## Grades of evidence and exact wording

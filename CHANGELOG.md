@@ -1,3 +1,12 @@
+## 0.8.4 — 24 October 2026 (candidate review)
+
+- New Focused and Complete résumé content options with exact employment titles/dates preserved, source facts never rewritten, and selected/omitted examples explained in a private application review.
+- Requirement-to-evidence review distinguishes matching saved evidence, unselected evidence and genuine gaps; keyword matches remain advisory.
+- Optional professional headline, separately staged Selected technical projects and one-line interests, editable in Profile & sources and preserved on résumé re-import.
+- Three-paragraph role-specific cover letters prioritise selected achievements plus supported user/stakeholder delivery.
+- Expanded applicant review tips and Australian recruitment documentation; updated audit rules invalidate prior sample approval.
+- No automatic mailing or employer application submission has been enabled.
+
 ## 0.8.3 — 24 October 2026 (candidate release)
 
 - Choose brief introductions when job instructions request them; otherwise create grounded three-paragraph cover letters from existing confirmed facts.
