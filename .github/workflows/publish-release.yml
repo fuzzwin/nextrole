@@ -23,6 +23,18 @@ jobs:
           python -m pip install -r requirements-lock.txt
           python -m pip install -e '.[test]'
           python -m pytest -q
+      - name: Check inline browser JavaScript syntax
+        run: |
+          python - <<'PY'
+          import pathlib, re
+          html=pathlib.Path("campus_agent/workspace.html").read_text(encoding="utf-8")
+          scripts=re.findall(r"<script[^>]*>(.*?)</script>",html,flags=re.I|re.S)
+          assert scripts, "No browser scripts found"
+          for i,script in enumerate(scripts):
+              pathlib.Path(f"/tmp/nextrole-script-{i}.js").write_text(script,encoding="utf-8")
+          print("Checking",len(scripts),"inline scripts")
+          PY
+          for script in /tmp/nextrole-script-*.js; do node --check "$script"; done
       - name: Build clean source distribution
         run: python scripts/build_release.py
       - name: Inspect release contents
