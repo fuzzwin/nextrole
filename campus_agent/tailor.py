@@ -7,30 +7,94 @@ from collections import Counter
 from pydantic import BaseModel, Field
 from .models import Job, Profile
 
+def application_kind(job: Job) -> str:
+    """Treat an explicit employer request for a brief introduction as shorter writing.
+
+    The vacancy is untrusted input: it chooses document length, never supplies
+    candidate facts or free-form instructions to the template.
+    """
+    description = job.description.lower()
+    if re.search(r"\b(?:brief|short)\s+(?:introduction|intro)\b|"
+                 r"\bbrief\s+note\b", description):
+        return "brief_introduction"
+    return "cover_letter"
+
+
+def role_focus(job: Job) -> str:
+    """Describe a role using a small, fixed vocabulary, not generated claims."""
+    title = job.title.lower()
+    text = title + " " + job.description.lower()
+    options = (
+        (r"\b(?:ai|artificial intelligence|automation)\b", "AI and automation"),
+        (r"\b(?:netsuite|erp|business systems|applications)\b", "business systems"),
+        (r"\b(?:reporting|data analyst|dashboard|analytics)\b", "reporting and analysis"),
+        (r"\b(?:service delivery|support|it operations|systems)\b", "systems and service delivery"),
+        (r"\b(?:project|stakeholder|business analyst)\b", "business change and delivery"),
+    )
+    for pattern, label in options:
+        if re.search(pattern, title):
+            return label
+    for pattern, label in options:
+        if re.search(pattern, text):
+            return label
+    return ""
+
+
 def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
-    """Build prose from fixed transitions and exact confirmed source statements."""
+    """A concise, role-aware letter/intro from exact confirmed profile facts.
+
+    Avoid copying claims or instructions out of a job advertisement. The prose
+    never changes a factual bullet's meaning or implies a prototype is live.
+    """
     from .document_style import DocumentStyle
-    choice = DocumentStyle.model_validate(prepared.get('document_preferences', {}))
-    summary = "I am an " + profile.summary if profile.summary.startswith("IT ") else profile.summary
+    choice = DocumentStyle.model_validate(prepared.get("document_preferences", {}))
+    short = application_kind(job) == "brief_introduction"
+    summary = profile.summary.strip()
+    if summary.startswith("IT "):
+        summary = "I am an " + summary
+    elif summary.startswith("Experienced "):
+        summary = "I am an " + summary[0].lower() + summary[1:]
     summary = summary.replace(". Supports ", ". I support ").replace(". Builds ", ". I build ")
-    verbs = {"created", "delivered", "built", "supported", "simplified", "map", "implemented", "manage", "administer", "deploy", "investigated", "run", "led", "recreated"}
-    facts = [b for e in prepared["experience"] if e["organization"] for b in e["bullets"]][:(2 if choice.letter_length == 'brief' else 4)]
-    prose = ["I " + b[0].lower() + b[1:] if b.split()[0].lower() in verbs else b for b in facts]
-    opening = f"I am applying for the {job.title} role at {job.employer}."
-    if prepared.get("cover_style") == "supplied_opening":
-        opening += " I help colleagues turn unfamiliar technology into practical ways of working."
-    if choice.tone == 'warm':
-        opening = f"I would welcome the opportunity to join {job.employer} as {job.title}."
-    elif choice.tone == 'direct':
+    facts = [b.strip() for entry in prepared["experience"] if entry["organization"]
+             for b in entry["bullets"] if b.strip()][:2 if short or choice.letter_length == "brief" else 3]
+    verbs = {"created", "delivered", "built", "supported", "simplified", "mapped",
+             "implemented", "managed", "administered", "deployed", "investigated",
+             "ran", "led", "recreated", "developed", "configured", "coordinated",
+             "trained", "tested", "designed", "reduced", "improved", "maintained",
+             "create", "deliver", "build", "support", "simplify", "map",
+             "implement", "manage", "administer", "deploy", "investigate",
+             "run", "lead", "develop", "configure", "coordinate"}
+    def sentence(bullet: str) -> str:
+        first = bullet.split(maxsplit=1)[0]
+        if first.lower() in verbs:
+            return "I " + first.lower() + bullet[len(first):]
+        return bullet
+
+    if choice.tone == "direct":
         opening = f"Please consider my application for {job.title} at {job.employer}."
-    paragraphs = [f"Dear {job.employer} hiring team,", opening, summary]
-    paragraphs += [" ".join(prose[i:i + 2]) for i in range(0, len(prose), 2)]
-    closing = {'professional': "Thank you for considering my application. I would welcome the opportunity to discuss how my experience could support your team.",
-               'warm': "Thank you for your time and consideration. I would appreciate the chance to discuss the role with your team.",
-               'direct': "Thank you for considering my application. I would welcome a discussion about the role."}[choice.tone]
-    paragraphs += [closing,
-                   f"Kind regards,\n{profile.name}"]
-    return paragraphs
+    elif choice.tone == "warm":
+        opening = f"I would welcome the opportunity to join {job.employer} as {job.title}."
+    else:
+        opening = f"I am applying for the {job.title} role at {job.employer}."
+
+    focus = role_focus(job)
+    link = (f"The role's emphasis on {focus} makes it relevant to the experience above. "
+            if focus else "")
+    closing = ("I would welcome the chance to discuss how I could contribute."
+               if short or choice.letter_length == "brief" else
+               "Thank you for considering my application. I would welcome the opportunity to discuss how my experience could support your team.")
+    evidence = " ".join(sentence(fact) for fact in facts)
+    if not evidence:
+        evidence = "My background is outlined in the attached résumé."
+    # Exactly three body paragraphs, plus greeting and sign-off. Do not turn
+    # a cover-letter style reference into an additional experience claim.
+    return [
+        f"Dear {job.employer} hiring team,",
+        (opening + " " + summary).strip(),
+        evidence,
+        link + closing,
+        f"Kind regards,\n{profile.name}",
+    ]
 
 class Selection(BaseModel):
     # AI can select/reorder supplied facts. It cannot invent resume facts.
@@ -98,7 +162,7 @@ def prepare_text(job: Job, profile: Profile, provider: str, role_type_id: str | 
         (profile.availability + " " if profile.availability else "") + "Thank you for considering my application. I would appreciate the opportunity to discuss the position.",
         f"Sincerely,\n{profile.name}"
     ]
-    return {"role_type_id":role_type_id, "profile":profile.model_dump(), "skills":[profile.skills[i] for i in skill_order],
+    return {"role_type_id":role_type_id, "application_kind":application_kind(job), "profile":profile.model_dump(), "skills":[profile.skills[i] for i in skill_order],
             "experience":experience, "cover_letter":letter, "matched_keywords":matched,
             "method":"Gemini fact ranking + grounded document templates" if provider == "gemini" else "Local keyword ranking + grounded document templates",
             "review_required":True}

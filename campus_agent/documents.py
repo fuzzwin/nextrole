@@ -14,7 +14,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, KeepTogether
 from .models import Job, Profile
 
-DOCUMENT_STYLE_VERSION = "a4-black-style-v4"
+DOCUMENT_STYLE_VERSION = "a4-black-style-v5"
 def font_names():
     candidates = [
         (os.getenv("CAMPUS_FONT_REGULAR", ""), os.getenv("CAMPUS_FONT_BOLD", "")),
@@ -93,7 +93,7 @@ def generate_documents(directory: Path, job: Job, profile: Profile, prepared: di
         resume += [KeepTogether(references)]
     build("Resume.pdf",resume)
     cover=header()+[para(datetime.now(ZoneInfo(timezone)).strftime("%B %d, %Y")),
-                    para("APPLICATION: "+job.title.upper(),"section"),para(job.employer)]
+                    para(("BRIEF INTRODUCTION: " if prepared.get("application_kind") == "brief_introduction" else "APPLICATION: ")+job.title.upper(),"section"),para(job.employer)]
     cover += [para(p) for p in prepared["cover_letter"]]
     build("Cover Letter.pdf",cover)
     (directory/"tailoring.json").write_text(json.dumps(prepared,indent=2,ensure_ascii=False),encoding="utf-8")

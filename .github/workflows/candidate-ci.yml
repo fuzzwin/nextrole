@@ -1,0 +1,56 @@
+name: NextRole Candidate Release CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/evidence-first-resume-cover-2026-10]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned dependencies and test tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e '.[test]'
+      - name: Run complete test suite
+        run: python -m pytest -q
+      - name: Build audited clean Mac ZIP
+        run: python scripts/build_release.py
+      - name: Verify release metadata and contents
+        run: |
+          python - <<'PY'
+          import pathlib,zipfile,json
+          output=pathlib.Path("dist")
+          zips=list(output.glob("NextRole-Mac-0.8.3.zip"))
+          assert len(zips)==1, zips
+          with zipfile.ZipFile(zips[0]) as archive:
+              assert archive.testzip() is None
+              paths=archive.namelist()
+              assert any(p.endswith("/docs/ROLE-TAILORING.md") for p in paths)
+              assert not any("/workspace/" in p for p in paths)
+              manifest=json.loads(archive.read("NextRole-Mac-0.8.3/RELEASE-MANIFEST.json"))
+              assert manifest["version"]=="0.8.3"
+          PY
+      - name: Upload clean release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: NextRole-Mac-0.8.3-Candidate
+          path: |
+            dist/NextRole-Mac-0.8.3.zip
+            dist/NextRole-Mac-0.8.3.zip.sha256
+            dist/NextRole-Mac-0.8.3.manifest.json
+          if-no-files-found: error

@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.8.0.zip**, the download you received.
+2. Find **NextRole-Mac-0.8.3.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -250,6 +250,12 @@ it, choose more space/pages or edit your own profile facts intentionally. The
 app never silently removes confirmed résumé facts to make a shorter document.
 You can still turn email delivery off while approval is pending.
 
+## Role-tailored application writing and tips
+
+NextRole now distinguishes a job advertisement requesting a **brief introduction** from a standard cover letter. Both are produced as a compatible one-page PDF called **Cover Letter.pdf**, with the correct heading shown inside. Check the actual employer's application instructions before attaching the file or putting the introduction in your email body. The writer uses only saved candidate facts and preserves qualifiers; it does **not** invent outcomes or prove the facts itself. Review the three body paragraphs for voice, relevance and true role fit. Selection criteria and required portfolio examples still need separate review and preparation.
+
+Read [Role-tailoring and evidence guide](ROLE-TAILORING.md) for end-user guidance about relevance, metrics, personal projects, referee consent and the proof loop. Every change to document rules makes old sample approval stale; approve a **new** sample after this release.
+
 ## See the document guardrails
 
 Inside a role, open **Résumé & cover-letter guardrails**. The panel shows the
@@ -268,7 +274,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.8.0** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.8.3** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
