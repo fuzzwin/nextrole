@@ -16,5 +16,5 @@ for candidate in "$PWD/.venv/bin/python" python3 python3.14 python3.13 python3.1
     break
   fi
 done
-[[ -n "$python_bin" ]] || fail 'Install Python 3.12 or later from https://www.python.org/downloads/macos/, then reopen this launcher. Open START HERE.html for instructions.'
-"$python_bin" launcher.py "$@" || fail 'NextRole stopped. Read the error above; START HERE.html has troubleshooting steps.'
+[[ -n "$python_bin" ]] || fail 'Install Python 3.12 or later from https://www.python.org/downloads/macos/, then reopen this launcher. Open setup/START HERE.html for instructions.'
+"$python_bin" launcher.py "$@" || fail 'NextRole stopped. Read the error above; setup/START HERE.html has troubleshooting steps.'

@@ -93,7 +93,7 @@ def build(root=ROOT):
     prompts = re.findall(r'```setup-prompt\n(.*?)\n```', markdown, re.S)
     if len(prompts) != 1:
         raise ValueError('The guide must contain exactly one Codex setup prompt')
-    body = render(markdown)
+    body = render(markdown).replace('href="docs/', 'href="../docs/')
     document = '''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>NextRole · Start here</title>
 <style>
@@ -127,9 +127,10 @@ document.getElementById('copy-setup-prompt').addEventListener('click', async fun
   }
 });
 </script></body></html>'''
-    target = root / 'START HERE.html'
+    target = root / 'setup/START HERE.html'
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(document, encoding='utf-8')
-    (root / 'CODEX SETUP PROMPT.txt').write_text(prompts[0] + '\n', encoding='utf-8')
+    (root / 'setup/CODEX SETUP PROMPT.txt').write_text(prompts[0] + '\n', encoding='utf-8')
     return target
 
 

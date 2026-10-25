@@ -16,10 +16,10 @@ from build_guide import build as build_guide
 
 FILES = (
     'LICENSE',
-    'assets/nextrole-banner.png', 'assets/README.md',
-    'README.md', 'START HERE.txt', 'START HERE.html', 'CODEX SETUP PROMPT.txt', 'Start Job Seeker.command',
+    'assets/nextrole-banner.png', 'assets/nextrole-workspace.jpg', 'assets/README.md',
+    'README.md', 'setup/START HERE.txt', 'setup/START HERE.html', 'setup/CODEX SETUP PROMPT.txt', 'setup/Start Job Seeker.command',
     'Start NextRole.command', 'CHANGELOG.md', 'PRIVACY.md', 'launcher.py', 'pyproject.toml', 'requirements-lock.txt', '.gitignore', '.env.example',
-    'config.example.json', 'profile.example.json', 'examples/jobs.json', 'Start-Demo.command',
+    'config.example.json', 'profile.example.json', 'examples/jobs.json', 'setup/Start-Demo.command',
     'docs/USER-GUIDE.md', 'docs/ROLE-TAILORING.md', 'docs/LEGACY-CLI.md', 'scripts/build_release.py', 'scripts/build_guide.py',
 )
 MODULES = (
@@ -39,8 +39,9 @@ SECRET_PATTERNS = (
     '/' + 'Users' + r'/[^/\s]+/',
 )
 # Binary assets must be visually reviewed and pinned before they can be shared.
-# The banner retains its generic C2PA provenance; no user screenshots are allowed.
+# Only reviewed synthetic-data captures may be included; no private-workspace screenshots.
 BINARY_SHA256 = {
+    'assets/nextrole-workspace.jpg': '9cfda945c853d4567bd644a1c81765397cf5df22c63583ac1cc63b20c7275872',
     'assets/nextrole-banner.png': '038eb6f8faa0fe026b3c9695e7b18a4045a23b4eaad3671fc01f9afff296563a',
 }
 
