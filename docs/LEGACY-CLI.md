@@ -100,7 +100,7 @@ Includes a local dashboard, CLI worker, and MCP stdio server. It prepares applic
 
 ## Quick start
 
-On macOS, double-click **Start-Demo.command**. It uses Python 3.12 or later,
+On macOS, double-click **setup/Start-Demo.command**. It uses Python 3.12 or later,
 installs missing dependencies into `.venv`, creates the sample packets, and
 opens the local dashboard. Keep its Terminal window open; press Ctrl+C to stop.
 The first installation requires internet access. Later demo runs work offline.

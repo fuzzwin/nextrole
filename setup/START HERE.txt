@@ -2,8 +2,8 @@ JOB SEEKER FOR MAC — START HERE
 
 RECOMMENDED: GIVE CODEX THE ZIP + YOUR CURRENT RESUME
 No coding knowledge needed. Codex can unpack the project, check requirements,
-help with connections and launch it. Use START HERE.html for detailed steps
-and checkpoints. The same setup message is in CODEX SETUP PROMPT.txt.
+help with connections and launch it. Use setup/START HERE.html for detailed steps
+and checkpoints. The same setup message is in setup/CODEX SETUP PROMPT.txt.
 
 STEP 1 — OPEN A LOCAL CODEX CHAT
 Open Codex on your Mac and sign into your own ChatGPT account. Choose Codex
@@ -27,9 +27,9 @@ Only attach documents you want to share with this Codex chat.
 Keep your resume OUT of the clean ZIP you share with other people.
 
 STEP 4 — COPY THE SETUP MESSAGE, PASTE AND SEND
-Open CODEX SETUP PROMPT.txt, click the text, press Command+A, then Command+C.
+Open setup/CODEX SETUP PROMPT.txt, click the text, press Command+A, then Command+C.
 Click the Codex message box with your attachments, press Command+V, then send.
-START HERE.html has the same message with a Copy setup prompt button.
+setup/START HERE.html has the same message with a Copy setup prompt button.
 Codex should confirm where it will unpack the project and keep existing data safe.
 
 STEP 5 — FOLLOW THE SETUP CHAT
@@ -71,4 +71,4 @@ HOW IT WORKS
 Python runs the site. Codex supplies connected tools. Matching and packet
 tailoring use local rules and confirmed facts, with no LLM inference calls in
 the connected workspace. A separate Codex chat uses its configured model.
-Full guide: START HERE.html / docs/USER-GUIDE.md.
+Full guide: setup/START HERE.html / docs/USER-GUIDE.md.

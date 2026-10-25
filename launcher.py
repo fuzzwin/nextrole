@@ -58,7 +58,7 @@ def install_dependencies():
         subprocess.run([str(python), '-m', 'pip', 'install', '--no-deps', '-e', str(ROOT)],
                        cwd=ROOT, env=environment(), check=True)
         if not dependency_probe(python):
-            raise RuntimeError('Dependency check failed. Keep the error above and see START HERE.html.')
+            raise RuntimeError('Dependency check failed. Keep the error above and see setup/START HERE.html.')
     return python
 
 
@@ -127,13 +127,13 @@ def main():
     if args.check:
         print(f'Python: {sys.version.split()[0]}\nFolder: {ROOT}')
         print('Python dependencies: ' + ('ready' if dependency_probe(python_path()) else 'will install on first launch'))
-        print('Codex CLI: ' + ('found (account access not checked)' if codex else 'not found; follow START HERE.html'))
+        print('Codex CLI: ' + ('found (account access not checked)' if codex else 'not found; follow setup/START HERE.html'))
         print('This check does not sign in, search jobs, send mail or install schedules.')
         return
     python = install_dependencies()
     if not codex:
         print('\nCodex CLI is not installed or not on PATH. Local profile editing and pasted jobs still work.\n'
-              'For connected search, Gmail and Drive, follow START HERE.html and relaunch.\n', flush=True)
+              'For connected search, Gmail and Drive, follow setup/START HERE.html and relaunch.\n', flush=True)
     serve(python, args.port, not args.no_browser)
 
 
@@ -143,5 +143,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('\nNextRole stopped. Your saved workspace is kept.')
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
-        print(f'\nSetup stopped: {error}\nSee START HERE.html for help.', file=sys.stderr)
+        print(f'\nSetup stopped: {error}\nSee setup/START HERE.html for help.', file=sys.stderr)
         sys.exit(1)

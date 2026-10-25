@@ -70,12 +70,12 @@ confirmation; uploading a file alone does not make every statement current.
 Click **Copy setup prompt** below. Click the Codex message box with your
 attachments, press **Command+V**, then send the message. You can also click
 inside the prompt box, press **Command+A** then **Command+C** to copy it.
-The same message is in **CODEX SETUP PROMPT.txt** inside the extracted package.
+The same message is in **setup/CODEX SETUP PROMPT.txt** inside the extracted package.
 
 ```setup-prompt
 Set up this NextRole ZIP on my Mac. I am not technical: use plain English, explain what I should see, and guide me through anything that needs my input.
 
-Locate the ZIP I attached, confirm a suitable local project folder with me, and unpack it there. Do not overwrite an existing installation or personal workspace. If the folder is already extracted, reuse the correct folder containing launcher.py and Start NextRole.command. If you cannot access the attachment or write to the intended folder, help me choose a permitted local location. Read START HERE.txt, docs/USER-GUIDE.md and the launcher instructions before making changes.
+Locate the ZIP I attached, confirm a suitable local project folder with me, and unpack it there. Do not overwrite an existing installation or personal workspace. If the folder is already extracted, reuse the correct folder containing launcher.py and Start NextRole.command. If you cannot access the attachment or write to the intended folder, help me choose a permitted local location. Read setup/START HERE.txt, docs/USER-GUIDE.md and the launcher instructions before making changes.
 
 Check Python 3.12 or later, the project dependencies and Codex CLI. Help install missing requirements from official sources, keep Python packages in the project's .venv, and launch with the supplied launcher. Do not create API keys or ask me to paste passwords or tokens into chat.
 

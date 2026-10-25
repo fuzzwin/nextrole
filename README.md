@@ -1,110 +1,100 @@
-# NextRole JobSeeker AI
+# NextRole
 
-![NextRole - JobSeeker AI - Codex /ClaudeCode : Your next role, ready.](assets/nextrole-banner.png)
+NextRole matches your saved experience to job requirements and explains the fit.<br>
+It prepares résumé and cover-letter PDFs from confirmed evidence for your review.<br>
+You stay in control: it does not submit applications to employers.
 
-**Your next role, ready.** A local job-search workspace for Mac.
+![NextRole local workspace showing fictional example roles](assets/nextrole-workspace.jpg)
+*Actual app capture with synthetic sample data; no connected accounts or live listings. [Screenshot details](assets/README.md).*
 
-**Open `START HERE.html` for the offline setup guide.**
+## Try it on your Mac
 
-1. Start a **local Codex chat on your Mac** and attach the NextRole ZIP.
-2. Attach your **current resume** (PDF or Word), or name your preferred Drive file.
-3. Paste the setup message from **START HERE.html** or **CODEX SETUP PROMPT.txt**.
-4. Let Codex unpack the project, check requirements and your own connections,
-   launch the site, and show your extracted profile for confirmation.
-5. Review a sample packet with sending disabled. Tomorrow, open the launcher
-   in the folder Codex confirmed; no new chat is needed.
+Requires **macOS and Python 3.12+**. Download and extract the [latest Mac release](https://github.com/fuzzwin/nextrole/releases/latest), then open **setup/START HERE.html** for guided setup. Older release ZIPs keep that guide at the top level.
 
-The guide includes checkpoints and a manual-folder fallback if ZIP attachments
-or local permissions need help. Your resume is supplied separately in your own
-setup chat; do not include it in the clean ZIP you share with other people.
-
-Keep Terminal open; Control+C stops the site. Relaunch the same file tomorrow.
-The package starts blank with automatic discovery/sending/tracking disabled.
-
-NextRole searches Australian IT, automation, AI, business analysis, applications,
-project delivery and service delivery roles. It explains experience/requirement
-matches, supports Auto top listings, and prepares checked résumé/letter PDFs.
-Candidate document choices now include **Focused** versus **Complete** résumé scope. Focused mode selects exact source-backed employment bullets and up to two relevant, separately labelled personal technical projects, preserving job chronology and explaining omitted evidence and outstanding skill gaps. Optional candidate headline and interests stay private in the local profile. Refer to [evidence and review guidance](docs/ROLE-TAILORING.md). Neither mode invents achievements or silently edits historical employer records.
-
-Saved roles use paginated lists (10/20/50), combined filters, sorting and a clear
-result count. Each role explains the document guardrails and its check status.
-Before automatic delivery, **Document style** lets each user choose PDF layout,
-page limit, letter tone/detail and fact order, then preview and approve a sample
-résumé and cover letter. Automatic emails remain blocked until current approval
-is saved. Changes to profile/style/sample files invalidate approval. Sample
-approval never enables an email preference or resumes a schedule by itself.
-No employer applications are submitted.
-
-## Tailoring and candidate review
-
-NextRole now distinguishes a vacancy's request for a **brief introduction** from a full cover letter, and creates concise three-paragraph writing from the candidate's saved factual statements. The PDF is still named `Cover Letter.pdf` for existing packet/email compatibility, but its heading identifies a brief introduction when requested. The candidate must review the actual application instructions and choose the correct attachment. The saved profile is the source of truth; role text is not authority to add experience. See [Role-tailoring and evidence guide](docs/ROLE-TAILORING.md).
-
-
-## How GPT / Codex fit in
-
-Python runs the site. Codex app-server supplies your connected tools. The
-connected workspace makes no LLM inference requests: scoring uses local evidence
-rules and tailoring ranks confirmed facts with a grounded letter template.
-PDFs use ReportLab. A separate Codex chat or scheduled run uses the model selected
-in Codex. No GPT model or API key is hardcoded into the connected workspace.
-
-Each recipient must connect their own accounts and set up their own optional
-schedules. A ChatGPT login alone does not guarantee the required connector tools
-are available. New users can still edit profiles and prepare pasted roles locally.
-
-[Full user guide](docs/USER-GUIDE.md) ·
-[Official Codex CLI setup](https://learn.chatgpt.com/docs/codex/cli) ·
-[Plugins](https://learn.chatgpt.com/docs/plugins) ·
-[App-server](https://learn.chatgpt.com/docs/app-server)
-
-## Dependencies and support
-
-macOS and Python 3.12+ are required. Python packages are pinned in
-`requirements-lock.txt` and installed automatically inside this folder.
-No Docker, Google app password or API key is needed for the connected workflow.
-This is a Mac source release, not a signed/notarized app or hosted service.
-Windows/Linux are outside this release. Experimental app-server methods and
-account-specific connector availability may affect compatibility after updates.
-The Mac must be awake/online for local scheduled runs.
-
-## Build a clean sharing ZIP
+From a source checkout:
 
 ```bash
-python3 scripts/build_release.py
+git clone https://github.com/fuzzwin/nextrole.git
+cd nextrole
+./Start\ NextRole.command
 ```
 
-Output: `dist/NextRole-Mac-0.8.4.zip`, a SHA-256 file and a file manifest.
-The builder uses an explicit source allowlist and audits paths, symlinks and
-common credential patterns. It does not read private workspace data. Share this
-clean ZIP, not a used folder: your workspace, profile, PDFs, account state,
-source documents, logs, evidence, credentials and schedules are excluded.
+The launcher creates a local Python environment, installs the pinned dependencies,
+and opens the workspace at `http://127.0.0.1:8877/`. Keep Terminal open;
+Control+C stops the site. Launch the same file to return to your workspace.
 
-The older campus-board CLI and offline demo remain separate compatibility modes.
-Their optional Gemini/SMTP/cloud settings are documented in `docs/LEGACY-CLI.md`
-and are not needed for the connected NextRole. Historical evidence and Windows
-scripts referenced there are not included in this Mac release.
+Start with your confirmed profile and a pasted role. Review the match explanation,
+missing evidence and generated documents before using them. The package starts
+blank, with automatic discovery, email delivery and application tracking disabled.
 
-## Development and privacy
+Optional connected search, Gmail and Drive need your own supported Codex connections.
+A ChatGPT login alone does not guarantee those tools are available. You can edit a
+profile and prepare pasted roles locally without connecting accounts.
 
-The Python distribution/module retains `campus-job-agent` / `campus_agent` for
-compatibility; the product is NextRole. Existing workspace folders and launchers
-keep working. `Start Job Seeker.command` remains a compatibility launcher.
+## What it does
 
-Run checks without calling connected services:
+- Matches roles against saved facts and shows evidence gaps.
+- Prepares Focused or Complete résumés and a cover letter or brief introduction.
+- Keeps personal projects distinct from employment experience.
+- Offers document layout choices and a sample-review step before optional delivery.
+- Organises saved roles with filters, sorting and review status.
+
+Generated PDFs need factual and application-instruction review. Résumé import is
+conservative and layout-dependent; confirm the extracted profile before use.
+Automatic delivery requires current sample approval plus enabled preferences.
+Changes to the profile, style or sample invalidate approval. Approval alone does
+not enable email or restart a schedule. NextRole never applies to jobs for you.
+
+[User guide](docs/USER-GUIDE.md) · [Evidence and tailoring](docs/ROLE-TAILORING.md) · [Privacy](PRIVACY.md)
+
+## How it works
+
+A local Python/FastAPI app stores the workspace on your Mac. Matching uses local
+evidence rules; tailoring selects saved facts and uses grounded templates.
+ReportLab produces the PDFs. The connected workspace itself makes no LLM inference
+requests; optional account tools are accessed through Codex app-server. A separate
+Codex chat or scheduled run uses the model selected there.
+
+This is a personal project built with AI coding tools and a Mac source release,
+not a signed/notarized app or hosted service. Connector availability and experimental
+app-server interfaces can change. Local scheduled runs need an awake, online Mac.
+Windows and Linux are outside this release.
+
+## Repository guide
+
+| Location | Purpose |
+| --- | --- |
+| `campus_agent/` | Local app, evidence matching, document generation and optional connectors |
+| `docs/` | User, tailoring and legacy CLI guides |
+| `setup/` | Offline setup guide, copyable prompt and compatibility/demo launchers |
+| `scripts/` | Guide generation and audited release packaging |
+| `tests/` | Synthetic fixtures and regression checks |
+| `assets/` | Public branding and synthetic-data screenshot |
+| `Start NextRole.command` | Main Mac launcher |
+
+The Python package retains `campus-job-agent` / `campus_agent` for compatibility.
+The legacy launcher is now `setup/Start Job Seeker.command`; it forwards to the main
+launcher. Existing used installations are not migrated by this source change.
+The separate [legacy CLI and offline demo](docs/LEGACY-CLI.md) have optional
+Gemini/SMTP/cloud settings that are not needed by the connected workspace.
+
+## Development and clean releases
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-lock.txt
 .venv/bin/python -m pip install -e '.[test]'
 .venv/bin/python -m pytest -q
+python3 scripts/build_release.py
 ```
 
-Read [PRIVACY.md](PRIVACY.md) before sharing a used installation. Tests use
-synthetic identities. Do not commit your workspace, documents, credentials,
-automation configuration or generated application packets.
+The release builder produces `dist/NextRole-Mac-0.8.4.zip`, a manifest and a SHA-256
+checksum from an explicit allowlist. It audits paths, symlinks, credential patterns
+and approved binary assets. Share that clean ZIP, never a used workspace folder.
+Do not commit profiles, documents, account state, logs, schedules or generated packets.
+Tests use synthetic identities; live connector access needs separate verification.
 
 ## Licence
 
-NextRole is available under the [MIT License](LICENSE). Dependencies retain
-their own licences. No third-party job listing, personal document or connected
-account data is licensed by this repository.
+[MIT](LICENSE). Dependencies retain their own licences. Personal documents,
+third-party listings and connected account data are not licensed by this repository.
