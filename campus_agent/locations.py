@@ -54,6 +54,14 @@ def location_info(job, search_area, override=None):
         saved = job.get('location','')
         if saved and saved not in {search_area, 'Melbourne Victoria Australia', 'Long Beach, CA'}:
             stated, evidence = saved, 'Saved listing location'
+    # Strip only an explicitly known employer prefix, retaining the source evidence.
+    employer = (job.get('employer') or '').strip()
+    if stated and employer and evidence != 'Saved by you' and stated.casefold().startswith(employer.casefold()+' '):
+        remainder = stated[len(employer):].strip(' ,–-')
+        if any(re.search(r'\b'+re.escape(city)+r'\b', remainder, re.I) for city in CITIES):
+            stated = remainder
+    if stated and re.fullmatch(r'\s*remote\s*[-–·,]\s*remote\s*', stated, re.I):
+        stated = 'Remote'
     mode = ''
     if re.search(r'\b(?:hybrid(?: work(?:ing)?)?|work (?:format|arrangement)\s*:?\s*hybrid)\b', header, re.I):
         mode = 'Hybrid'

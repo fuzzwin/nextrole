@@ -60,4 +60,5 @@ def clean_summary(text):
     text = re.sub(r'[^]*|【[^】]*】|\[wordlim\s*:?\s*\d+\]', '', text)
     text = re.sub(r'^\s*(?:(?:Published|Crawled):[^;\n]*;\s*)+', '', text)
     text = re.sub(r'(?m)^L\d+: ?', '', text)
+    text = re.sub(r'(?<!\w)#{1,6}\s*', '', text)
     return re.sub(r'\s+', ' ', text).strip()
