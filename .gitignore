@@ -25,3 +25,6 @@ evidence/
 *.log
 *.pdf
 *.docx
+
+# Local proof-loop logs and reviewer evidence
+.proof/

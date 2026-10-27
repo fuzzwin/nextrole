@@ -500,10 +500,15 @@ class Workspace:
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
             row['top_saved'] = bool(metadata.get('top:'+row['id'],False))
+            from .locations import preferred_location
+            row['preferred_location'] = preferred_location(row['location_info'],self.preferences.location)
             row['top_match'] = bool(self.preferences.auto_top_enabled and row.get('full_description')
                 and row.get('stage') not in {'applied','archived'} and not row['listing']['closed']
+                and row['fit']['auto_eligible'] and row['preferred_location']
+                and row['reading_view']['salary']['status']!='conflicting'
                 and row['fit']['status']=='Good match' and not row['fit']['reviews']
-                and row['fit']['percent'] is not None and row['fit']['percent']>=self.preferences.auto_top_threshold)
+                and row['fit']['percent'] is not None and row['fit']['percent']>=max(75,self.preferences.auto_top_threshold))
+            row['top_reason'] = ('Meets '+str(max(75,self.preferences.auto_top_threshold))+'% threshold; full listing, supported requirements, employer and preferred location checked.' if row['top_match'] else 'Saved by you; independent of the fit assessment.' if row['top_saved'] else '')
             row['top_listing'] = row['top_saved'] or row['top_match']
             quality_path = Path(row["packet_dir"]) / "quality-report.json" if row.get("packet_dir") else None
             row["quality"] = json.loads(quality_path.read_text()) if quality_path and quality_path.is_relative_to(self.artifacts) and quality_path.is_file() else None
@@ -623,7 +628,7 @@ class Workspace:
         return row, Job.model_validate_json(row["payload"])
 
     def hydrate(self, job_id):
-        from .listing_view import confirmed_listing_employer
+        from .listing_view import confirmed_listing_employer, normalize_listing
         row, job = self.job(job_id)
         result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": str(job.url)}], "response_length": "long"})
         text = source_text(result)
@@ -633,6 +638,9 @@ class Workspace:
             raise ValueError('The listing has expired or redirects to a job search page; it cannot be used for a current packet.')
         if len(text) < 300 or any(phrase in text.lower() for phrase in ("just a moment...", "access denied", "failed to fetch", "unable to resolve open call")):
             raise ValueError("The job board blocked readable access. Open the listing and paste its description in Edit job.")
+        text = normalize_listing(text, job.title)
+        if text.startswith('Listing mismatch:'):
+            raise ValueError('The page metadata describes another role. Verify the employer posting or paste the correct listing.')
         self.save_listing_dates(job,text)
         closing = stated_closing_date(text)
         if closing and closing < datetime.now(ZoneInfo(self.preferences.timezone)).date():

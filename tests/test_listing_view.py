@@ -106,3 +106,23 @@ def test_salary_range_is_literal_and_does_not_invent_an_unknown_salary():
     facts=listing_view(text,'Automation Specialist')['facts']
     assert facts[0]['value']=='$120,000 to $140,000 base plus superannuation'
     assert not listing_view('Competitive remuneration and flexible working.','Support Specialist')['facts']
+
+
+def test_structured_employer_salary_and_html_requirements_are_read():
+    import json
+    posting={'@type':'JobPosting','title':'Automation Specialist','description':'<h2>About the role</h2><p>Build business workflows.</p><h2>Requirements</h2><ul><li>Python automation experience.</li><li>Power Automate workflow experience.</li><li>Microsoft 365 systems support experience.</li></ul>','baseSalary':{'currency':'AUD','value':{'minValue':110000,'maxValue':130000,'unitText':'YEAR'}},'jobLocation':{'address':{'addressLocality':'Melbourne','addressRegion':'VIC','addressCountry':'Australia'}}}
+    text='<html><script type="application/ld+json">'+json.dumps(posting)+'</script><p>Noise from the board</p></html>'
+    view=listing_view(text,'Automation Specialist')
+    assert view['salary']['currency']=='AUD' and view['salary']['period']=='year'
+    assert view['salary']['minimum']==110000 and view['salary']['maximum']==130000
+    assert 'Build business workflows.' in view['overview']
+    requirements=next(s for s in view['sections'] if s['title']=='Requirements')
+    assert len(requirements['blocks'][0]['items'])==3
+    assert 'Noise' not in str(view['sections'])
+
+
+def test_other_structured_job_cannot_supply_salary_for_named_role():
+    import json
+    jobs=[{'@type':'JobPosting','title':name,'description':'<p>Unrelated employer role.</p>','baseSalary':{'currency':'USD','value':{'value':999999,'unitText':'YEAR'}}} for name in ['Other Role','Third Role']]
+    text='<html><script type="application/ld+json">'+json.dumps(jobs)+'</script><main><h2>About the role</h2><p>Build business workflows.</p></main></html>'
+    assert listing_view(text,'Automation Specialist')['salary']['status']=='not_stated'
