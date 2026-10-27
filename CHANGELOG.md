@@ -1,3 +1,26 @@
+## 0.9.2 — 28 October 2026 (incomplete-match check)
+
+- Unread, requirements-free or unidentified listings show Assessment pending and neutral component bars, with no numerical match or automatic promotion.
+- Restore flattened Markdown headings/lists and keep job-board tags separate from employer-written requirements.
+- Resolve explicit company headers on supported role pages and match employer-suffixed titles against JobPosting metadata without guessing company identity from a title.
+- Reproduce the saved GBST screenshot case read-only; preserve the private profile and live workspace.
+
+## 0.9.1 — 28 October 2026 (dashboard density)
+
+- Job rows use roughly half the vertical space on desktop while retaining the same facts, badges, score, explanation and actions.
+- Put pagination beside the result count and combine desktop filters into one row to show more jobs before scrolling.
+- Keep readable wrapping and the existing stacked layout on narrower screens.
+
+## 0.9.0 — 28 October 2026 (dashboard and evidence review)
+
+- Multi-role browsing matches any selected family; selections persist across reloads and can be cleared individually.
+- Denser job cards put the original listing link first, followed by salary, location, dates and evidence fit.
+- A short popup summary precedes expandable scoring, source pay wording and full listing details.
+- Full work credit requires affirmative delivery evidence; sparse listings, unknown obligations, prototypes and missing credentials hold automatic strong matches.
+- Automatic strong matches default to 80%, with a 75% floor, full listing, identified employer, preferred location and no outstanding fit checks. Manual saved picks remain separate; this is not an applicant ranking.
+- Employer JobPosting metadata must match the selected role. Pay retains period/currency and source quotes, flags conflicts, and separates base amounts from benefits.
+- Existing private workspace, sample approval, delivery and application-submission boundaries remain in place.
+
 ## 0.8.4 — 24 October 2026 (candidate review)
 
 - New Focused and Complete résumé content options with exact employment titles/dates preserved, source facts never rewritten, and selected/omitted examples explained in a private application review.

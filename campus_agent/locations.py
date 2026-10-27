@@ -11,8 +11,9 @@ CITIES = {'Melbourne':'VIC', 'Sydney':'NSW', 'Brisbane':'QLD', 'Perth':'WA',
 
 
 def location_info(job, search_area, override=None):
-    text = re.sub(r'(?m)^L\d+: ?', '', job['description'])
-    text = re.split(r'(?im)^\s*(?:#+\s*)?(?:Recommended Jobs|Similar jobs|Find similar jobs|People also viewed|More jobs like this|Show more Show less)\b', text)[0]
+    from .listing_view import normalize_listing
+    text = re.sub(r'(?m)^L\d+: ?', '', normalize_listing(job['description'],job.get('title','')))
+    text = re.split(r'(?im)^\s*(?:#+\s*)?(?:Recommended Jobs|Related jobs|Similar jobs|Find similar jobs|People also viewed|More jobs like this|Show more Show less)\b', text)[0]
     header = text[:1800]
     stated = override
     evidence = 'Saved by you' if override else ''
@@ -26,20 +27,26 @@ def location_info(job, search_area, override=None):
             if candidate and len(candidate)<=100 and re.search(r'[A-Za-z]{2}',candidate):
                 stated, evidence = candidate, field[0]
     if not stated:
+        explicit=re.search(r'\b(?:this role|this position|the role|the position|you)\b.{0,45}\b(?:based|located|working)\s+(?:in|at)\s+([A-Z][^.!?\n]{2,90})',header,re.I)
+        if explicit:
+            stated,evidence=explicit[1].strip(),explicit[0]
+    # Unlabelled place headers must not come from office marketing or contacts.
+    header_places='\n'.join(line for line in header.splitlines() if not re.search(r'\b(?:our|office|offices|headquarters|contact|supports|company)\b',line,re.I))
+    if not stated:
         state_names='|'.join(map(re.escape,STATES.values()))
-        place=re.search(r'\b([A-Z][a-z]+(?: [A-Z][a-z]+){0,2}),?\s+('+state_names+r')(?:[, ]+Australia)?\b',header)
+        place=re.search(r'\b([A-Z][a-z]+(?: [A-Z][a-z]+){0,2}),?\s+('+state_names+r')(?:[, ]+Australia)?\b',header_places)
         if place:
             stated,evidence=place[0],place[0]
     if not stated:
         # Common unlabelled board headers: “Scoresby VIC, Australia” or “Sydney, NSW”.
-        place = re.search(r'\b([A-Z][a-z]+(?: [A-Z][a-z]+){0,2}),?\s+(VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b(?:[, ]+Australia)?', header)
+        place = re.search(r'\b([A-Z][a-z]+(?: [A-Z][a-z]+){0,2}),?\s+(VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b(?:[, ]+Australia)?', header_places)
         if place:
             stated, evidence = place[0], place[0]
     if not stated:
         city_pattern = '|'.join(map(re.escape, CITIES))
-        place = re.search(r'(?:'+city_pattern+r')\s+(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b',header)
+        place = re.search(r'(?:'+city_pattern+r')\s+(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b',header_places)
         if not place:
-            place = re.search(r'\b(?:'+city_pattern+r')[, ]+Australia\b', header, re.I)
+            place = re.search(r'\b(?:'+city_pattern+r')[, ]+Australia\b', header_places, re.I)
         if place:
             stated, evidence = place[0], place[0]
     if not stated:
@@ -62,3 +69,15 @@ def location_info(job, search_area, override=None):
     states = list(dict.fromkeys(states+[CITIES[c] for c in cities]))
     return {'display':stated or 'Location not stated', 'stated':bool(stated),
             'cities':cities, 'states':states, 'arrangement':mode, 'evidence':evidence}
+
+
+def preferred_location(info, search_area):
+    """Use extracted places, never a city mentioned in duties or company offices."""
+    if not info.get('stated'): return False
+    cities=[c for c in CITIES if re.search(r'\b'+re.escape(c)+r'\b',search_area,re.I)]
+    regions=[c for c,n in STATES.items() if re.search(r'\b(?:'+c+'|'+n+r')\b',search_area,re.I)]
+    if cities and set(cities)&set(info.get('cities',[])): return True
+    if not cities and regions and set(regions)&set(info.get('states',[])): return True
+    australian=bool(cities or regions or re.search(r'\bAustralia\b',search_area,re.I))
+    if australian and info.get('arrangement')=='Remote' and re.search(r'\bAustralia\b',info.get('display',''),re.I): return True
+    return info.get('display','').strip().casefold()==search_area.strip().casefold()

@@ -920,8 +920,8 @@ def test_corrected_referee_marks_existing_packet_stale_until_regenerated(workspa
 
 def setup_automatic_top_role(workspace,role):
     from campus_agent.models import Experience
-    workspace.save_profile(workspace.profile.model_copy(update={'skills':['Python'], 'experience':[Experience(organization='Example Employer',role='IT Support Specialist',dates='2021 - Present',bullets=['Built a Python utility used monthly by Finance to convert payment files.'])]}))
-    job=role.model_copy(update={'title':'Automation Specialist','location':'Melbourne, VIC','description':'Location: Melbourne, VIC\nRequirements\n- Python workflow automation experience.'})
+    workspace.save_profile(workspace.profile.model_copy(update={'skills':['Python','Power Automate','Microsoft 365'], 'experience':[Experience(organization='Example Employer',role='IT Support Specialist',dates='2021 - Present',bullets=['Built a Python utility used monthly by Finance to convert payment files.','Delivered Power Automate approval workflows.','Administered Microsoft 365 for IT onboarding.'])]}))
+    job=role.model_copy(update={'title':'Automation Specialist','location':'Melbourne, VIC','description':'Location: Melbourne, VIC\nRequirements\n- Python workflow automation experience.\n- Power Automate workflow experience.\n- Microsoft 365 systems support experience.'})
     workspace.add_job(job,full=True)
     return job
 

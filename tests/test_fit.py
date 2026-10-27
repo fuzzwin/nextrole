@@ -18,11 +18,12 @@ def assess(text,p=None,title='Automation Specialist',full=True):
 def test_match_uses_job_requirements_and_work_evidence_not_all_profile_skills():
     text='Location: Melbourne, VIC\nRequirements\n- Python workflow automation experience.'
     fit=assess(text)
-    assert fit['percent']==100 and fit['status']=='Good match'
+    assert fit['percent']==79 and fit['status']=='Needs review'
+    assert not fit['auto_eligible']
     assert fit['breakdown']==[
-        {'id':'skills','label':'Relevant skills','weight':30,'points':30,'covered':1,'total':1},
-        {'id':'experience','label':'Work experience','weight':40,'points':40,'covered':1,'total':1},
-        {'id':'requirements','label':'Stated requirements','weight':30,'points':30,'covered':1,'total':1}]
+        {'id':'skills','label':'Relevant skills','weight':30,'points':30,'covered':1,'total':1,'state':'assessed'},
+        {'id':'experience','label':'Work experience','weight':40,'points':40,'covered':1,'total':1,'state':'assessed'},
+        {'id':'requirements','label':'Stated requirements','weight':30,'points':30,'covered':1,'total':1,'state':'assessed'}]
     assert fit['requirements'][0]['status']=='Supported'
     assert fit['strengths'][0]['evidence'] in profile().experience[0].bullets
     assert 'not a hiring probability' in fit['method'].lower()
@@ -53,9 +54,10 @@ def test_missing_mandatory_technology_and_specialist_duration_limit_score():
 
 def test_optional_requirements_and_related_roles_do_not_create_false_gaps():
     fit=assess('Location: Melbourne, VIC\nRequirements\n- Python workflow automation experience.\nHelpful, not required\n- Kubernetes and Australian citizenship.\nSimilar jobs\n.NET lead developer requiring ten years experience.')
-    assert fit['status']=='Good match'
-    assert fit['percent']==100
-    assert fit['matched_skills']==['Python'] and not fit['reviews']
+    assert fit['status']=='Needs review'
+    assert fit['percent']==79
+    assert fit['matched_skills']==['Python']
+    assert all(r['label'].startswith('Limited evidence:') for r in fit['reviews'])
 
 
 def test_non_it_degree_does_not_satisfy_technical_qualification_heading():
@@ -75,7 +77,8 @@ def test_closed_and_partial_listings_cannot_appear_as_good_matches():
     text='Location: Melbourne, VIC\nNo longer accepting applications\nRequirements\n- Python workflow automation experience.'
     assert assess(text)['status']=='Closed' and assess(text)['percent']==0
     partial=assess(text.replace('No longer accepting applications',''),full=False)
-    assert partial['percent']<=49 and partial['status']=='Needs review'
+    assert partial['percent'] is None and partial['status']=='Needs review'
+    assert partial['assessment_state']=='incomplete'
 
 
 def test_referee_titles_are_never_used_as_candidate_work_experience():

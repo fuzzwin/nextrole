@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.8.4.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.2.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.8.4** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.2** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -456,3 +456,34 @@ python3 launcher.py --check
 ```
 
 It checks Python/dependency/CLI presence, not private account access.
+
+
+## Evidence fit and compact browsing (0.9.2)
+
+Use **Role types** to tick several families. A role matches any selected family;
+location, minimum fit, date and status filters still combine with that selection.
+Remove individual chips or use **Clear filters**. These browsing choices do not
+change the role families used by discovery.
+
+The role title opens the original advert. **View details** opens the short summary,
+location, listed pay and the main evidence check. Expand **Fit and evidence details**
+for supported/partial/unconfirmed counts and exact saved facts. Weighted points are
+available in each component's explanation; a full bar describes the recognised
+criteria, not independent proof of every possible skill or hiring probability.
+
+A short advert cannot establish a 100% strong match. Automatic strong matches need
+at least three distinct stated requirements, two supporting work examples, a full
+listing, identified employer, preferred location and no outstanding fit checks.
+The default threshold is 80%; older lower settings use a minimum of 75%.
+Unknown or compound obligations stay for manual review. Skills-only, prototype,
+future and uncertain work evidence does not establish delivered experience.
+These conservative local rules may hold a suitable role for review; confirm the
+actual advert and your source profile. **Your saved pick** is a separate manual pin.
+
+Listed pay preserves its period and currency where stated. Open **Pay source and
+basis** for the exact captured wording. A likely annual basis is labelled inferred;
+hourly/day rates are not silently annualised. Conflicting figures need checking
+against the original advert. Blocked pages still require pasted employer text.
+
+
+Unread leads, listings with no assessable requirements and unconfirmed employer identities show **Assessment pending**. Their bars stay neutral; missing information does not become zero fit or a fixed49% score. Read or paste the full employer advert and confirm identity to assess. Job-board keyword tags alone are not mandatory requirements.
