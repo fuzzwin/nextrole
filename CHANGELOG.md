@@ -1,3 +1,7 @@
+## 0.9.4 — 28 October 2026 (usability polish)
+
+- Clarify match gaps, listing summaries, location and pay uncertainty; add previous/next role navigation.
+
 ## 0.9.3 — 28 October 2026 (live refresh performance)
 
 - Reuse unchanged derived listing views and evidence assessments; invalidate them on source, profile, preferences, full-listing, closure or location changes.

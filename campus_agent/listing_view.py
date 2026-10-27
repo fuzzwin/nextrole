@@ -148,7 +148,12 @@ def listing_view(text, title='', employer=''):
     overview_text = next((b['text'] if b['kind']=='paragraph' else b['items'][0]
         for section in sections if re.search(r'^(?:about the role|the role|your role|the opportunity|what you will do|responsibilities|key responsibilities)$',section['title'],re.I)
         for b in section['blocks']), preview)
-    return {'overview':overview_text[:500], 'salary':salary, 'title':display_title,'facts':facts,'employer':employer,'sections':sections,'highlights':highlights[:3],
+    overview_text = re.sub(r'(?<!\w)#{1,6}\s*', '', overview_text)
+    if len(overview_text) > 500:
+        excerpt = overview_text[:500]
+        boundary = max((m.end() for m in re.finditer(r'[.!?](?=\s)', excerpt)), default=0)
+        overview_text = (excerpt[:boundary] if boundary >= 250 else excerpt.rsplit(' ', 1)[0] if ' ' in excerpt else '').rstrip() + '…'
+    return {'overview':overview_text, 'salary':salary, 'title':display_title,'facts':facts,'employer':employer,'sections':sections,'highlights':highlights[:3],
             'notices':notices,'preview':preview,'original_chars':len(original)}
 
 

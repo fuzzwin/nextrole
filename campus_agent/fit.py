@@ -216,7 +216,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             special=True
         extra=unsupported_clauses(criterion,facts)
         if extra:
-            reasons.append('Unconfirmed requirement detail: '+', '.join(dict.fromkeys(extra))+'.')
+            reasons.append('Some details of this requirement are not confirmed in your saved evidence.')
             special=True
         if not special and not evidence:
             if required_tools and len(found)==len(required_tools):
