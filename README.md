@@ -88,7 +88,7 @@ python3 -m venv .venv
 python3 scripts/build_release.py
 ```
 
-The release builder produces `dist/NextRole-Mac-0.9.2.zip`, a manifest and a SHA-256
+The release builder produces `dist/NextRole-Mac-0.9.3.zip`, a manifest and a SHA-256
 checksum from an explicit allowlist. It audits paths, symlinks, credential patterns
 and approved binary assets. Share that clean ZIP, never a used workspace folder.
 Do not commit profiles, documents, account state, logs, schedules or generated packets.
