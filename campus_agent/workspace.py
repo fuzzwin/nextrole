@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import html
 import json
@@ -194,6 +195,8 @@ class Workspace:
         self.bridge = bridge or ConnectorBridge(self.root)
         self.pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="job-agent")
         self.write_lock = threading.RLock()
+        self._jobs_read_lock = threading.RLock()
+        self._assessment_cache = {}
         self.scan_lock = threading.Lock()
         self.stop_event = threading.Event()
         self.accounts = {}
@@ -460,6 +463,10 @@ class Workspace:
         return {"score": min(100, len(matched) * 8), "skills": matched[:12]}
 
     def jobs(self):
+        with self._jobs_read_lock:
+            return self._jobs_read()
+
+    def _jobs_read(self):
         from .listing_info import extract_dates, date_state, clean_summary
         from .locations import location_info
         from .listing_view import listing_view
@@ -471,6 +478,9 @@ class Workspace:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
             metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%'")}
         applications = {a['id']:a for a in self.get_meta('applications', [])}
+        profile, preferences = self.profile, self.preferences
+        context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
+        context_hash = hashlib.sha256(context.encode()).hexdigest()
         for row in rows:
             row.update(details.get(row["id"], {}))
             row.update(self.match(row["job"]))
@@ -481,22 +491,29 @@ class Workspace:
             row["shortlist"] = metadata.get("shortlist:" + row["id"])
             row['listing'] = metadata.get('listing:'+row['id'], extract_dates(row['job']['description']))
             row['listing'] = {**row['listing'], **date_state(row['listing'],self.preferences.timezone)}
-            row['source_domain'] = urlsplit(row['job']['url']).netloc.removeprefix('www.')
-            row['summary'] = clean_summary(row['job']['description'])
-            row['location_info'] = location_info(row['job'], self.preferences.location, metadata.get('location_override:'+row['id']))
-            row['reading_view'] = listing_view(row['job']['description'], row['job']['title'], row['job']['employer'])
-            # A literal coverage percentage, separate from the existing search rank.
-            # Use the primary description, excluding known recommendation sections.
-            skill_phrases = [s for s in self.profile.skills if terms(s)] if self.profile else []
-            view = row['reading_view']
-            listing_words = terms(view['title']+' '+' '.join(
-                b['text'] if b['kind']=='paragraph' else ' '.join(b['items'])
-                for section in view['sections'] for b in section['blocks']))
-            overlaps = [s for s in skill_phrases if terms(s) <= listing_words]
-            row['skill_overlap'] = {'percent':round(100*len(overlaps)/len(skill_phrases)) if skill_phrases else None,
-                'matched':len(overlaps),'total':len(skill_phrases),'skills':overlaps}
-            row['fit'] = fit_assessment(Job.model_validate(row['job']), self.profile, self.preferences,
-                row['reading_view'],row['location_info'],full=bool(row.get('full_description')),closed=row['listing']['closed'])
+            cache_key = (context_hash, json.dumps(row['job'],sort_keys=True), bool(row.get('full_description')),
+                         row['listing']['closed'], json.dumps(metadata.get('location_override:'+row['id']),sort_keys=True))
+            cached = self._assessment_cache.get(row['id'])
+            if cached is not None and cached[0] == cache_key:
+                row.update(copy.deepcopy(cached[1]))
+            else:
+                row['source_domain'] = urlsplit(row['job']['url']).netloc.removeprefix('www.')
+                row['summary'] = clean_summary(row['job']['description'])
+                row['location_info'] = location_info(row['job'], preferences.location, metadata.get('location_override:'+row['id']))
+                row['reading_view'] = listing_view(row['job']['description'], row['job']['title'], row['job']['employer'])
+                # A literal coverage percentage, separate from the existing search rank.
+                # Use the primary description, excluding known recommendation sections.
+                skill_phrases = [s for s in profile.skills if terms(s)] if profile else []
+                view = row['reading_view']
+                listing_words = terms(view['title']+' '+' '.join(
+                    b['text'] if b['kind']=='paragraph' else ' '.join(b['items'])
+                    for section in view['sections'] for b in section['blocks']))
+                overlaps = [s for s in skill_phrases if terms(s) <= listing_words]
+                row['skill_overlap'] = {'percent':round(100*len(overlaps)/len(skill_phrases)) if skill_phrases else None,
+                    'matched':len(overlaps),'total':len(skill_phrases),'skills':overlaps}
+                row['fit'] = fit_assessment(Job.model_validate(row['job']), profile, preferences,
+                    row['reading_view'],row['location_info'],full=bool(row.get('full_description')),closed=row['listing']['closed'])
+                self._assessment_cache[row['id']] = (cache_key, copy.deepcopy({key:row[key] for key in ['source_domain', 'summary', 'location_info', 'reading_view', 'skill_overlap', 'fit']}))
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
             row['top_saved'] = bool(metadata.get('top:'+row['id'],False))
@@ -529,6 +546,8 @@ class Workspace:
                 if row["quality"].get("ruleset") != RULESET_VERSION:
                     row["quality"]["delivery_ready"] = False
                     row["quality"]["errors"].append("Regenerate this packet to apply the current role-focus rules")
+        present = {row['id'] for row in rows}
+        self._assessment_cache = {key:value for key,value in self._assessment_cache.items() if key in present}
         return sorted(rows, key=lambda row: (-row["score"], row["seen_at"]))
 
     def add_job(self, job, full=False):

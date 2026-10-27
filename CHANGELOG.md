@@ -1,3 +1,9 @@
+## 0.9.3 — 28 October 2026 (live refresh performance)
+
+- Reuse unchanged derived listing views and evidence assessments; invalidate them on source, profile, preferences, full-listing, closure or location changes.
+- Keep manual pins, application status and packet/delivery checks fresh on every read.
+- Coalesce overlapping browser refreshes so a large saved-job workspace does not queue repeated requests.
+
 ## 0.9.2 — 28 October 2026 (incomplete-match check)
 
 - Unread, requirements-free or unidentified listings show Assessment pending and neutral component bars, with no numerical match or automatic promotion.
