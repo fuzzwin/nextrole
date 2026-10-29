@@ -47,22 +47,22 @@ jobs:
           python - <<'PY'
           import pathlib,zipfile,json
           output=pathlib.Path("dist")
-          zips=list(output.glob("NextRole-Mac-0.9.5.zip"))
+          zips=list(output.glob("NextRole-Mac-0.9.6.zip"))
           assert len(zips)==1, zips
           with zipfile.ZipFile(zips[0]) as archive:
               assert archive.testzip() is None
               paths=archive.namelist()
               assert any(p.endswith("/docs/ROLE-TAILORING.md") for p in paths)
               assert not any("/workspace/" in p for p in paths)
-              manifest=json.loads(archive.read("NextRole-Mac-0.9.5/RELEASE-MANIFEST.json"))
-              assert manifest["version"]=="0.9.5"
+              manifest=json.loads(archive.read("NextRole-Mac-0.9.6/RELEASE-MANIFEST.json"))
+              assert manifest["version"]=="0.9.6"
           PY
       - name: Upload clean release candidate
         uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.9.5-Candidate
+          name: NextRole-Mac-0.9.6-Candidate
           path: |
-            dist/NextRole-Mac-0.9.5.zip
-            dist/NextRole-Mac-0.9.5.zip.sha256
-            dist/NextRole-Mac-0.9.5.manifest.json
+            dist/NextRole-Mac-0.9.6.zip
+            dist/NextRole-Mac-0.9.6.zip.sha256
+            dist/NextRole-Mac-0.9.6.manifest.json
           if-no-files-found: error
