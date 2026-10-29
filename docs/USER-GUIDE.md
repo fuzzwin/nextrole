@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.4.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.5.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.4** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.5** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -458,7 +458,7 @@ python3 launcher.py --check
 It checks Python/dependency/CLI presence, not private account access.
 
 
-## Evidence fit and compact browsing (0.9.4)
+## Evidence fit and compact browsing (0.9.5)
 
 Use **Role types** to tick several families. A role matches any selected family;
 location, minimum fit, date and status filters still combine with that selection.
@@ -488,6 +488,10 @@ against the original advert. Blocked pages still require pasted employer text.
 
 Unread leads, listings with no assessable requirements and unconfirmed employer identities show **Assessment pending**. Their bars stay neutral; missing information does not become zero fit or a fixed49% score. Read or paste the full employer advert and confirm identity to assess. Job-board keyword tags alone are not mandatory requirements.
 
-## Usability improvements (0.9.4)
+## Usability improvements (0.9.5)
 
 Use Previous and Next in a role to move through the current filtered and sorted results. A pending assessment tells you what listing information to check. Pay is shown as captured; an inferred annual basis or conflicting figures need verification.
+
+## Reading and assessing roles (0.9.5)
+
+Find jobs reads up to 12 relevant new listings. Use Read & assess filtered roles to process up to 12 eligible saved roles at a time. Blocked sources remain visible: open the listing and paste the original advert in Edit role, or retry that role explicitly. These actions do not prepare or send applications.

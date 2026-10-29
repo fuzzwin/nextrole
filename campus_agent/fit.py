@@ -119,6 +119,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     if not profile or profile.is_example:
         result['reviews']=[{'label':'Save your confirmed résumé profile to assess this role.','requirement':''}]
         return result
+    if re.search(r'(?i)\b(?:summary|synopsis|excerpt)\b[^\n]{0,100}\bnot\s+(?:a\s+)?verbatim\b|\bnot\s+(?:a\s+)?verbatim\b[^\n]{0,100}\b(?:summary|synopsis|excerpt)\b',job.description):
+        full=False
     if re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',job.description):
         result.update(assessment_state='incomplete',assessment_notice='Verify the original role posting before assessment.',status='Needs review',reviews=[{'label':'The source returned a job-search results page instead of this role. Verify the original posting.','requirement':''}])
         return result
@@ -158,9 +160,10 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                               'kind':'Experience','evidence':fact['text'],'source':fact})
 
     criteria=[]
-    for heading,text in rows:
-        optional=bool(re.search(OPTIONAL,heading,re.I)) or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
-        explicit=re.search(r'\b(?:must|required|at least|mandatory|seeking a certified)\b|^(?:Demonstrated|Strong|Proven|Experience|Commercial experience|Hands.on experience|Working knowledge|Ability to)\b',text,re.I)
+    for heading,block_text in rows:
+      for text in re.split(r'(?<=[.!?])\s+(?=[A-Z])', block_text):
+        optional=bool(re.search(OPTIONAL,heading,re.I)) or heading.casefold() in {'about us','about the company','company description','benefits','what we offer'} or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
+        explicit=re.search(r'\b(?:must|required|at least|mandatory|seeking a certified)\b|^(?:Requires|You need|Demonstrated|Strong|Proven|Experience|Commercial experience|Hands.on experience|Working knowledge|Ability to)\b',text,re.I)
         if not optional and (re.fullmatch(REQUIRED,heading,re.I) or explicit):
             if len(text.strip())>15 and not re.fullmatch(r'Beyond that:?',text,re.I):
                 criteria.append(text)

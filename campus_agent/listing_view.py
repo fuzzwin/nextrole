@@ -48,6 +48,22 @@ def confirmed_listing_employer(job, text):
             name=company[1].strip()
             title_found=any(role_key(job.title) in {role_key(re.sub(r'^#+\s*','',line)),role_key(re.sub(r'^#+\s*','',line))+' - '+name.casefold()} for line in header.splitlines() if line.startswith('#'))
             if title_found: return name
+    if (host == 'indeed.com' or host.endswith('.indeed.com')) and urlsplit(str(job.url)).path == '/viewjob':
+        header=re.split(r'(?im)^\s*(?:#+\s*)?Full job description\s*$', text, maxsplit=1)[0]
+        match=re.search(r'(?m)^\s*#+\s+([^\n]+)\s*\n+\s*([^\n]+)',header)
+        if match:
+            title=match[1].strip()
+            saved=re.split(r'\s+-\s+',job.title)[0].strip()
+            name=re.sub(r'\s+\.css-[^\n]*$', '',match[2]).strip()
+            from .locations import CITIES, STATES
+            location_words = list(CITIES) + list(STATES.values()) + ['Australia']
+            is_location = any(re.search(r'\b'+re.escape(place)+r'\b', name, re.I) for place in location_words) or bool(re.search(r'\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b',name))
+            invalid = re.search(r'\b(?:indeed|job description|location|remote|hybrid|on.site|stars?|rating|apply|employer not|company not|not disclosed|not stated|unknown|confidential|anonymous|undisclosed|recruiter|sign in|save job|view job)\b', name, re.I)
+            # A genuine board company header is followed by a parent, rating or location line.
+            following=header[match.end():]
+            context=re.search(r'(?im)^\s*(?:\(part of .+\)|[0-5](?:\.\d)?(?:\s+[0-5](?:\.\d)?)?\s+out of\s+5\s+stars|[^\n]{0,70}\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b)\s*$',following)
+            if role_key(title)==role_key(saved) and re.fullmatch(r'[\w][\w &.,\'’()/-]{1,98}',name) and not is_location and not invalid and context:
+                return name
     # The official careers host and its company section independently establish identity.
     host = (urlsplit(str(job.url)).hostname or '').lower()
     if host in {'openai.com', 'www.openai.com'} and urlsplit(str(job.url)).path.startswith('/careers/'):
@@ -69,6 +85,8 @@ def listing_view(text, title='', employer=''):
     freehire = 'Sign in to see your match' in text and 'Profile match' in text
     if freehire:
         text = re.split(r'(?im)^\s*## Skills\s*$', text)[0]
+    # Split explicit inline headings at paragraph or sentence boundaries only.
+    text = re.sub(r'(?im)(^|(?<=[.!?])\s+)(Job Requirements|Requirements|Essential requirements|What you need|About the role|About us|About the company|Company description|Benefits|What we offer|Desirable|Nice to have):\s*', lambda m:m.group(1)+'\n'+m.group(2)+'\n', text)
     lines = [line.strip() for line in text.splitlines()]
     display_title = next((re.sub(r'^#+\s*','',line) for line in lines
                           if line.startswith('#') and len(re.sub(r'^#+\s*','',line))>8
