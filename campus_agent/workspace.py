@@ -26,6 +26,21 @@ from .tailor import prepare_text, terms
 from .role_types import DEFAULT_ROLE_TYPES, matched_types, validate_types, example_types
 
 
+def public_listing_url(url):
+    """Canonical LinkedIn job URLs contain only a numeric ID; never forward tracking."""
+    from urllib.parse import urlsplit
+    parsed=urlsplit(url)
+    if parsed.username or parsed.password: raise ValueError('Credentials are not permitted in source URLs.')
+    if parsed.scheme != 'https' or not parsed.hostname: raise ValueError('A public HTTPS source URL is required.')
+    if parsed.hostname and (parsed.hostname.lower()=='linkedin.com' or parsed.hostname.lower().endswith('.linkedin.com')):
+        match=re.fullmatch(r'/(?:comm/)?jobs/view/(?:[^/]*-)?(\d+)/?',parsed.path)
+        if not match: raise ValueError('LinkedIn URL does not identify one public job.')
+        return 'https://www.linkedin.com/jobs/view/'+match[1]+'/'
+    if any(re.search(r'(?i)(?:token|secret|auth|password|otp|session|signature|key|credential)', k) for k in parse_qs(parsed.query)):
+        raise ValueError('Private or authenticated source URL parameters are not permitted.')
+    return url
+
+
 class Preferences(StrictModel):
     role_types: list[str] = Field(default_factory=lambda: list(DEFAULT_ROLE_TYPES))
     use_custom_keywords: bool = False
@@ -736,7 +751,7 @@ class Workspace:
     def _hydrate(self, job_id):
         from .listing_view import confirmed_listing_employer, normalize_listing
         row, job = self.job(job_id)
-        result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": str(job.url)}], "response_length": "long"})
+        result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": public_listing_url(str(job.url))}], "response_length": "long"})
         text = source_text(result)
         if re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',text):
             raise ValueError('The URL returned job-search results instead of the original listing; verify the employer posting before preparing a packet.')
@@ -749,6 +764,8 @@ class Workspace:
             raise ValueError('The page metadata describes another role. Verify the employer posting or paste the correct listing.')
         closing = stated_closing_date(text)
         text = readable_listing(text, job.title)
+        if len(text.strip())<300 or re.search(r'(?i)\b(?:AI.generated summary|search results|access denied|failed to fetch)\b',text):
+            raise ValueError('The source returned only a short or incomplete listing; the saved advert was kept.')
         job = job.model_copy(update={"description": text[:60000], "employer": confirmed_listing_employer(job, text)})
         with self.write_lock:
             current,_ = self.job(job_id)

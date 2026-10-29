@@ -1,3 +1,7 @@
+## 0.9.7 — 30 October 2026 (source recovery)
+
+- Recognise additional source requirement headings and employer fields, use clean LinkedIn job links, and protect saved adverts from short source responses.
+
 ## 0.9.6 — 30 October 2026 (salary classification)
 
 - Exclude company funding, valuation and revenue figures from salary while retaining stated pay figures.
