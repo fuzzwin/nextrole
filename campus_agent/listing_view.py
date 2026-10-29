@@ -23,7 +23,7 @@ HEADINGS = {
     'what you need to do now', 'other relevant information',
     'required experience', 'required skills', 'required skills and experience',
     'required experience & skills', 'required qualifications',
-    'job requirements', 'key criteria', 'company description',
+    'job requirements', 'key requirements', 'skills required', 'key criteria', 'company description', 'company overview', 'our story',
 }
 
 
@@ -32,15 +32,37 @@ def without_site_footer(text):
     return re.split(r'(?im)^\s*Research\s*\n+\s*[*•-]\s+Research Index\b', text, maxsplit=1)[0].rstrip()
 
 
+def title_matches_source(saved_title, text):
+    """Require a role title in the captured single-role heading, not body mentions."""
+    if re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,120}\bjobs?\s+in\b',text): return False
+    headings=re.findall(r'(?m)^\s*#{1,6}\s+([^\n]{3,200})',text[:4000])
+    saved=re.sub(r'\s+-\s+Indeed\.com\s*$', '', saved_title,flags=re.I)
+    saved=re.sub(r'\s+-\s+(?:[A-Za-z][A-Za-z .\']*\s+)?(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)(?:\s+\d{4})?\s*$', '', saved,flags=re.I)
+    saved=re.sub(r'\s+Job Details\s*$', '',saved,flags=re.I).strip().casefold()
+    for heading in headings[:1]:
+        candidate=heading.strip().casefold()
+        if candidate == saved: return True
+        alias=re.search(r'\s*\(([^()]{2,60})\)\s*$',heading)
+        if alias and saved == (alias[1]+' - '+heading[:alias.start()].strip()).casefold(): return True
+    return False
+
+
 def confirmed_listing_employer(job, text):
     """Resolve placeholders from explicit employer evidence, never a product mention."""
     from urllib.parse import urlsplit
     host = (urlsplit(str(job.url)).hostname or '').lower()
     if not re.fullmatch(r'(?:Employer on job listing|Employer in job alert|Unknown|TBD)', job.employer, re.I):
         return job.employer
-    explicit = re.search(r'(?im)^\s*(?:Employer|Hiring organisation|Hiring organization)\s*:\s*([^\n|<>]{2,100})\s*$', text)
-    if explicit:
-        return explicit[1].strip()
+    explicit = re.search(r'(?im)^\s*(?:Employer|Company|Hiring organisation|Hiring organization)\s*:\s*([^\n|<>]{2,100})\s*$', text)
+    first_heading=re.search(r'(?m)^\s*#{1,6}\s+[^\n]+',text)
+    next_heading=re.search(r'(?m)^\s*#{1,6}\s+[^\n]+',text[first_heading.end():]) if first_heading else None
+    header_end=first_heading.end()+next_heading.start() if next_heading else len(text)
+    if explicit and first_heading and first_heading.end() < explicit.start() < header_end and title_matches_source(job.title,text):
+        name=explicit[1].strip()
+        from .locations import CITIES, STATES
+        geographic=any(re.search(r'\b'+re.escape(v)+r'\b',name,re.I) for v in [*CITIES,*STATES.values()]) or bool(re.search(r'\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b',name))
+        if not geographic and not re.search(r'\b(?:indeed|remote|hybrid|apply|rating|stars?|unknown|not disclosed|not stated|undisclosed|confidential)\b|\b[0-5](?:\.\d)?\s+out of\s+5\b|\b(?:funding|valuation|revenue)\s+(?:raised|of|is|was)\b',name,re.I):
+            return name
     if host in {'simplyhired.com.au','www.simplyhired.com.au'} and urlsplit(str(job.url)).path.startswith('/job/'):
         header=re.split(r'(?im)^\s*(?:#+\s*)?(?:Full Job Description|Job Details|Qualifications|Benefits)\s*$',restore_flat_markdown(text),maxsplit=1)[0]
         company=re.search(r'(?m)^\s*[-*]\s+([^\n|<>]{2,100}?)\s+-\s+[0-5](?:\.\d)?\s*$',header)
@@ -62,7 +84,9 @@ def confirmed_listing_employer(job, text):
             # A genuine board company header is followed by a parent, rating or location line.
             following=header[match.end():]
             context=re.search(r'(?im)^\s*(?:\(part of .+\)|[0-5](?:\.\d)?(?:\s+[0-5](?:\.\d)?)?\s+out of\s+5\s+stars|[^\n]{0,70}\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b)\s*$',following)
-            if role_key(title)==role_key(saved) and re.fullmatch(r'[\w][\w &.,\'’()/-]{1,98}',name) and not is_location and not invalid and context:
+            alias=re.search(r'\s*\(([^()]{2,60})\)\s*$',title)
+            alias_match=bool(alias and job.title.casefold().startswith((alias[1]+' - '+title[:alias.start()].strip()+' - ').casefold()))
+            if (role_key(title)==role_key(saved) or alias_match) and re.fullmatch(r'[\w][\w &.,\'’()/-]{1,98}',name) and not is_location and not invalid and context:
                 return name
     # The official careers host and its company section independently establish identity.
     host = (urlsplit(str(job.url)).hostname or '').lower()
@@ -86,7 +110,7 @@ def listing_view(text, title='', employer=''):
     if freehire:
         text = re.split(r'(?im)^\s*## Skills\s*$', text)[0]
     # Split explicit inline headings at paragraph or sentence boundaries only.
-    text = re.sub(r'(?im)(^|(?<=[.!?])\s+)(Job Requirements|Requirements|Essential requirements|What you need|About the role|About us|About the company|Company description|Benefits|What we offer|Desirable|Nice to have):\s*', lambda m:m.group(1)+'\n'+m.group(2)+'\n', text)
+    text = re.sub(r'(?im)(^|(?<=[.!?])\s+)(Job Requirements|Key Requirements|Requirements|Skills Required|Your Profile|What you[\x27’]ll need to succeed|What you need|Essential requirements|About the role|About us|About the company|Company description|Benefits|What we offer|Desirable|Nice to have):\s*', lambda m:m.group(1)+'\n'+m.group(2)+'\n', text)
     lines = [line.strip() for line in text.splitlines()]
     display_title = next((re.sub(r'^#+\s*','',line) for line in lines
                           if line.startswith('#') and len(re.sub(r'^#+\s*','',line))>8
@@ -136,6 +160,10 @@ def listing_view(text, title='', employer=''):
         if re.fullmatch(r'[-_=]{3,}',line) or line in {'Discussion Report Save','Description Company','Save to board','Sign in','Seek'}:
             continue
         bullet = re.match(r'^(?:[*•-]\s+|\d+[.)]\s+)(.+)',line)
+        if bullet and re.match(r'(?i)^bonus points\b',bullet[1]):
+            flush()
+            sections.append({'title':'Bonus points','blocks':[]})
+            continue
         if bullet:
             flush()
             ordered=bool(re.match(r'^\d+[.)]',line))

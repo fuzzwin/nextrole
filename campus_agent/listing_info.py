@@ -53,7 +53,7 @@ def date_state(metadata, timezone):
     today = datetime.now(ZoneInfo(timezone)).date()
     closing = metadata.get('closes_on')
     days = (datetime.fromisoformat(closing).date() - today).days if closing else None
-    return {'closed':days is not None and days < 0,'days_to_close':days}
+    return {'closed':bool(metadata.get('closed_notice')) or (days is not None and days < 0),'days_to_close':days}
 
 
 def clean_summary(text):

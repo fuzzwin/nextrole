@@ -40,8 +40,8 @@ DOMAINS = [
     ('Security operations',r'\bsecurity\b|\bpermissions?\b|\baccess control\b|\bauthentication\b',r'security incident|Entra ID|phishing|authentication'),
     ('User guidance and communication',r'\bguides?\b|\bcommunication|\btraining|\bcoaching|\benablement|\badoption',r'interactive guide|plain.language user guides|induction guides|awareness training|AI Hub demonstration'),
 ]
-REQUIRED = r'what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
-OPTIONAL = r'helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
+REQUIRED = r'what you[’\x27]ll need to succeed|key requirements|skills required|what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
+OPTIONAL = r'bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
 QUALIFIED = r'\b(?:prototyp\w*|concept|propos\w*|paused|before rollout|ahead of rollout|not (?:yet )?(?:deployed|live)|proof.of.concept|planned|planning|intended|learning|studying|tutorial|training exercise|not implemented|not yet rolled out)\b'
 PRODUCTION = r'\b(?:production|deployed|live|real (?:people|users)|used monthly)\b'
 
@@ -104,6 +104,11 @@ def mentions(text):
     return [name for name,pattern in TOOLS.items() if re.search(pattern,text,re.I)]
 
 
+def company_section(heading):
+    name=heading.casefold().strip()
+    return name in {'company description','company overview','our story'} or (name.startswith('about ') and name not in {'about the role','about you'})
+
+
 def sentences(view):
     for section in view.get('sections',[]):
         for block in section['blocks']:
@@ -133,7 +138,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     # Referees' titles and example cover letters cannot become candidate experience.
     profile_text='\n'.join([s for s in profile.skills if positive_evidence(s)]+[f['text'] for f in facts])
     scoring_text=view.get('title',job.title)+'\n'+'\n'.join(text for heading,text in rows
-        if not re.search(OPTIONAL,heading,re.I) and heading.casefold() not in {'about us','about the company','company description'})
+        if not re.search(OPTIONAL,heading,re.I) and not company_section(heading))
     tools=mentions(scoring_text)
     supported_tools=[t for t in tools if re.search(TOOLS[t],profile_text,re.I)]
     tool_values={t:(1 if any(re.search(TOOLS[t],f['text'],re.I) and evidence_value(f['text'])==1 for f in facts) else 0.5) for t in supported_tools}
@@ -162,7 +167,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     criteria=[]
     for heading,block_text in rows:
       for text in re.split(r'(?<=[.!?])\s+(?=[A-Z])', block_text):
-        optional=bool(re.search(OPTIONAL,heading,re.I)) or heading.casefold() in {'about us','about the company','company description','benefits','what we offer'} or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
+        optional=bool(re.search(OPTIONAL,heading,re.I)) or company_section(heading) or heading.casefold() in {'benefits','what we offer'} or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
         explicit=re.search(r'\b(?:must|required|at least|mandatory|seeking a certified)\b|^(?:Requires|You need|Demonstrated|Strong|Proven|Experience|Commercial experience|Hands.on experience|Working knowledge|Ability to)\b',text,re.I)
         if not optional and (re.fullmatch(REQUIRED,heading,re.I) or explicit):
             if len(text.strip())>15 and not re.fullmatch(r'Beyond that:?',text,re.I):
