@@ -14,7 +14,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 
 STEP 2 — ATTACH THE ZIP
 Open Finder (the blue smiling face), then Downloads. Drag
-NextRole-Mac-0.9.4.zip into the Codex message box, or use its attachment
+NextRole-Mac-0.9.5.zip into the Codex message box, or use its attachment
 control. Wait until the attachment appears. You do not need to unzip it first.
 If your browser already extracted it, use the original ZIP or the fallback below.
 
@@ -56,7 +56,7 @@ Terminal window open. Control+C stops the site; closing a browser tab alone does
 Your Mac cannot search while shut down. Schedules are optional and set up separately.
 
 MANUAL-FOLDER FALLBACK — ONLY IF ATTACHMENTS DO NOT WORK
-Double-click the ZIP in Downloads. Move the whole extracted NextRole-Mac-0.9.4
+Double-click the ZIP in Downloads. Move the whole extracted NextRole-Mac-0.9.5
 folder to Documents. In Codex open THAT folder as a local project and start a
 chat. It must contain launcher.py and Start NextRole.command. Attach your resume
 or name the Drive file. Paste the same prompt and add:

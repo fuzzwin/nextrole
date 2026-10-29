@@ -184,6 +184,18 @@ def search_results(payload: dict) -> list[dict]:
     return list(unique.values())
 
 
+class BatchInProgress(ValueError):
+    pass
+
+
+class SourceChanged(ValueError):
+    pass
+
+
+class ReadInProgress(ValueError):
+    pass
+
+
 class Workspace:
     def __init__(self, root: Path, bridge=None, recover=True):
         self.root = root.resolve()
@@ -198,6 +210,9 @@ class Workspace:
         self._jobs_read_lock = threading.RLock()
         self._assessment_cache = {}
         self.scan_lock = threading.Lock()
+        self.batch_lock = threading.Lock()
+        self.read_guard = threading.Lock()
+        self.reading_jobs = set()
         self.stop_event = threading.Event()
         self.accounts = {}
         with self.store.connect() as db:
@@ -469,14 +484,14 @@ class Workspace:
     def _jobs_read(self):
         from .listing_info import extract_dates, date_state, clean_summary
         from .locations import location_info
-        from .listing_view import listing_view
+        from .listing_view import listing_view, confirmed_listing_employer
         from .fit import fit_assessment
         from .applications import application_key
         rows = self.store.jobs()
         style_preferences = self.document_style().model_dump()
         with self.store.connect() as db:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
-            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%'")}
+            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%'")}
         applications = {a['id']:a for a in self.get_meta('applications', [])}
         profile, preferences = self.profile, self.preferences
         context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
@@ -500,7 +515,10 @@ class Workspace:
                 row['source_domain'] = urlsplit(row['job']['url']).netloc.removeprefix('www.')
                 row['summary'] = clean_summary(row['job']['description'])
                 row['location_info'] = location_info(row['job'], preferences.location, metadata.get('location_override:'+row['id']))
-                row['reading_view'] = listing_view(row['job']['description'], row['job']['title'], row['job']['employer'])
+                assessed_job = Job.model_validate(row['job'])
+                if row.get('full_description'):
+                    assessed_job = assessed_job.model_copy(update={'employer':confirmed_listing_employer(assessed_job,assessed_job.description)})
+                row['reading_view'] = listing_view(row['job']['description'], row['job']['title'], assessed_job.employer)
                 # A literal coverage percentage, separate from the existing search rank.
                 # Use the primary description, excluding known recommendation sections.
                 skill_phrases = [s for s in profile.skills if terms(s)] if profile else []
@@ -511,11 +529,12 @@ class Workspace:
                 overlaps = [s for s in skill_phrases if terms(s) <= listing_words]
                 row['skill_overlap'] = {'percent':round(100*len(overlaps)/len(skill_phrases)) if skill_phrases else None,
                     'matched':len(overlaps),'total':len(skill_phrases),'skills':overlaps}
-                row['fit'] = fit_assessment(Job.model_validate(row['job']), profile, preferences,
+                row['fit'] = fit_assessment(assessed_job, profile, preferences,
                     row['reading_view'],row['location_info'],full=bool(row.get('full_description')),closed=row['listing']['closed'])
                 self._assessment_cache[row['id']] = (cache_key, copy.deepcopy({key:row[key] for key in ['source_domain', 'summary', 'location_info', 'reading_view', 'skill_overlap', 'fit']}))
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
+            row['assessment_source'] = metadata.get('assessment_source:'+row['id'])
             row['top_saved'] = bool(metadata.get('top:'+row['id'],False))
             from .locations import preferred_location
             row['preferred_location'] = preferred_location(row['location_info'],self.preferences.location)
@@ -533,9 +552,14 @@ class Workspace:
             row['profile_stale'] = bool(row.get('packet_dir') and row.get('status')=='prepared' and self.profile and (
                 not tailoring_path.is_relative_to(self.artifacts) or not tailoring_path.is_file()
                 or json.loads(tailoring_path.read_text()).get('profile')!=self.profile.model_dump()))
+            packet_revision = json.loads(tailoring_path.read_text()).get('job_revision') if tailoring_path and tailoring_path.is_file() else None
+            row['listing_stale'] = bool(row.get('packet_dir') and (metadata.get('packet_source_stale:'+row['id']) == row['packet_dir'] or (packet_revision is not None and packet_revision != row['revision'])))
             row['style_stale'] = bool(tailoring_path and tailoring_path.is_file() and
                 (json.loads(tailoring_path.read_text()).get('document_preferences', {}) != style_preferences))
             if row["quality"]:
+                if row['listing_stale']:
+                    row['quality']['delivery_ready'] = False
+                    row['quality']['errors'].append('Listing changed; regenerate this packet before delivery')
                 if row['style_stale']:
                     row['quality']['delivery_ready'] = False
                     row['quality']['errors'].append('Document style updated; regenerate this packet')
@@ -566,7 +590,14 @@ class Workspace:
         # A search snippet must never overwrite a complete, reviewed job description.
         if previous and not full:
             return False
-        self.store.save_job(job)
+        if previous and full:
+            if previous.get('packet_dir'):
+                self.set_meta('packet_source_stale:'+job.identity,previous['packet_dir'])
+            # Keep prior packet access and tracking while the new revision is assessed.
+            with self.store.connect() as db:
+                db.execute('UPDATE jobs SET revision=?,payload=?,updated_at=? WHERE id=?', (job.revision,job.model_dump_json(),utcnow(),job.identity))
+        else:
+            self.store.save_job(job)
         with self.store.connect() as db:
             db.execute("INSERT INTO job_details(job_id,full_description) VALUES (?,?) ON CONFLICT(job_id) DO UPDATE SET full_description=excluded.full_description", (job.identity, int(full)))
         return previous is None
@@ -607,6 +638,7 @@ class Workspace:
             if errors and not items:
                 raise ValueError("Search failed: " + errors[0])
             added = 0
+            new_ids = []
             excluded_closed = 0
             for item in items:
                 description = clean_excerpt(str(item["description"]))[:12000]
@@ -631,8 +663,14 @@ class Workspace:
                     title = title.split(' at ')[0].strip()
                 job = Job(source_id="opportunity", title=title, employer=company,
                     url=item["url"], description=description, location=self.preferences.location)
-                added += self.add_job(job)
-            report = {"at": utcnow(), "mode": "extended" if extended else "daily", "queries": queries,
+                is_new = self.add_job(job)
+                added += is_new
+                if is_new and matched_types(job, self.preferences.role_types): new_ids.append(job.identity)
+            try:
+                assessment = self.assess_batch(new_ids) if new_ids else {"assessed":0,"needs_source":0,"blocked":0,"remaining":0}
+            except BatchInProgress:
+                assessment = {"assessed":0,"needs_source":0,"blocked":0,"remaining":len(new_ids),"deferred":True}
+            report = {"assessment": assessment, "at": utcnow(), "mode": "extended" if extended else "daily", "queries": queries,
                 "found": len(items), "new": added, "excluded_closed": excluded_closed,
                 "domains": sorted({urlsplit(str(i["url"])).netloc for i in items}), "errors": errors}
             self.set_meta("last_search", report)
@@ -646,7 +684,56 @@ class Workspace:
             raise ValueError("Job no longer exists")
         return row, Job.model_validate_json(row["payload"])
 
+    def assess_batch(self, job_ids):
+        if not self.batch_lock.acquire(blocking=False):
+            raise BatchInProgress('A read and assess batch is already running.')
+        try:
+            rows = {row['id']:row for row in self.jobs()}
+            eligible = [i for i in dict.fromkeys(job_ids) if i in rows and rows[i].get('stage') not in {'archived','applied'} and not rows[i].get('listing',{}).get('closed') and rows[i].get('fit',{}).get('assessment_state') == 'incomplete' and (not rows[i].get('assessment_source') or rows[i]['assessment_source'].get('revision') != rows[i]['revision'])]
+            with self.read_guard:
+                busy = set(self.reading_jobs)
+            available = [i for i in eligible if i not in busy]
+            counts = {'assessed':0, 'needs_source':0, 'blocked':0, 'remaining':max(0,len(available)-12)+len(eligible)-len(available), 'processed':0, 'total':min(12,len(available))}
+            self.set_meta('assessment_progress', counts)
+            for job_id in available[:12]:
+                try:
+                    self.hydrate(job_id)
+                    row = next(r for r in self.jobs() if r['id']==job_id)
+                    status = 'assessed' if row['fit']['assessment_state']=='assessed' else 'needs_source'
+                    note = row['fit'].get('assessment_notice','')
+                except SourceChanged as exc:
+                    status, note = 'needs_source', str(exc)
+                except ReadInProgress:
+                    counts['remaining'] += 1
+                    self.set_meta('assessment_progress',counts)
+                    continue
+                except Exception as exc:
+                    status, note = 'blocked', str(exc)[:500]
+                self.set_meta('assessment_source:'+job_id, {'status':status,'message':note,'at':utcnow(),'revision':self.job(job_id)[0]['revision']})
+                counts[status]+=1
+                counts['processed']+=1
+                self.set_meta('assessment_progress',counts)
+            return counts
+        finally:
+            self.batch_lock.release()
+
     def hydrate(self, job_id):
+        with self.read_guard:
+            if job_id in self.reading_jobs:
+                raise ReadInProgress('This role is already being read.')
+            self.reading_jobs.add(job_id)
+        try:
+            result = self._hydrate(job_id)
+            self.set_meta('assessment_source:'+job_id, None)
+            return result
+        except Exception as exc:
+            self.set_meta('assessment_source:'+job_id, {'status':'needs_source' if isinstance(exc,SourceChanged) else 'blocked','message':str(exc)[:500],'at':utcnow(),'revision':self.job(job_id)[0]['revision']})
+            raise
+        finally:
+            with self.read_guard:
+                self.reading_jobs.discard(job_id)
+
+    def _hydrate(self, job_id):
         from .listing_view import confirmed_listing_employer, normalize_listing
         row, job = self.job(job_id)
         result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": str(job.url)}], "response_length": "long"})
@@ -660,13 +747,17 @@ class Workspace:
         text = normalize_listing(text, job.title)
         if text.startswith('Listing mismatch:'):
             raise ValueError('The page metadata describes another role. Verify the employer posting or paste the correct listing.')
-        self.save_listing_dates(job,text)
         closing = stated_closing_date(text)
-        if closing and closing < datetime.now(ZoneInfo(self.preferences.timezone)).date():
-            raise ValueError(f"This listing states a closing date of {closing.isoformat()}. Verify that the employer has reopened it before preparing a packet.")
         text = readable_listing(text, job.title)
         job = job.model_copy(update={"description": text[:60000], "employer": confirmed_listing_employer(job, text)})
-        self.add_job(job, full=True)
+        with self.write_lock:
+            current,_ = self.job(job_id)
+            if current['payload'] != row['payload']:
+                raise SourceChanged('The saved role changed while reading; your edit was kept. Review the source before retrying.')
+            self.save_listing_dates(job,text)
+            if closing and closing < datetime.now(ZoneInfo(self.preferences.timezone)).date():
+                raise ValueError(f"This listing states a closing date of {closing.isoformat()}. Verify that the employer has reopened it before preparing a packet.")
+            self.add_job(job, full=True)
         return {"description_chars": len(job.description)}
 
     def prepare(self, job_id, sample_id=None):

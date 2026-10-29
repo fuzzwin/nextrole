@@ -1,3 +1,7 @@
+## 0.9.5 — 30 October 2026 (assessment flow)
+
+- Read up to 12 relevant new or filtered saved listings for evidence-based assessment and show source outcomes. Open role details from the card.
+
 ## 0.9.4 — 28 October 2026 (usability polish)
 
 - Clarify match gaps, listing summaries, location and pay uncertainty; add previous/next role navigation.

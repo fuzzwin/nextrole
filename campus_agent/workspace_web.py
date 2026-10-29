@@ -51,7 +51,7 @@ def create_workspace_app(workspace: Workspace):
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
-            "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
+            "assessment_progress": workspace.get_meta("assessment_progress"), "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
             "applications": workspace.get_meta('applications', []), "application_sync": workspace.get_meta('application_sync'),
             "morning_schedule": workspace.get_meta("morning_schedule"), "alert_search": workspace.get_meta("job_alert_search")}
 
@@ -173,15 +173,25 @@ def create_workspace_app(workspace: Workspace):
         data = await request.json()
         return workspace.set_top_listing(job_id, data.get('top'))
 
+    @app.post('/api/assess-filtered')
+    async def assess_filtered(request: Request):
+        data = await request.json()
+        ids = data.get('job_ids', [])
+        if not isinstance(ids, list) or len(ids)>10000 or not all(isinstance(i,str) for i in ids):
+            raise ValueError('Invalid role selection')
+        return workspace.task('Read and assess saved roles', lambda: workspace.assess_batch(ids))
+
     @app.post("/api/jobs/{job_id}/edit")
     async def edit_job(job_id: str, request: Request):
         data = await request.json()
-        row, original = workspace.job(job_id)
-        job = Job.model_validate({**original.model_dump(mode="json"), **data.get("job", {}), "source_id": original.source_id, "url": str(original.url)})
-        workspace.add_job(job, full=True)
-        workspace.set_meta('location_override:'+job.identity, job.location)
-        with workspace.store.connect() as db:
-            db.execute("UPDATE job_details SET stage=?,notes=? WHERE job_id=?", (str(data.get("stage", "saved"))[:40], str(data.get("notes", ""))[:12000], job_id))
+        with workspace.write_lock:
+            row, original = workspace.job(job_id)
+            job = Job.model_validate({**original.model_dump(mode="json"), **data.get("job", {}), "source_id": original.source_id, "url": str(original.url)})
+            workspace.add_job(job, full=True)
+            workspace.set_meta('assessment_source:'+job.identity, None)
+            workspace.set_meta('location_override:'+job.identity, job.location)
+            with workspace.store.connect() as db:
+                db.execute("UPDATE job_details SET stage=?,notes=? WHERE job_id=?", (str(data.get("stage", "saved"))[:40], str(data.get("notes", ""))[:12000], job_id))
         return {"saved": True}
 
     @app.post("/api/jobs/{job_id}/{action}")
