@@ -1,4 +1,4 @@
-name: Publish NextRole 0.9.5
+name: Publish NextRole 0.9.6
 
 on:
   pull_request:
@@ -41,7 +41,7 @@ jobs:
         run: |
           python - <<'PY'
           import json, pathlib, zipfile
-          name="NextRole-Mac-0.9.5"
+          name="NextRole-Mac-0.9.6"
           z=pathlib.Path("dist")/(name+".zip")
           assert z.exists()
           with zipfile.ZipFile(z) as archive:
@@ -50,15 +50,15 @@ jobs:
               assert any(x.endswith("/docs/ROLE-TAILORING.md") for x in files)
               assert not any("/workspace/" in x or "/artifacts/" in x for x in files)
               m=json.loads(archive.read(name+"/RELEASE-MANIFEST.json"))
-              assert m["version"]=="0.9.5"
+              assert m["version"]=="0.9.6"
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.9.5-Verified
+          name: NextRole-Mac-0.9.6-Verified
           path: |
-            dist/NextRole-Mac-0.9.5.zip
-            dist/NextRole-Mac-0.9.5.zip.sha256
-            dist/NextRole-Mac-0.9.5.manifest.json
+            dist/NextRole-Mac-0.9.6.zip
+            dist/NextRole-Mac-0.9.6.zip.sha256
+            dist/NextRole-Mac-0.9.6.manifest.json
           if-no-files-found: error
 
   publish-release:
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: NextRole-Mac-0.9.5-Verified
+          name: NextRole-Mac-0.9.6-Verified
           path: dist
       - name: Release verified Mac package
         env:
@@ -78,15 +78,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if gh release view v0.9.5 --repo "$GH_REPO" >/dev/null 2>&1; then
-            echo "Release v0.9.5 already exists; refusing to overwrite artifacts."
+          if gh release view v0.9.6 --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release v0.9.6 already exists; refusing to overwrite artifacts."
           else
-            gh release create v0.9.5 \
-              dist/NextRole-Mac-0.9.5.zip \
-              dist/NextRole-Mac-0.9.5.zip.sha256 \
-              dist/NextRole-Mac-0.9.5.manifest.json \
+            gh release create v0.9.6 \
+              dist/NextRole-Mac-0.9.6.zip \
+              dist/NextRole-Mac-0.9.6.zip.sha256 \
+              dist/NextRole-Mac-0.9.6.manifest.json \
               --repo "$GH_REPO" \
               --target "$GITHUB_SHA" \
-              --title "NextRole Mac 0.9.5" \
+              --title "NextRole Mac 0.9.6" \
               --notes "Compact dashboard, multi-role filters, conservative evidence matching and pending assessments for incomplete listings. Local regression and browser checks passed; this workflow verifies the source package before publication. Requires Python 3.12+ and local Mac setup. No application submission or automatic sending is enabled by this release. Existing sample approvals must be reviewed again."
           fi

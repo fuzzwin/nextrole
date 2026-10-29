@@ -245,10 +245,22 @@ def salary_info(text):
         evidence=line
         # An explicitly suffixed currency is just another source spelling.
         line=re.sub(r'('+number+r'(?:\s*(?:–|—|-|to)\s*'+number+r')?)\s+(AUD|USD|NZD|GBP|EUR)\b',r'\2 \1',line,flags=re.I)
-        for match in pattern.finditer(line):
-            value=match[0].strip();tail=line[match.end():]
+        matches=list(pattern.finditer(line))
+        for index,match in enumerate(matches):
+            sentence_start=max((m.end() for m in re.finditer(r'[.!?]\s+',line[:match.start()])),default=0)
+            sentence_end=next((match.end()+m.start() for m in re.finditer(r'[.!?]\s+',line[match.end():])),len(line))
+            start=max(sentence_start,matches[index-1].end() if index else 0)
+            end=min(sentence_end,matches[index+1].start() if index+1<len(matches) else len(line))
+            context=line[start:end]
+            offset=match.start()-start
+            value=match[0].strip();tail=context[offset+len(match[0]):]
+            prefix=context[:offset]
+            pay_marker=list(re.finditer(r'\b(?:base salary|salary(?: range)?|remuneration|compensation|pay(?: rate| range)?)\s*:',prefix,re.I))
+            if pay_marker: prefix=prefix[pay_marker[-1].start():]
+            funding=r'\b(?:funding|funded|fundraise|fundraising|raised|raising|series\s+[a-f]\b|valuation|valued|revenue|turnover|investment round)\b'
+            if re.search(funding,prefix,re.I) or re.search(r'^(?:\s*[mMbB])?\s*(?:in\s+)?(?:series\s+[a-f]\b|funding|valuation|revenue|raised)',tail,re.I):
+                continue
             # Classify each money figure, rather than dropping a salary line that mentions benefits.
-            prefix=line[:match.start()]
             nearby_before=re.split(r'[;+]|\b(?:plus|and)\b',prefix,flags=re.I)[-1]
             nearby_after=re.split(r'[;+]|\b(?:plus|and)\b',tail,flags=re.I)[0]
             other=r'learning|training|budget|allowance|salary packaging|sign.on|bonus|revenue|turnover|relocation|equity|project value|projects range'
@@ -260,13 +272,13 @@ def salary_info(text):
             if benefit_before: continue
             if benefit_after and not (declared_base or (labelled and explicit_basis and explicit_basis.start()<benefit_after.start())): continue
             if re.search(r'not (?:disclosed|stated)|negotiable|salary packaging',prefix,re.I): continue
-            before=line[:match.start()].strip()
+            before=prefix.strip()
             period_context=tail+' '+before
             pm=re.search(r'(?:per\s+|/\s*|\bp\s*/\s*|\bp\.?)(annum|year|hour|day|week|month|hr|a|h|d)\b|\b(hourly|daily|weekly|monthly|annually|annual)\b',period_context,re.I)
             period=next((g.lower() for g in pm.groups() if g),None) if pm else None
             period={'annum':'year','hr':'hour','h':'hour','d':'day','a':'year','hourly':'hour','daily':'day','weekly':'week','monthly':'month','annually':'year','annual':'year'}.get(period,period)
-            before=line[:match.start()].strip()
-            pay_context=bool(re.search(r'base|super|package|salary|remuneration|pay\b',line,re.I))
+            before=prefix.strip()
+            pay_context=bool(re.search(r'\b(?:base|super|package|salary|remuneration|compensation|pay)\b',prefix+' '+tail,re.I))
             standalone=not before and not re.search(r'[a-z]',tail,re.I)
             if not labelled and not pm and not (pay_context or standalone): continue
             numbers=re.findall(number,value)
@@ -278,6 +290,8 @@ def salary_info(text):
             currencies=[c for c,rx in [('USD',r'USD|US\$'),('NZD',r'NZD'),('AUD',r'AUD|AU\$|(?<![A-Z])A\$'),('GBP',r'GBP|£'),('EUR',r'EUR|€')] if re.search(rx,value,re.I)]
             currency=currencies[0] if len(currencies)==1 else None
             display=evidence.split(':',1)[1].strip() if labelled and ':' in evidence else evidence
+            if len(matches)>1 or start>0 or end<len(line):
+                display=(prefix+value+tail).strip(' ,;')
             if len(display)>160: display=value+tail[:60]
             record={'status':'conflicting' if len(currencies)>1 else 'stated','display':display,'currency':currency,'period':period,'period_inferred':bool(inferred),'minimum':parsed[0],'maximum':parsed[-1],'evidence':evidence,'alternatives':[]}
             same=next((r for r in candidates if r['minimum']==parsed[0] and r['maximum']==parsed[-1] and r['period']==period and (r['currency']==currency or r['currency'] is None or currency is None)),None)

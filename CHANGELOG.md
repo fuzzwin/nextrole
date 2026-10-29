@@ -1,3 +1,7 @@
+## 0.9.6 — 30 October 2026 (salary classification)
+
+- Exclude company funding, valuation and revenue figures from salary while retaining stated pay figures.
+
 ## 0.9.5 — 30 October 2026 (assessment flow)
 
 - Read up to 12 relevant new or filtered saved listings for evidence-based assessment and show source outcomes. Open role details from the card.
