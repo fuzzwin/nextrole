@@ -79,5 +79,3 @@ def test_company_marketing_scopes_do_not_become_requirements(workspace):
         j=job('https://careers.example.com/job/'+str(100+i)).model_copy(update={'description':text});workspace.add_job(j,full=True)
         fit=next(r for r in workspace.jobs() if r['id']==j.identity)['fit']
         assert not any('Terraform' in r['text'] for r in fit['requirements'])
-
-
