@@ -1,3 +1,8 @@
+## 0.9.8 — 30 October 2026 (dashboard space)
+
+- Put job results first with a compact summary row, smaller setup/email notices and secondary list actions.
+- Keep all job facts and controls available across desktop and mobile; completed notifications can be dismissed and expire automatically.
+
 ## 0.9.7 — 30 October 2026 (source recovery)
 
 - Recognise additional source requirement headings and employer fields, use clean LinkedIn job links, and protect saved adverts from short source responses.

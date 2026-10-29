@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.7.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.8.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.7** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.8** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -503,3 +503,9 @@ Company funding and valuation figures are excluded from pay. Confirm any listed 
 ## Source recovery (0.9.7)
 
 Role assessment uses confirmed source text. When a source is unavailable or a role cannot be identified, its assessment remains pending for review.
+
+## Dashboard layout (0.9.8)
+
+Your opportunities puts saved roles first. Find jobs and Add a role stay beside the heading. The slim summary shows saved roles, prepared packets, Drive files and confirmed emails. Auto-email paused still means your sample documents need review before automatic email can run.
+
+Open **Search setup** for search roles, preferred location and Extended search. Open **List actions** beside the result count for Read & assess filtered roles, its progress and Clear filters. Filters and page controls stay next to the list. Job rows keep their original link, employer, fit gauge, location, pay, dates, review reason and actions; click the row or press Enter to open it. Completed notifications clear after ten seconds; errors stay until dismissed.

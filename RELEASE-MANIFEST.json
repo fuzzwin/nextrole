@@ -1,5 +1,5 @@
 {
-  "version": "0.9.7",
+  "version": "0.9.8",
   "platform": "macOS",
   "files": [
     {
@@ -29,19 +29,19 @@
     {
       "path": "README.md",
       "bytes": 4915,
-      "sha256": "a4dbbfe3c3433e79dd9863ca59ad41eda2247c4933d846c2cc5aafe1dfc3424e",
+      "sha256": "1128b9f8f051034251cb590e1609eb63221c1b944a2d1423949b091867d9cbf6",
       "mode": "0o644"
     },
     {
       "path": "setup/START HERE.txt",
       "bytes": 4352,
-      "sha256": "e0461f25ad705ea130a611ea49a038059941160c4c39a41ee27ebd39375234a3",
+      "sha256": "327e7ec79122e6954161d9d00a87c13c8d25d08e998d473d8a5782977924a8e9",
       "mode": "0o644"
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 43180,
-      "sha256": "8e3b6a24a32b079ed9227944351d7632fd3d9fea2a1ba669cfa753c433b1e71d",
+      "bytes": 44028,
+      "sha256": "41393012815aaf167dfdbf8f1faddd971e617959c614cfee2da3c76ae9729eb4",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 6630,
-      "sha256": "a02ab33d645bfa033312703aaaf1cd873708bf17a72bbc70f9e8ceab2e5ddc47",
+      "bytes": 6925,
+      "sha256": "3d9d43a23604483008fbca7ee2169ee10b662a25cec94635308d0320eca232a4",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 949,
-      "sha256": "661be7310e7449663012719bccc39e2653f3f23b2f4f1fe3c7a2b1abb3d0b87f",
+      "sha256": "06102af2a0470c042c4fce48faf55408ea90f524fb2c00642e87cc4ba9c0ca1a",
       "mode": "0o644"
     },
     {
@@ -130,8 +130,8 @@
     },
     {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 33472,
-      "sha256": "716e83e9637dd7e4b46f67dfb46936bfb1c5af09f12ccbd433727efc8e123d35",
+      "bytes": 34245,
+      "sha256": "16e806df22334b8f5b3bcb4e8616d985d3ccf3c10242cc5346b135f1e36a6adc",
       "mode": "0o644"
     },
     {
@@ -304,8 +304,8 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 137278,
-      "sha256": "8236d89222e14f7a225ed4281f8ce28353e84b9c3168eaf60ba7c2594af94c94",
+      "bytes": 145590,
+      "sha256": "ab61c7d7f08e43302ce6f76fdef8b798b84f0e0cb910c9bab75498db202e192c",
       "mode": "0o644"
     },
     {
