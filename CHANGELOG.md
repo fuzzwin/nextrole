@@ -1,3 +1,10 @@
+## 0.9.10 — 3 November 2026 (assessment reliability)
+
+- Distinguish original adverts from summaries, blocked pages, directories and vacancy-list redirects; show actionable source states and scored/pending counts.
+- Base work-experience points on specific criterion-linked evidence; remove blanket 59%/69% ceilings while preserving uncertainty and automatic-top review gates.
+- Read explicit qualification records and narrowly stated specialist tenure; unrelated employment, company age, prototypes and future intentions cannot establish full delivery evidence.
+- Retry pending sources once after a source revision or rubric version change; preserve saved jobs, tracking and profile.
+
 ## 0.9.9 — 3 November 2026 (work-arrangement filters)
 
 - Select Hybrid, Remote, On-site and Not stated independently of geographic location.

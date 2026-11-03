@@ -105,6 +105,8 @@ def test_unrelated_retail_duration_does_not_prove_python_tenure():
     'Built Python automation while working for 6 years in retail.',
     'Built Python automation after working for 6 years.',
     'Built Python automation, previously worked for 6 years.',
+    'Built Python automation for a company operating for 6 years.',
+    'Built Python automation for a client employed in retail for 6 years.',
 ])
 def test_duration_of_unrelated_employment_is_not_specialist_tenure(fact):
     fit=assess('Requirements\n5+ years Python automation experience.',profile([fact]))

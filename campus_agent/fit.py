@@ -142,6 +142,10 @@ def recorded_duration(criterion, facts):
         linked=bool((re.search(r'\bfor\s+\d+\+?\s*years?\s*[.!]?\s*$',fact['text'],re.I)
             and not re.search(r'\bwhile|previously|before|after|working|worked\b',fact['text'],re.I))
             or re.match(r'^\s*\d+\+?\s*years?\s+(?:of\s+)?(?:hands.on\s+)?(?:experience\s+(?:in|with)\s+)?(?:'+ '|'.join(TOOLS[t] for t in tools) +')',fact['text'],re.I)) if tools else False
+        # Accept only a direct tenure statement about the requested activity.
+        # Extra subjects (company age, client employment, other duties) need review.
+        allowed=requirement_words(criterion)|set('built developed supported administered maintained configured operated programmed used provided worked i'.split())
+        linked=linked and not (requirement_words(fact['text'])-allowed)
         if (duration and int(duration[1])>=int(demand[1]) and positive_evidence(fact['text'])
             and linked and not re.search(QUALIFIED,fact['text'],re.I) and tools
             and all(re.search(TOOLS[t],fact['text'],re.I) for t in tools)):

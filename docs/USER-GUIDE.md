@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.9.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.10.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.9** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.10** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -517,3 +517,12 @@ Choose a geographic **Location**, then tick one or more choices under **Work arr
 For Melbourne hybrid jobs plus remote jobs elsewhere in Australia, choose **Melbourne**, tick **Hybrid** and **Remote**, and leave **Include Australian remote listings outside this location** checked. Uncheck that option to restrict results to the chosen location. Explicit source location restrictions still need review. Roles with an unknown location enter the Australian remote exception only when the advert explicitly states an Australian remote scope.
 
 Your choices are remembered in this browser. Remove an individual filter chip or use **List actions → Clear filters**. Older Hybrid/Remote choices in the Location dropdown migrate to Work arrangement automatically. These browsing choices do not change fit scores or automatic-top eligibility.
+
+
+## Assessment reliability (0.9.10)
+
+The result count shows how many filtered roles have scores and how many need the original advert. **Needs advert**, **Source unavailable**, **Wrong source** and **Source incomplete** explain why a number cannot be calculated. A page being saved does not prove its requirements are complete. Use **Read & assess**, or **Paste original advert** if the board blocks access. The filtered batch reads up to 12 eligible roles; unchanged failed sources are held after one attempt until the source or assessment version changes. A direct Read & assess lets you retry deliberately.
+
+Evidence fit combines relevant tools (30 points), specific work examples linked to job requirements (40), and the stated requirements (30). Supported evidence earns full credit; transferable or qualified evidence earns partial credit; unconfirmed obligations earn none. Components show their numerator and denominator. Missing wording no longer forces every role to 59%. A sparse advert or too few work examples still caps automatic strong-match judgement at 79%; closed roles show 0. Review flags continue to block automatic Top listings even when the percentage is higher.
+
+This is a conservative text-based evidence aid, not a hiring probability. It can miss differently phrased experience. Specialist tenure needs a direct explicit record; overall employment dates or a company's age do not prove years using a tool. Open **Why this match** to review each criterion and its saved source evidence. Blocked, expired, anonymous or summary-only adverts may remain pending until you supply the complete original text and employer identity.
