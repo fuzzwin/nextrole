@@ -979,7 +979,7 @@ def test_location_reads_full_state_names_and_compact_board_headers():
 
 
 def test_prepare_resolves_official_employer_and_persists_identity_only_correction(workspace,role):
-    job=role.model_copy(update={'employer':'Employer on job listing','url':'https://openai.com/careers/example/','description':role.description+'\nAbout OpenAI\nOpenAI is an AI research and deployment company.'})
+    job=role.model_copy(update={'employer':'Employer on job listing','url':'https://openai.com/careers/example/','description':'# '+role.title+'\n'+role.description+'\nAbout OpenAI\nOpenAI is an AI research and deployment company.'})
     workspace.add_job(job,full=True)
     revision=workspace.store.get(job.identity)['revision']
     result=workspace.prepare(job.identity)

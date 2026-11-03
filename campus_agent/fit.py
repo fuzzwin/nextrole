@@ -41,7 +41,7 @@ DOMAINS = [
     ('User guidance and communication',r'\bguides?\b|\bcommunication|\btraining|\bcoaching|\benablement|\badoption',r'interactive guide|plain.language user guides|induction guides|awareness training|AI Hub demonstration'),
 ]
 REQUIRED = r'your background|what you will bring|required skills and qualifications|to be successful(?: in this role)?|your skills and experience|essential skills and experience|qualifications and experience|key capabilities|selection requirements|what you[’\x27]ll need to succeed|key requirements|skills required|what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
-OPTIONAL = r'^why\b|our benefits|highly regarded|is an advantage|bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
+OPTIONAL = r'you will ideally have|^why\b|our benefits|highly regarded|is an advantage|bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
 QUALIFIED = r'\b(?:prototyp\w*|concept|propos\w*|paused|before rollout|ahead of rollout|not (?:yet )?(?:deployed|live)|proof.of.concept|planned|planning|intended|learning|studying|tutorial|training exercise|not implemented|not yet rolled out)\b'
 PRODUCTION = r'\b(?:production|deployed|live|real (?:people|users)|used monthly)\b'
 
@@ -106,7 +106,7 @@ def mentions(text):
 
 def company_section(heading):
     name=heading.casefold().strip()
-    return name in {'company description','company overview','our story'} or (name.startswith('about ') and name not in {'about the role','about you'})
+    return name in {'company description','company overview','our story'} or name.startswith(('who is ','working at ')) or (name.startswith('about ') and name not in {'about the role','about you'})
 
 
 def recorded_qualification(criterion, profile):
@@ -179,7 +179,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     if not profile or profile.is_example:
         result['reviews']=[{'label':'Save your confirmed résumé profile to assess this role.','requirement':''}]
         return result
-    from .listing_view import source_problem
+    from .listing_view import source_problem, requirement_heading
     problem=source_problem(job.description,job.title)
     if problem and problem[0]=='closed': closed=True
     if problem and problem[0]!='closed':
@@ -226,7 +226,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
       for text in re.split(r'(?<=[.!?])\s+(?=[A-Z])', block_text):
         optional=bool(re.search(OPTIONAL,heading,re.I)) or company_section(heading) or heading.casefold() in {'benefits','what we offer'} or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
         explicit=re.search(r'\b(?:must|required|at least|mandatory|seeking a certified)\b|^(?:Requires|You need|Demonstrated|Strong|Proven|Experience|Commercial experience|Hands.on experience|Working knowledge|Ability to)\b',text,re.I)
-        if not optional and (re.fullmatch(REQUIRED,heading,re.I) or explicit):
+        if not optional and (re.fullmatch(REQUIRED,heading,re.I) or requirement_heading(heading) or explicit):
             if len(text.strip())>15 and not re.fullmatch(r'Beyond that:?',text,re.I):
                 criteria.append(text)
     criteria=list(dict.fromkeys(criteria))

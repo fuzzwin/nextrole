@@ -1,3 +1,11 @@
+## 0.9.12 — 3 November 2026 (source completion)
+
+- Read additional genuine applicant qualification headings while excluding optional, company and platform-generated summary material.
+- Resolve explicit same-role employer headers on supported sources, preserving functional title qualifiers and refusing anonymous-client or unrelated-role guesses.
+- Recognise additional expiry/removal notices and directory redirects; retain closed notices below cookie/search controls.
+- Backfill supported employer facts from saved adverts when resuming detail refresh, retaining tracking and prior source history. Guard owner-reviewed source corrections against stale or unrelated records.
+- Preserve blocked availability checks when a cached advert becomes assessable; those records remain in review and cannot be automatic Top listings.
+
 ## 0.9.11 — 3 November 2026 (saved advert refresh)
 
 - Start, pause and resume a persistent background queue for incomplete saved job details, independently of new-job discovery.
