@@ -51,7 +51,7 @@ def create_workspace_app(workspace: Workspace):
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
-            "assessment_progress": workspace.get_meta("assessment_progress"), "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
+            "assessment_progress": workspace.get_meta("assessment_progress"), "detail_refresh": workspace.detail_refresh.summary(), "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
             "applications": workspace.get_meta('applications', []), "application_sync": workspace.get_meta('application_sync'),
             "morning_schedule": workspace.get_meta("morning_schedule"), "alert_search": workspace.get_meta("job_alert_search")}
 
@@ -86,11 +86,19 @@ def create_workspace_app(workspace: Workspace):
 
     @app.post("/api/discover")
     def discover():
-        return workspace.task("Find Australian jobs", workspace.discover)
+        return workspace.start_discovery()
 
     @app.post("/api/discover/extended")
     def extended():
-        return workspace.task("Extended Australian job search", lambda: workspace.discover(extended=True))
+        return workspace.start_discovery(extended=True)
+
+    @app.post('/api/details-refresh/start')
+    def details_refresh_start():
+        return workspace.start_detail_refresh()
+
+    @app.post('/api/details-refresh/pause')
+    def details_refresh_pause():
+        return workspace.detail_refresh.pause()
 
     @app.post("/api/morning")
     async def morning(request: Request):

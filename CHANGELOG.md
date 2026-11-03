@@ -1,3 +1,10 @@
+## 0.9.11 — 3 November 2026 (saved advert refresh)
+
+- Start, pause and resume a persistent background queue for incomplete saved job details, independently of new-job discovery.
+- Pace reads by source host, retry blocked/incomplete sources once after 24 hours, and retain retry limits across restarts. Connector failures pause the queue for reconnection.
+- Save readable original adverts, pay and employer details through existing source checks; retain all prior advert revisions and recalculate fit without resetting tracking.
+- Show checked/scored/closed/source-needed/waiting counts. Repeated normal/extended search requests reuse the active search instead of creating overlapping errors.
+
 ## 0.9.10 — 3 November 2026 (assessment reliability)
 
 - Distinguish original adverts from summaries, blocked pages, directories and vacancy-list redirects; show actionable source states and scored/pending counts.

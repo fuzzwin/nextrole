@@ -1,5 +1,5 @@
 {
-  "version": "0.9.10",
+  "version": "0.9.11",
   "platform": "macOS",
   "files": [
     {
@@ -29,19 +29,19 @@
     {
       "path": "README.md",
       "bytes": 4916,
-      "sha256": "87e84d2c8709262539ba8e8c719f916e312fa2aa975cce1fe62def78a734989c",
+      "sha256": "824ca0fefe28dd19f306645487732b104dd2b468ebcee208cee50a74899fbf55",
       "mode": "0o644"
     },
     {
       "path": "setup/START HERE.txt",
       "bytes": 4354,
-      "sha256": "94bc700b79921011d3bc63f58c554620f2b8777b5fbd315752140512452dd5ac",
+      "sha256": "476ba37d963dbac0312e031b1b0a48a66af0cf2672bb6b3bd8910b22f69aecf8",
       "mode": "0o644"
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 46982,
-      "sha256": "a3ea6c1207bf64a430c690cddb94c578b7a8d28136b71617e006083f109fba75",
+      "bytes": 48816,
+      "sha256": "44f469a8949f87aca56b753fc65889c66ec1e8d83d1be37d0e9e5321c917f282",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 7972,
-      "sha256": "e82d794873b541647be6bd78ea09ff2785d78f66676d4a08c1449cf441c45fba",
+      "bytes": 8667,
+      "sha256": "034b44deabfc7c7a10be866c4987528b033c2c56bdd50f182424e5511a874a44",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 950,
-      "sha256": "5355a791245392b8c4594f35305edeedfa380e0c860ae00632bd28bd13b32cb0",
+      "sha256": "bdbb11c6e66fe3844fab97610466610ae0daa2b772344d5e099217313d6e9684",
       "mode": "0o644"
     },
     {
@@ -130,8 +130,8 @@
     },
     {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 36883,
-      "sha256": "782790a1e9cdc344a6cb368b452247d91ae5c0a3ef19c7dd984196096f5f2393",
+      "bytes": 38584,
+      "sha256": "16bf61004d90a885f5f7013d2f1b1c89e408919fed6fef51b6959b621b2f0e61",
       "mode": "0o644"
     },
     {
@@ -148,8 +148,8 @@
     },
     {
       "path": "scripts/build_release.py",
-      "bytes": 6335,
-      "sha256": "2afb7217b0061bbc70a26b815080b62375cf30d7513eeeadc6559b9e97ab0a0e",
+      "bytes": 6356,
+      "sha256": "b937912a8b5058e8aa5ab7443896821701dedb85c9050402206327207918b703",
       "mode": "0o644"
     },
     {
@@ -198,6 +198,12 @@
       "path": "campus_agent/dashboard.html",
       "bytes": 18477,
       "sha256": "2e884f22b7acfe32438556a7afd01a7997f1f486c08b9eee34bec373652516df",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/detail_refresh.py",
+      "bytes": 10229,
+      "sha256": "8a33320848ac06f491cc704615f2fa86ea0a17d10734944a79210a8f12b0290f",
       "mode": "0o644"
     },
     {
@@ -304,20 +310,20 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 153353,
-      "sha256": "d29b486dd5e3930fc0498ce7780f790d0d41073acc154f6bfc7637d6d4c4d59b",
+      "bytes": 155854,
+      "sha256": "8562cc47a60dc00496cf060fde3c05a6132cab740d3c6755e91dfdcd2c579fb4",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace.py",
-      "bytes": 65639,
-      "sha256": "d226decd8848a7aa05c40afd5bd1977e0f5414abf23cc3a55a16021a9b31674f",
+      "bytes": 67648,
+      "sha256": "56abed9b35ecc4e7aa452212452c8ef374d2f3159b6d7f0a14eba18eaee3016d",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace_web.py",
-      "bytes": 12683,
-      "sha256": "4a242eeae815502a89374f615f545b7ff1e3cdae19c3942ee57f7b5217e7ab70",
+      "bytes": 12907,
+      "sha256": "7ce3398425f38306f0f16d7d9ea726d2e0d659fb1b38bef41856d3572bf91f6a",
       "mode": "0o644"
     }
   ]

@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.10.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.11.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.10** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.11** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -526,3 +526,16 @@ The result count shows how many filtered roles have scores and how many need the
 Evidence fit combines relevant tools (30 points), specific work examples linked to job requirements (40), and the stated requirements (30). Supported evidence earns full credit; transferable or qualified evidence earns partial credit; unconfirmed obligations earn none. Components show their numerator and denominator. Missing wording no longer forces every role to 59%. A sparse advert or too few work examples still caps automatic strong-match judgement at 79%; closed roles show 0. Review flags continue to block automatic Top listings even when the percentage is higher.
 
 This is a conservative text-based evidence aid, not a hiring probability. It can miss differently phrased experience. Specialist tenure needs a direct explicit record; overall employment dates or a company's age do not prove years using a tool. Open **Why this match** to review each criterion and its saved source evidence. Blocked, expired, anonymous or summary-only adverts may remain pending until you supply the complete original text and employer identity.
+
+
+## Updating saved advert details (0.9.11)
+
+Open **List actions → Update missing job details** to start a background queue for all incomplete saved roles. It is independent of **Find jobs** and its automatic discovery setting. The queue saves each readable original advert and updates the displayed employer, pay, requirements and score where the source supports them. Archived, applied and closed roles are skipped.
+
+The result area shows checked, scored, closed, source-needed and waiting counts. Use **List actions → Pause details refresh** to pause after the current read; **Resume details refresh** continues without discarding progress. Progress survives restarting NextRole. Your Mac must be awake and NextRole must be running for reads to continue.
+
+Reads are paced by source site. Blocked or still incomplete adverts get one retry after 24 hours, then remain held for an original advert or deliberate manual retry. A connection failure pauses the queue rather than repeatedly failing every saved role. After reconnecting, choose Resume. A real source edit makes that role eligible again. Unknown pay, employer or requirements remain unknown; a successful page fetch alone does not establish a complete advert.
+
+Previous advert revisions are retained locally. Your notes, stages, original saved links, stars and prepared-packet links are preserved; changed adverts continue to flag older packets for review. This queue only reads source pages and saves job details. Existing document approval and delivery controls are unchanged.
+
+Clicking Find jobs or Extended search again while a search is active shows that search's progress. Wait for it to finish before starting a different search.
