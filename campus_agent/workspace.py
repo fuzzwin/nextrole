@@ -225,6 +225,8 @@ class Workspace:
         self._jobs_read_lock = threading.RLock()
         self._assessment_cache = {}
         self.scan_lock = threading.Lock()
+        self.discovery_request_lock = threading.Lock()
+        self.discovery_task_id = None
         self.batch_lock = threading.Lock()
         self.read_guard = threading.Lock()
         self.reading_jobs = set()
@@ -246,6 +248,8 @@ class Workspace:
         if profile_path.exists():
             self.profile = Profile.model_validate_json(profile_path.read_text())
         self.sources = json.loads((self.data / "source-documents.json").read_text()) if (self.data / "source-documents.json").exists() else []
+        from .detail_refresh import DetailRefreshQueue
+        self.detail_refresh = DetailRefreshQueue(self)
         threading.Thread(target=self._scheduler, daemon=True).start()
 
     def get_meta(self, key, default=None):
@@ -640,6 +644,22 @@ class Workspace:
         self.set_meta('top:'+job_id,value)
         return {'saved':True,'top':value}
 
+    def start_discovery(self, extended=False):
+        with self.discovery_request_lock:
+            if self.discovery_task_id:
+                with self.store.connect() as db:
+                    row=db.execute('SELECT status FROM tasks WHERE id=?',(self.discovery_task_id,)).fetchone()
+                if row and row[0]=='running':
+                    return {'task_id':self.discovery_task_id,'reused':True}
+            result=self.task('Extended Australian job search' if extended else 'Find Australian jobs',lambda:self.discover(extended=extended))
+            self.discovery_task_id=result['task_id']
+            return result
+
+    def start_detail_refresh(self):
+        result=self.detail_refresh.start()
+        self.pool.submit(self.detail_refresh.run_batch)
+        return result
+
     def discover(self, extended=False):
         from .morning import search_queries
         if not self.scan_lock.acquire(blocking=False):
@@ -744,20 +764,27 @@ class Workspace:
             if job_id in self.reading_jobs:
                 raise ReadInProgress('This role is already being read.')
             self.reading_jobs.add(job_id)
+        snapshot = None
         try:
-            result = self._hydrate(job_id)
+            snapshot = self.job(job_id)
+            result = self._hydrate(job_id, snapshot)
             self.set_meta('assessment_source:'+job_id, None)
             return result
         except Exception as exc:
-            self.set_meta('assessment_source:'+job_id, {'status':'needs_source' if isinstance(exc,SourceChanged) else 'blocked','message':str(exc)[:500],'at':utcnow(),'revision':self.job(job_id)[0]['revision'],'version':VERSION})
+            if snapshot is None: raise
+            with self.write_lock:
+                current,_ = self.job(job_id)
+                if current['payload'] != snapshot[0]['payload']:
+                    raise SourceChanged('The saved role changed during this read; the newer source was kept. Review it before retrying.') from exc
+                self.set_meta('assessment_source:'+job_id, {'status':'needs_source' if isinstance(exc,SourceChanged) else 'blocked','message':str(exc)[:500],'at':utcnow(),'revision':snapshot[0]['revision'],'version':VERSION})
             raise
         finally:
             with self.read_guard:
                 self.reading_jobs.discard(job_id)
 
-    def _hydrate(self, job_id):
+    def _hydrate(self, job_id, snapshot=None):
         from .listing_view import confirmed_listing_employer, normalize_listing, source_problem
-        row, job = self.job(job_id)
+        row, job = snapshot if snapshot is not None else self.job(job_id)
         result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": public_listing_url(str(job.url))}], "response_length": "long"})
         text = source_text(result)
         if re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',text):
@@ -780,11 +807,16 @@ class Workspace:
             current,_ = self.job(job_id)
             if current['payload'] != row['payload']:
                 raise SourceChanged('The saved role changed while reading; your edit was kept. Review the source before retrying.')
+            if job.revision != Job.model_validate_json(row['payload']).revision:
+                history=self.get_meta('listing_history:'+job_id,[])
+                history.append({'job':json.loads(row['payload']),'saved_at':utcnow()})
+                self.set_meta('listing_history:'+job_id,history)
             self.save_listing_dates(job,text)
             if closing and closing < datetime.now(ZoneInfo(self.preferences.timezone)).date():
                 raise ValueError(f"This listing states a closing date of {closing.isoformat()}. Verify that the employer has reopened it before preparing a packet.")
             self.add_job(job, full=True)
-        return {"description_chars": len(job.description)}
+        return {"description_chars": len(job.description), "revision": job.revision,
+                "source_hash":hashlib.sha256(job.model_dump_json().encode()).hexdigest()}
 
     def prepare(self, job_id, sample_id=None):
         with self.write_lock:
@@ -1064,7 +1096,9 @@ class Workspace:
             now = datetime.now(ZoneInfo(prefs.timezone))
             if prefs.schedule_enabled and now.weekday() < 5 and 7 <= now.hour < 21 and time.monotonic() - last >= prefs.interval_minutes * 60:
                 last = time.monotonic()
-                self.task("Scheduled discovery", self.discover)
+                self.start_discovery()
+            if self.detail_refresh.summary()['enabled'] and not self.detail_refresh.worker_lock.locked():
+                self.pool.submit(self.detail_refresh.run_batch)
 
     def close(self):
         self.stop_event.set()
