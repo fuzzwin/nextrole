@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.8.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.9.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.8** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.9** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -509,3 +509,11 @@ Role assessment uses confirmed source text. When a source is unavailable or a ro
 Your opportunities puts saved roles first. Find jobs and Add a role stay beside the heading. The slim summary shows saved roles, prepared packets, Drive files and confirmed emails. Auto-email paused still means your sample documents need review before automatic email can run.
 
 Open **Search setup** for search roles, preferred location and Extended search. Open **List actions** beside the result count for Read & assess filtered roles, its progress and Clear filters. Filters and page controls stay next to the list. Job rows keep their original link, employer, fit gauge, location, pay, dates, review reason and actions; click the row or press Enter to open it. Completed notifications clear after ten seconds; errors stay until dismissed.
+
+## Location and work arrangement (0.9.9)
+
+Choose a geographic **Location**, then tick one or more choices under **Work arrangement**: Hybrid, Remote, On-site or Not stated. Selecting Hybrid and Remote matches either arrangement.
+
+For Melbourne hybrid jobs plus remote jobs elsewhere in Australia, choose **Melbourne**, tick **Hybrid** and **Remote**, and leave **Include Australian remote listings outside this location** checked. Uncheck that option to restrict results to the chosen location. Explicit source location restrictions still need review. Roles with an unknown location enter the Australian remote exception only when the advert explicitly states an Australian remote scope.
+
+Your choices are remembered in this browser. Remove an individual filter chip or use **List actions → Clear filters**. Older Hybrid/Remote choices in the Location dropdown migrate to Work arrangement automatically. These browsing choices do not change fit scores or automatic-top eligibility.
