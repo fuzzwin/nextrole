@@ -1,6 +1,22 @@
 """Readable listing sections, retaining source wording and the original text."""
 import re
 import json
+import html
+
+REQUIREMENT_HEADINGS = {
+    'you might thrive in this role if you', "you'll thrive here if you", 'who you are',
+    'what you bring', 'what you will need', "what you'll bring", 'requirements & qualifications',
+    'requirements and qualifications', "what kind of things we're most interested in you having",
+    'your qualifications', 'your skills & experience',
+}
+
+
+def heading_key(value):
+    return re.sub(r'\s+',' ',html.unescape(value).replace('’',"'")).strip().rstrip(':?').casefold()
+
+
+def requirement_heading(value):
+    return heading_key(value) in REQUIREMENT_HEADINGS
 
 
 HEADINGS = {
@@ -25,6 +41,8 @@ HEADINGS = {
     'required experience & skills', 'required qualifications',
     'your background', 'what you will bring', 'required skills and qualifications', 'to be successful', 'to be successful in this role', 'your skills and experience', 'essential skills and experience', 'qualifications and experience', 'key capabilities', 'selection requirements', 'job requirements', 'key requirements', 'skills required', 'key criteria', 'company description', 'company overview', 'our story',
 }
+HEADINGS |= REQUIREMENT_HEADINGS | {'bonus points for', 'highly regarded', "what you'll own",
+    "how you'll spend your time", "what's life like at plenti", 'hear more from the team', 'you will ideally have'}
 
 
 def without_site_footer(text):
@@ -32,7 +50,7 @@ def without_site_footer(text):
     return re.split(r'(?im)^\s*Research\s*\n+\s*[*•-]\s+Research Index\b', text, maxsplit=1)[0].rstrip()
 
 
-RECOMMENDATIONS = r'(?im)^\s*(?:#+\s*)?(?:Similar jobs|Related jobs|Find similar jobs|Recommended jobs|People also viewed|Jobs with similar titles|Search similar titles|More jobs like this|Explore more jobs|See also|What .+ jobs ask for|Tailor my CV Apply|Show more Show less|Show more\s*\n\s*Show less)\b'
+RECOMMENDATIONS = r'(?im)^\s*(?:#+\s*)?(?:Similar jobs|Similar roles|More roles at|Related jobs|Find similar jobs|Recommended jobs|People also viewed|Jobs with similar titles|Search similar titles|More jobs like this|Explore more jobs|Hear More from the Team|See also|What .+ jobs ask for|Tailor my CV Apply|Show more Show less|Show more\s*\n\s*Show less)\b'
 
 
 def source_problem(text, title=''):
@@ -44,15 +62,19 @@ def source_problem(text, title=''):
         return ('source_summary','Only a non-verbatim summary is saved. Original employer requirements are needed.')
     if re.search(r'(?i)\bjobs?\s+(?:in|near me)\b',title) or re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',clean):
         return ('search_results','This source is a job-search directory, not the original individual advert.')
-    if re.search(r'(?im)^\s*#{1,6}\s*(?:Current openings at\b|\d+ results for\b|\d+ jobs\s*$)',clean) or re.search(r'(?i)Redirected to URL:[^\n]*(?:job_not_found|[?&]error=true)',clean):
+    if re.search(r'(?im)^\s*#{1,6}\s*(?:Current openings at\b|\d+ results? for\b|\d+ jobs\s*$|Search jobs at\b)',clean) or re.search(r'(?i)Redirected to URL:[^\n]*(?:job_not_found|[?&]error=true|/jobsearch\b|/careers/[^/]+/jobs(?:\s|$))|job vacancy you tried to view was not found',clean):
         return ('search_results','This source redirects to a list of vacancies instead of this individual advert.')
     if re.search(r'(?im)^\s*#{1,6}\s*Job summary\s*$',clean) and not re.search(r'(?im)^\s*#{1,6}\s*(?:Full )?Job description\s*$',clean):
         return ('source_summary','This board saved a job summary, not the complete original employer advert.')
     primary = re.split(RECOMMENDATIONS,clean)[0]
     if len(re.findall(r'(?m)^\s*####\s+[^\n]+',primary))>=6 and len(re.findall(r'(?m)^\s*###\s+[^\n]+',primary))>=6:
         return ('search_results','The saved capture contains unrelated roles/employers. Verify the individual advert.')
-    if re.search(r'(?i)wurde besetzt|position (?:has been )?(?:filled|closed)|no longer accepting applications|job (?:has )?(?:expired|closed)', primary):
+    if re.search(r'(?i)wurde besetzt|position (?:has been )?(?:filled|closed)|no longer accepting applications|job (?:has )?(?:expired|closed)|this job post has expired|sorry, this job was removed', primary):
         return ('closed','The original source says this listing is closed or filled.')
+    if re.search(r'(?im)^\s*#{1,6}\s*Job summary\s*$',primary):
+        body=re.split(r'(?im)^\s*#{1,6}\s*(?:Full )?Job description\s*$',primary,maxsplit=1)
+        if len(body)==2 and re.search(r'(?im)^\s*Show more\s*$',body[1]):
+            return ('source_summary','The original advert is truncated behind Show more; board-generated qualifications are not the employer requirements.')
     if '[wordlim' in clean and clean.count('...')>=2 and len(clean)<1200:
         return ('source_summary','Only an indexed excerpt is saved. Read or paste the complete original advert.')
     return None
@@ -72,28 +94,132 @@ def title_matches_source(saved_title, text):
     return False
 
 
+def same_role(saved, actual, company=''):
+    """Allow listing decorations, never a different functional title or seniority."""
+    clean=lambda s:re.sub(r'\s+',' ',re.sub('(?i)managerment','management',html.unescape(s)).replace('’',"'").replace('–','-').replace('—','-')).strip().casefold()
+    expected=clean(saved)
+    actual=clean(re.sub(r'^\[Hiring\]\s*','',actual,flags=re.I))
+    if company:actual=re.sub(r'\s+(?:[-·|]|at)\s*'+re.escape(clean(company))+r'\s*$','',actual)
+    actual=re.split(r'\s*\|\s*(?:up\s*to|from)\s*\$',actual,maxsplit=1,flags=re.I)[0]
+    expected=re.sub(r'\s+(?:-\s*(?:indeed\.com|seek(?: \(seek\.com\))?)|job details)\s*$','',expected)
+    if expected==actual:return True
+    if re.search(r'(?:…|\.{3})$',expected):
+        prefix=re.sub(r'(?:…|\.{3})$','',expected)
+        if len(prefix)>=30 and len(prefix.split())>=4 and actual.startswith(prefix):return True
+    if not expected.startswith(actual):return False
+    tail=expected[len(actual):]
+    if tail and tail[0].isalnum():return False
+    if company:tail=tail.replace(clean(company),'',1)
+    tail=re.sub(r'\b\d+\s+(?:school alumni|company alum|connections?|alumni)\b|\b(?:school alumni|company alum|connections?|alumni)\b',' ',tail,flags=re.I)
+    from .locations import CITIES, STATES
+    for place in sorted([*CITIES,*STATES.values(),'alice springs','barangaroo','australia','remote','hybrid','location','actively recruiting','easy apply','company alum','in','at','up to'],key=len,reverse=True):
+        tail=re.sub(r'\b'+re.escape(place)+r'\b',' ',tail,flags=re.I)
+    tail=re.sub(r'\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b|\b\d+\b|A\$[\d,]+',' ',tail,flags=re.I)
+    return not re.search(r'[a-z]',tail,re.I)
+
+
+def valid_company(name):
+    name=re.sub(r'^[#*\s]+|[#*\s]+$','',name)
+    from .locations import CITIES, STATES
+    places={str(p).casefold() for p in [*CITIES,*STATES.values(),'Alice Springs','Barangaroo','Australia','Remote','Hybrid']}
+    residue=name.casefold()
+    for place in sorted(places|{'vic','nsw','qld','wa','sa','tas','act','nt'},key=len,reverse=True):
+        residue=re.sub(r'\b'+re.escape(place)+r'\b',' ',residue)
+    geographic=not re.search(r'[a-z]',residue) or re.search(r',\s*(?:Australia|United States|United Kingdom|New Zealand|Philippines)\s*$|\s+(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\s*\d{4}\s*$',name,re.I)
+    return bool(2<=len(name)<=100 and not geographic and not re.search(
+        r'(?i)^(?:apply|save job|job details|full job|full.time\b|part.time\b|permanent\b|casual\b|salary\b|sign in|unknown|not disclosed|not stated|undisclosed|anonymous|confidential|employer (?:on|not)|company not|vacancy from)|[<>{}]|\d.*out of.*5',name))
+
+
+def header_employer(job, text):
+    """Explicit same-role platform evidence; no product, title-only or logo guesses."""
+    from urllib.parse import urlsplit
+    host=(urlsplit(str(job.url)).hostname or '').lower().removeprefix('www.')
+    primary=re.split(RECOMMENDATIONS,re.sub(r'(?m)^L\d+(?:@P[\d-]+)?:\s?','',html.unescape(text)))[0]
+    headings=re.findall(r'(?m)^\s*#{1,6}\s+([^\n]+)',primary[:4000])
+    if host in {'rmit.edu.au','www.rmit.edu.au'} and urlsplit(str(job.url)).path.lower().endswith('.pdf'):
+        if re.search(r'\bRMIT is a global university\b',primary) and any(same_role(job.title,l.strip(),'RMIT University') for l in primary.splitlines()[:30]):return 'RMIT University'
+    if host=='healthsharevic.org.au' and urlsplit(str(job.url)).path.lower().endswith('.pdf'):
+        if re.search(r'HealthShare Victoria \(HSV\) is a Victorian public sector entity',primary) and re.search(r'(?im)^\s*Position\s+'+re.escape(job.title)+r'\s*$',primary):return 'HealthShare Victoria'
+    if not headings:return None
+    title=headings[0].strip()
+    if host=='linkedin.com' or host.endswith('.linkedin.com'):
+        match=re.search(r'(?im)^\s*See who ([^\n†]+?) has hired for this role',primary)
+        if match:
+            name=match[1].strip()
+            header=primary[:match.start()]
+            corroborated=re.search(r'(?m)^\s*'+re.escape(name)+r'(?:\s|†|$)',header)
+            agency=name.casefold() in {'talent','peoplebank','hays','randstad','galileo search','robert half','sharp & carter','mercor'}
+            client=re.search(r'(?i)our client\b|on behalf of|partner(?:ing|ed) with|well.established organi[sz]ation|client(?:\x27s)? team',primary)
+            if corroborated and same_role(job.title,title,name) and valid_company(name) and not (agency and client):return name
+    if host=='indeed.com' or host.endswith('.indeed.com'):
+        header=re.split(r'(?im)^\s*(?:#+\s*)?Full job description\s*$',primary,maxsplit=1)[0]
+        match=re.search(r'(?m)^\s*#{1,6}\s+[^\n]+\n+\s*([^\n]+)',header)
+        if match:
+            name=re.sub(r'\s+\.css-[^\n]*$', '',match[1]).strip()
+            metadata=header[match.end():]
+            if valid_company(name) and same_role(job.title,title,name) and re.search(r'(?m)^\s*[0-5](?:\.\d)?\s*$|\b(?:VIC|NSW|QLD|Victoria|Australia)\b',metadata):return name
+    if host=='jobstore.com' and len(headings)>1:
+        name=headings[1].strip()
+        if name.casefold()=='mercor' and re.search(r'(?i)AI research labs|leading AI companies',primary):return None
+        if same_role(job.title,title,name) and valid_company(name) and re.search(re.escape(name),primary[primary.find(name)+len(name):],re.I):return name
+    if host in {'hirealice.app','victra.careers'}:
+        header=re.search(r'(?m)^\s*#{1,6}\s+[^\n]+\n+([^\n]+)',primary)
+        if header:
+            name=header[1].split(' · ')[0].strip()
+            saved=re.sub(r'\s+[·|—-]\s*(?:Victra|HireAlice)\s*$','',job.title,flags=re.I)
+            if valid_company(name) and same_role(saved,title,name) and re.search(r'\b'+re.escape(name)+r'\b',primary[header.end():],re.I):return name
+    if host in {'builtin.com','builtinmelbourne.com','builtinsydney.au'}:
+        match=re.search(r'(?im)^\s*(?:#+\s*)?About ([^\n:]{2,80})\s*$',primary)
+        if match:
+            name=match[1].strip()
+            if valid_company(name) and name.casefold() not in {'us','the role','the team','you','this role'} and same_role(job.title,title,name) and len(re.findall(re.escape(name),primary,re.I))>=2:return name
+        match=re.search(r'(?i)\bWorking at ([\w &.]+?) (?:will|means|is)\b',primary)
+        if match:
+            name=match[1].strip()
+            office=re.search(r'(?im)^\s*#+\s*'+re.escape(name)+r'\b[^\n]*Office\s*$',primary)
+            if office and valid_company(name) and same_role(job.title,title,name):return name
+        match=re.search(r'(?im)^\s*(?:#+\s*)?Working at ([^\n:]{2,80})\s*$',primary)
+        if match:
+            name=match[1].strip()
+            claim=re.search(r'(?i)core member of '+re.escape(name)+r'[’\x27]s [^.\n]{0,60}team',primary)
+            if claim and valid_company(name) and same_role(job.title,title,name):return name
+    if host=='jobs.lever.co':
+        match=re.search(r'(?im)^\s*(?:#+\s*)?Who is ([^\n?]{2,80})\??\s*$',primary)
+        if match:
+            name=match[1].strip();tenant=urlsplit(str(job.url)).path.strip('/').split('/')[0]
+            if re.sub(r'\W','',name).casefold()==tenant.casefold() and same_role(job.title,title,name) and re.search(r'(?im)^'+re.escape(name)+r' is a\b',primary):return name
+    if host=='swiftcruit.ai':
+        match=re.search(r'(?im)^\s*(?:#+\s*)?Employer\s*\n+([^\n]+)',primary)
+        if match:
+            name=match[1].strip()
+            if valid_company(name) and same_role(job.title,title,name) and re.search(r'(?im)^\s*(?:#+\s*)?Why '+re.escape(name)+r'\s*$',primary):return name
+    if host=='deliverycentric.com' and same_role(job.title,title,'Delivery Centric') and re.search(r'(?im)^Delivery Centric is seeking\b',primary):return 'Delivery Centric'
+    if host=='careers.rldatix.com' and same_role(job.title,title,'RLDatix') and re.search(r'(?im)^RLDatix (?:\(RLD\) )?is on a mission\b',primary):return 'RLDatix'
+    return None
+
+
 def confirmed_listing_employer(job, text):
     """Resolve placeholders from explicit employer evidence, never a product mention."""
     from urllib.parse import urlsplit
     host = (urlsplit(str(job.url)).hostname or '').lower()
     if not re.fullmatch(r'(?:Employer on job listing|Employer in job alert|Unknown|TBD)', job.employer, re.I):
         return job.employer
+    found=header_employer(job,text)
+    if found:return found
     explicit = re.search(r'(?im)^\s*(?:Employer|Company|Hiring organisation|Hiring organization)\s*:\s*([^\n|<>]{2,100})\s*$', text)
     first_heading=re.search(r'(?m)^\s*#{1,6}\s+[^\n]+',text)
     next_heading=re.search(r'(?m)^\s*#{1,6}\s+[^\n]+',text[first_heading.end():]) if first_heading else None
     header_end=first_heading.end()+next_heading.start() if next_heading else len(text)
     if explicit and first_heading and first_heading.end() < explicit.start() < header_end and title_matches_source(job.title,text):
         name=explicit[1].strip()
-        from .locations import CITIES, STATES
-        geographic=any(re.search(r'\b'+re.escape(v)+r'\b',name,re.I) for v in [*CITIES,*STATES.values()]) or bool(re.search(r'\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b',name))
-        if not geographic and not re.search(r'\b(?:indeed|remote|hybrid|apply|rating|stars?|unknown|not disclosed|not stated|undisclosed|confidential)\b|\b[0-5](?:\.\d)?\s+out of\s+5\b|\b(?:funding|valuation|revenue)\s+(?:raised|of|is|was)\b',name,re.I):
+        if valid_company(name) and not re.search(r'\b(?:indeed|remote|hybrid|apply|rating|stars?|unknown|not disclosed|not stated|undisclosed|confidential)\b|\b[0-5](?:\.\d)?\s+out of\s+5\b|\b(?:funding|valuation|revenue)\s+(?:raised|of|is|was)\b',name,re.I):
             return name
     if host in {'simplyhired.com.au','www.simplyhired.com.au'} and urlsplit(str(job.url)).path.startswith('/job/'):
         header=re.split(r'(?im)^\s*(?:#+\s*)?(?:Full Job Description|Job Details|Qualifications|Benefits)\s*$',restore_flat_markdown(text),maxsplit=1)[0]
         company=re.search(r'(?m)^\s*[-*]\s+([^\n|<>]{2,100}?)\s+-\s+[0-5](?:\.\d)?\s*$',header)
         if company:
             name=company[1].strip()
-            title_found=any(role_key(job.title) in {role_key(re.sub(r'^#+\s*','',line)),role_key(re.sub(r'^#+\s*','',line))+' - '+name.casefold()} for line in header.splitlines() if line.startswith('#'))
+            title_found=any(same_role(job.title,re.sub(r'^#+\s*','',line),name) for line in header.splitlines() if line.startswith('#'))
             if title_found: return name
     if (host == 'indeed.com' or host.endswith('.indeed.com')) and urlsplit(str(job.url)).path == '/viewjob':
         header=re.split(r'(?im)^\s*(?:#+\s*)?Full job description\s*$', text, maxsplit=1)[0]
@@ -111,12 +237,12 @@ def confirmed_listing_employer(job, text):
             context=re.search(r'(?im)^\s*(?:\(part of .+\)|[0-5](?:\.\d)?(?:\s+[0-5](?:\.\d)?)?\s+out of\s+5\s+stars|[^\n]{0,70}\b(?:VIC|NSW|QLD|WA|SA|TAS|ACT|NT)\b)\s*$',following)
             alias=re.search(r'\s*\(([^()]{2,60})\)\s*$',title)
             alias_match=bool(alias and job.title.casefold().startswith((alias[1]+' - '+title[:alias.start()].strip()+' - ').casefold()))
-            if (role_key(title)==role_key(saved) or alias_match) and re.fullmatch(r'[\w][\w &.,\'’()/-]{1,98}',name) and not is_location and not invalid and context:
+            if (same_role(job.title,title,name) or alias_match) and re.fullmatch(r'[\w][\w &.,\'’()/-]{1,98}',name) and not is_location and not invalid and context:
                 return name
     # The official careers host and its company section independently establish identity.
     host = (urlsplit(str(job.url)).hostname or '').lower()
     if host in {'openai.com', 'www.openai.com'} and urlsplit(str(job.url)).path.startswith('/careers/'):
-        if re.search(r'(?im)^\s*(?:#+\s*)?About OpenAI\s*$', text):
+        if title_matches_source(job.title,text) and re.search(r'(?im)^\s*(?:#+\s*)?About OpenAI\s*$', text):
             return 'OpenAI'
     return job.employer
 
@@ -179,7 +305,7 @@ def listing_view(text, title='', employer=''):
             continue
         if re.match(r'^(?:Posted\s+|Published:|Crawled:)',stripped,re.I) and len(stripped)<100:
             continue
-        if stripped.rstrip(':?').casefold() in HEADINGS or (len(stripped)<80 and re.match(r'(?i)^(?:about [A-Za-z]|why [A-Za-z]|our benefits)',stripped)) or (line.startswith('#') and 0<len(stripped)<100):
+        if heading_key(stripped) in HEADINGS or (len(stripped)<80 and re.match(r'(?i)^(?:about [A-Za-z]|why [A-Za-z]|our benefits)',stripped)) or (line.startswith('#') and 0<len(stripped)<100):
             flush()
             sections.append({'title':stripped.rstrip(':'),'blocks':[]})
             continue
@@ -209,6 +335,8 @@ def listing_view(text, title='', employer=''):
             if block['kind']=='paragraph' and re.search(r'\b(?:criterion|must|required|at least|do not count)\b',block['text'],re.I):
                 highlights.append(block['text'])
     notices=[]
+    if re.search(r'(?im)^\s*(?:#+\s*)?Position Description\s*$',text):
+        notices.append({'message':'This is a position description; confirm the current vacancy and closing date.','quote':'Position Description'})
     if text.startswith('Listing mismatch:'):
         notices.append({'message':'The page metadata describes a different role. Verify the original posting.','quote':text.splitlines()[0]})
     if any(f['label']=='Work format' and f['value'].casefold()=='hybrid' for f in facts):
@@ -232,7 +360,7 @@ def listing_view(text, title='', employer=''):
 def normalize_listing(text, title=''):
     """Read employer JobPosting metadata where present, without borrowing other roles."""
     if not re.match(r'\s*(?:<!doctype|<(?:html|p|div|article|main|section)\b|<script[^>]+application/ld\+json)', text, re.I):
-        return restore_flat_markdown(text)
+        return restore_flat_markdown(re.sub(r'(?m)^L\d+(?:@P[\d-]+)?:\s?','',text))
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(text, 'html.parser')
     postings = []
@@ -371,12 +499,9 @@ def html_text(markup):
 
 
 def posting_matches(posting,title):
-    actual=role_key(posting.get('title',''))
-    expected=role_key(title)
-    if actual==expected: return True
     organisation=posting.get('hiringOrganization',{})
     name=organisation.get('name','') if isinstance(organisation,dict) else ''
-    return bool(name and expected==actual+' - '+str(name).casefold().strip())
+    return same_role(title,str(posting.get('title','')),str(name))
 
 
 def restore_flat_markdown(text):

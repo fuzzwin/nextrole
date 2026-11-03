@@ -555,6 +555,11 @@ class Workspace:
                 row['listing']['closed']=True
             row['assessment_source'] = metadata.get('assessment_source:'+row['id'])
             source=row['assessment_source'] or {}
+            if (row['fit']['assessment_state']=='assessed' and source.get('revision')==row['revision']
+                and source.get('status')=='blocked'):
+                row['fit']['reviews'].append({'label':'The latest source check was blocked. This score uses the saved advert; verify current availability.','requirement':''})
+                row['fit']['auto_eligible']=False
+                if row['fit']['status']=='Good match':row['fit']['status']='Needs review'
             if (row['fit']['assessment_state']=='incomplete' and source.get('revision')==row['revision']
                 and source.get('message') and row['fit'].get('source_state') in {'unread','missing_requirements','employer_missing'}):
                 row['fit']['assessment_notice']=source['message']
@@ -656,9 +661,66 @@ class Workspace:
             return result
 
     def start_detail_refresh(self):
+        self.recheck_saved_employers()
         result=self.detail_refresh.start()
         self.pool.submit(self.detail_refresh.run_batch)
         return result
+
+    def correct_saved_source(self, job_id, expected_hash, changes, source_url=None):
+        """Apply owner-reviewed source facts without touching notes/stages/identity."""
+        from .listing_view import normalize_listing, source_problem, confirmed_listing_employer, same_role
+        if not isinstance(changes,dict) or set(changes)-{'title','employer','description'}:
+            raise ValueError('Only advert title, employer and description can be corrected here.')
+        if source_url is not None:raise ValueError('Alternate source URLs require separate same-vacancy verification; the original saved link is retained.')
+        with self.write_lock:
+            row,job=self.job(job_id)
+            if hashlib.sha256(row['payload'].encode()).hexdigest()!=expected_hash:
+                raise SourceChanged('The saved source changed; review the current advert before applying a correction.')
+            updated=Job.model_validate({**job.model_dump(mode='json'),**changes})
+            text=normalize_listing(updated.description,updated.title)
+            document_correction=(updated.description==job.description and job.title=='HealthShare Victoria' and urlsplit(str(job.url)).hostname=='healthsharevic.org.au'
+                and str(job.url).split('?')[0].endswith('.pdf') and re.search(r'(?im)^Position\s+'+re.escape(updated.title)+r'\s*$',text)
+                and re.search(r'HealthShare Victoria \(HSV\) is a Victorian public sector entity',text))
+            if not same_role(job.title,updated.title,updated.employer) and not document_correction:
+                raise ValueError('The correction describes a different role; the original saved identity was kept.')
+            problem=source_problem(text,updated.title)
+            if problem and problem[0]!='closed':raise ValueError(problem[1])
+            headings=re.findall(r'(?m)^\s*#{1,6}\s+([^\n]+)',text[:4000])
+            if headings and not same_role(updated.title,headings[0],updated.employer):
+                raise ValueError('The corrected title does not match the original source heading.')
+            inferred_job=updated.model_copy(update={'employer':'Employer on job listing'})
+            if updated.employer!=job.employer and updated.employer!=confirmed_listing_employer(inferred_job,text):
+                raise ValueError('The employer must be explicitly supported by this saved source.')
+            if updated.model_dump_json()!=row['payload']:
+                history=self.get_meta('listing_history:'+job_id,[])
+                history.append({'job':json.loads(row['payload']),'saved_at':utcnow(),'reason':'Source facts corrected from advert evidence'})
+                self.set_meta('listing_history:'+job_id,history)
+                self.add_job(updated,full=True)
+            prior_check=self.get_meta('assessment_source:'+job_id)
+            if updated.description!=job.description or not prior_check or prior_check.get('status')!='blocked':
+                self.set_meta('assessment_source:'+job_id,None)
+            elif prior_check.get('revision')==row['revision']:
+                self.set_meta('assessment_source:'+job_id,{**prior_check,'revision':updated.revision})
+        return {'id':job_id,'saved':True,'employer':updated.employer}
+
+    def recheck_saved_employers(self):
+        from .listing_view import confirmed_listing_employer, source_problem
+        updated=[]
+        for row in self.jobs():
+            if not row.get('full_description') or row.get('stage') in {'archived','applied'}:continue
+            job=Job.model_validate(row['job'])
+            problem=source_problem(job.description,job.title)
+            if problem and problem[0]!='closed':continue
+            employer=confirmed_listing_employer(job,job.description)
+            if employer==job.employer:continue
+            raw,_=self.job(row['id'])
+            if raw['revision']!=row['revision']:continue
+            try:
+                self.correct_saved_source(row['id'],hashlib.sha256(job.model_dump_json().encode()).hexdigest(),{'employer':employer})
+                updated.append(row['id'])
+            except (SourceChanged,ValueError):
+                continue
+        return {'employers_updated':len(updated),'ids':updated}
 
     def discover(self, extended=False):
         from .morning import search_queries
@@ -799,7 +861,8 @@ class Workspace:
         problem=source_problem(text,job.title)
         if problem and problem[0]!='closed': raise ValueError(problem[1])
         closing = stated_closing_date(text)
-        text = readable_listing(text, job.title)
+        # A closure may appear below search/cookie form controls; keep its evidence.
+        text = text if problem and problem[0]=='closed' else readable_listing(text, job.title)
         if len(text.strip())<300 or re.search(r'(?i)\b(?:AI.generated summary|search results|access denied|failed to fetch)\b',text):
             raise ValueError('The source returned only a short or incomplete listing; the saved advert was kept.')
         job = job.model_copy(update={"description": text[:60000], "employer": confirmed_listing_employer(job, text)})

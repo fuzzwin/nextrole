@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.11.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.12.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.11** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.12** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -539,3 +539,12 @@ Reads are paced by source site. Blocked or still incomplete adverts get one retr
 Previous advert revisions are retained locally. Your notes, stages, original saved links, stars and prepared-packet links are preserved; changed adverts continue to flag older packets for review. This queue only reads source pages and saves job details. Existing document approval and delivery controls are unchanged.
 
 Clicking Find jobs or Extended search again while a search is active shows that search's progress. Wait for it to finish before starting a different search.
+
+
+## Completing saved source details (0.9.12)
+
+Resuming detail refresh also rechecks already-saved adverts for supported employer headers. A recognised employer is saved without resetting your notes, stages, stars or packet links. Additional headings such as Who you are, What you bring and You might thrive in this role if you can supply original applicant requirements. Optional skills, company descriptions and board-generated summaries remain separate.
+
+A score can describe the saved advert even when a later source check is blocked. Those cards retain a review warning and cannot become automatic Top listings until the source issue is resolved. A recruiting agency or platform name does not establish an undisclosed client employer. Truncated adverts, role mismatches and anonymous employers can still need the original employer posting or a deliberate review.
+
+A position-description document also needs a current vacancy check. Original saved links and previous source revisions remain available locally; source completion does not claim a vacancy is currently accepting applications without evidence.

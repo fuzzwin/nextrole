@@ -100,6 +100,11 @@ def create_workspace_app(workspace: Workspace):
     def details_refresh_pause():
         return workspace.detail_refresh.pause()
 
+    @app.post('/api/jobs/{job_id}/source-correction')
+    async def source_correction(job_id: str, request: Request):
+        data=await request.json()
+        return workspace.correct_saved_source(job_id,data.get('expected_hash'),data.get('changes',{}),data.get('source_url'))
+
     @app.post("/api/morning")
     async def morning(request: Request):
         from .morning import run_morning
