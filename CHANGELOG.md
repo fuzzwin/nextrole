@@ -1,3 +1,9 @@
+## 0.9.9 — 3 November 2026 (work-arrangement filters)
+
+- Select Hybrid, Remote, On-site and Not stated independently of geographic location.
+- Optionally include Australian remote listings beyond the selected location, with checks for explicit state/city restrictions.
+- Preserve saved filters and migrate prior work-mode choices from the location dropdown.
+
 ## 0.9.8 — 30 October 2026 (dashboard space)
 
 - Put job results first with a compact summary row, smaller setup/email notices and secondary list actions.
