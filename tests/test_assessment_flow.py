@@ -37,6 +37,17 @@ def test_batch_caps_reads_persists_block_and_continues(workspace):
     assert next(r for r in workspace.jobs() if r['id']==jobs[1].identity)['fit']['percent'] is not None
 
 
+def test_new_rubric_version_allows_one_retry_then_stops(workspace):
+    from campus_agent.fit import VERSION
+    job=make_job(999)
+    workspace.add_job(job)
+    workspace.set_meta('assessment_source:'+job.identity,{'status':'blocked','revision':job.revision,'version':'older'})
+    workspace.bridge.call=lambda *_:{'content':'access denied'}
+    assert workspace.assess_batch([job.identity])['processed']==1
+    assert workspace.get_meta('assessment_source:'+job.identity)['version']==VERSION
+    assert workspace.assess_batch([job.identity])['processed']==0
+
+
 def test_discovery_reads_new_relevant_listing_and_assesses(workspace):
     calls=[]
     def call(tool,args):

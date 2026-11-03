@@ -550,6 +550,11 @@ class Workspace:
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
             row['assessment_source'] = metadata.get('assessment_source:'+row['id'])
+            source=row['assessment_source'] or {}
+            if (row['fit']['assessment_state']=='incomplete' and source.get('revision')==row['revision']
+                and source.get('message') and row['fit'].get('source_state') in {'unread','missing_requirements','employer_missing'}):
+                row['fit']['assessment_notice']=source['message']
+                if source.get('status')=='blocked': row['fit']['source_state']='source_unavailable'
             row['top_saved'] = bool(metadata.get('top:'+row['id'],False))
             from .locations import preferred_location
             row['preferred_location'] = preferred_location(row['location_info'],self.preferences.location)
@@ -703,18 +708,19 @@ class Workspace:
         if not self.batch_lock.acquire(blocking=False):
             raise BatchInProgress('A read and assess batch is already running.')
         try:
+            from .fit import VERSION
             rows = {row['id']:row for row in self.jobs()}
-            eligible = [i for i in dict.fromkeys(job_ids) if i in rows and rows[i].get('stage') not in {'archived','applied'} and not rows[i].get('listing',{}).get('closed') and rows[i].get('fit',{}).get('assessment_state') == 'incomplete' and (not rows[i].get('assessment_source') or rows[i]['assessment_source'].get('revision') != rows[i]['revision'])]
+            eligible = [i for i in dict.fromkeys(job_ids) if i in rows and rows[i].get('stage') not in {'archived','applied'} and not rows[i].get('listing',{}).get('closed') and rows[i].get('fit',{}).get('assessment_state') == 'incomplete' and (not rows[i].get('assessment_source') or rows[i]['assessment_source'].get('revision') != rows[i]['revision'] or rows[i]['assessment_source'].get('version') != VERSION)]
             with self.read_guard:
                 busy = set(self.reading_jobs)
             available = [i for i in eligible if i not in busy]
-            counts = {'assessed':0, 'needs_source':0, 'blocked':0, 'remaining':max(0,len(available)-12)+len(eligible)-len(available), 'processed':0, 'total':min(12,len(available))}
+            counts = {'assessed':0, 'closed':0, 'needs_source':0, 'blocked':0, 'remaining':max(0,len(available)-12)+len(eligible)-len(available), 'processed':0, 'total':min(12,len(available))}
             self.set_meta('assessment_progress', counts)
             for job_id in available[:12]:
                 try:
                     self.hydrate(job_id)
                     row = next(r for r in self.jobs() if r['id']==job_id)
-                    status = 'assessed' if row['fit']['assessment_state']=='assessed' else 'needs_source'
+                    status = 'closed' if row['fit']['assessment_state']=='closed' else 'assessed' if row['fit']['assessment_state']=='assessed' else 'needs_source'
                     note = row['fit'].get('assessment_notice','')
                 except SourceChanged as exc:
                     status, note = 'needs_source', str(exc)
@@ -724,7 +730,7 @@ class Workspace:
                     continue
                 except Exception as exc:
                     status, note = 'blocked', str(exc)[:500]
-                self.set_meta('assessment_source:'+job_id, {'status':status,'message':note,'at':utcnow(),'revision':self.job(job_id)[0]['revision']})
+                self.set_meta('assessment_source:'+job_id, {'status':status,'message':note,'at':utcnow(),'revision':self.job(job_id)[0]['revision'],'version':VERSION})
                 counts[status]+=1
                 counts['processed']+=1
                 self.set_meta('assessment_progress',counts)
@@ -733,6 +739,7 @@ class Workspace:
             self.batch_lock.release()
 
     def hydrate(self, job_id):
+        from .fit import VERSION
         with self.read_guard:
             if job_id in self.reading_jobs:
                 raise ReadInProgress('This role is already being read.')
@@ -742,14 +749,14 @@ class Workspace:
             self.set_meta('assessment_source:'+job_id, None)
             return result
         except Exception as exc:
-            self.set_meta('assessment_source:'+job_id, {'status':'needs_source' if isinstance(exc,SourceChanged) else 'blocked','message':str(exc)[:500],'at':utcnow(),'revision':self.job(job_id)[0]['revision']})
+            self.set_meta('assessment_source:'+job_id, {'status':'needs_source' if isinstance(exc,SourceChanged) else 'blocked','message':str(exc)[:500],'at':utcnow(),'revision':self.job(job_id)[0]['revision'],'version':VERSION})
             raise
         finally:
             with self.read_guard:
                 self.reading_jobs.discard(job_id)
 
     def _hydrate(self, job_id):
-        from .listing_view import confirmed_listing_employer, normalize_listing
+        from .listing_view import confirmed_listing_employer, normalize_listing, source_problem
         row, job = self.job(job_id)
         result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": public_listing_url(str(job.url))}], "response_length": "long"})
         text = source_text(result)
@@ -762,6 +769,8 @@ class Workspace:
         text = normalize_listing(text, job.title)
         if text.startswith('Listing mismatch:'):
             raise ValueError('The page metadata describes another role. Verify the employer posting or paste the correct listing.')
+        problem=source_problem(text,job.title)
+        if problem and problem[0]!='closed': raise ValueError(problem[1])
         closing = stated_closing_date(text)
         text = readable_listing(text, job.title)
         if len(text.strip())<300 or re.search(r'(?i)\b(?:AI.generated summary|search results|access denied|failed to fetch)\b',text):
