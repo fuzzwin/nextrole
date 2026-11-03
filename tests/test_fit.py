@@ -62,14 +62,15 @@ def test_optional_requirements_and_related_roles_do_not_create_false_gaps():
 
 def test_non_it_degree_does_not_satisfy_technical_qualification_heading():
     fit=assess('Location: Melbourne, VIC\nSpecialist/Technical Expertise/Qualifications\n- Formal tertiary qualifications in Information Systems or related discipline.\n- Python automation experience.')
-    assert fit['percent']<=59
+    assert not fit['auto_eligible']
     assert fit['requirements'][0]['status']=='Needs confirmation'
     assert 'credential' in fit['reviews'][0]['label']
 
 
 def test_five_years_requirement_in_plain_experience_heading_is_not_missed():
     fit=assess("Location: Melbourne, VIC\nWhat you'll need to succeed:\nTechnical Skills:\n- Python automation experience.\nExperience\n- 5+ years hands-on automation experience.")
-    assert fit['percent']<=59
+    assert not fit['auto_eligible']
+    assert any(r['value']==0 for r in fit['requirements'] if '5+' in r['text'])
     assert any('5+' in r['text'] for r in fit['requirements'])
 
 
@@ -124,13 +125,13 @@ def test_confirmed_user_guides_are_credited_as_work_evidence():
     p=profile(['Created an interactive guide to the governed AI Hub for users.'],skills=['Microsoft 365'])
     fit=assess('Location: Newcastle NSW\nKey criteria\n- Microsoft 365 knowledge.\n- Experience creating guides and communication materials for users.',p,title='Digital Workplace Specialist')
     assert fit['requirements'][1]['status']=='Supported'
-    assert any(s['label']=='User guidance and communication' for s in fit['strengths'])
+    assert any(s['kind']=='Experience' and s['evidence']==p.experience[0].bullets[0] for s in fit['strengths'])
 
 
 def test_search_redirect_never_receives_a_fit_score():
     fit=assess('# 262 Senior Business Analyst Contract Jobs in United States\n## Requirements\nPython workflow automation experience.')
     assert fit['percent'] is None and fit['status']=='Needs review'
-    assert 'search results page' in fit['reviews'][0]['label']
+    assert fit['source_state']=='search_results'
 
 
 def test_job_closed_footer_overrides_strong_requirements_match():

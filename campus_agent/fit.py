@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from .models import Job
 
-VERSION = 'experience-fit-v3'
+VERSION = 'criterion-evidence-v4'
 # These are deliberate product weights, not a probability of being hired.
 WEIGHTS = {'skills':30, 'experience':40, 'requirements':30}
 TOOLS = {
@@ -40,8 +40,8 @@ DOMAINS = [
     ('Security operations',r'\bsecurity\b|\bpermissions?\b|\baccess control\b|\bauthentication\b',r'security incident|Entra ID|phishing|authentication'),
     ('User guidance and communication',r'\bguides?\b|\bcommunication|\btraining|\bcoaching|\benablement|\badoption',r'interactive guide|plain.language user guides|induction guides|awareness training|AI Hub demonstration'),
 ]
-REQUIRED = r'what you[’\x27]ll need to succeed|key requirements|skills required|what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
-OPTIONAL = r'bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
+REQUIRED = r'your background|what you will bring|required skills and qualifications|to be successful(?: in this role)?|your skills and experience|essential skills and experience|qualifications and experience|key capabilities|selection requirements|what you[’\x27]ll need to succeed|key requirements|skills required|what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
+OPTIONAL = r'^why\b|our benefits|highly regarded|is an advantage|bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
 QUALIFIED = r'\b(?:prototyp\w*|concept|propos\w*|paused|before rollout|ahead of rollout|not (?:yet )?(?:deployed|live)|proof.of.concept|planned|planning|intended|learning|studying|tutorial|training exercise|not implemented|not yet rolled out)\b'
 PRODUCTION = r'\b(?:production|deployed|live|real (?:people|users)|used monthly)\b'
 
@@ -74,7 +74,7 @@ def requirement_words(text):
         'design designing build building create creating develop developing development deliver delivering delivery '
         'implement implementing expert expertise advanced using use core tool role title and plus '
         'or that which who your our their this relevant including related good excellent solid '
-        'material materials user users years year months month least at').split())
+        'effective effectively practical modern complex appropriate clear confident strong highly collaborative scalable successfully excellent material materials user users years year months month least at').split())
     words=set(re.findall(r'[a-z][a-z0-9]+',text.lower()))-stop
     return {w[:-1] if len(w)>4 and w.endswith('s') else w for w in words}
 
@@ -109,6 +109,57 @@ def company_section(heading):
     return name in {'company description','company overview','our story'} or (name.startswith('about ') and name not in {'about the role','about you'})
 
 
+def recorded_qualification(criterion, profile):
+    """Match explicit records only; an unrelated degree or expired status is not proof."""
+    records=[x for x in profile.education+profile.skills if positive_evidence(x) and not re.search(r'\bexpired|lapsed|studying|pursuing|planned|pending|previously held\b',x,re.I)]
+    names=re.findall(r'\b(?:CISSP|CISM|PMP|ITIL|PL-\d{3}|AZ-\d{3}|MS-\d{3})\b',criterion,re.I)
+    if names:
+        found=[r for r in records if all(re.search(r'\b'+re.escape(n)+r'\b',r,re.I) for n in names)]
+        if re.search(r'\bactive|current|valid\b',criterion,re.I):
+            found=[r for r in found if re.search(r'\bactive|current|valid\b',r,re.I)]
+        return found[0] if found else None
+    if not re.search(r'\bdegree|tertiary|qualifications?\b',criterion,re.I): return None
+    fields=re.findall(r'computer science|information (?:technology|systems)|engineering|business|data science|education',criterion,re.I)
+    found=[r for r in records if r in profile.education and re.search(r'\bdegree|bachelor|master|diploma|phd\b',r,re.I)
+           and (not fields or any(re.search(re.escape(f),r,re.I) for f in fields))]
+    return found[0] if found else None
+
+
+def qualification_only(criterion):
+    """A matching degree never proves an extra language, skill or delivery clause."""
+    remainder=re.sub(r'\b(?:CISSP|CISM|PMP|ITIL|PL-\d{3}|AZ-\d{3}|MS-\d{3})\b|computer science|information (?:technology|systems)|data science', '', criterion, flags=re.I)
+    allowed=set('a an the in or and of with formal tertiary degree bachelor bachelors master masters diploma phd qualification qualifications related relevant discipline field business engineering education active current valid certification certified required essential must have hold holding'.split())
+    return not (set(re.findall(r'[a-z]+',remainder.lower()))-allowed)
+
+
+def recorded_duration(criterion, facts):
+    """Never turn overall employment dates into years of a particular technology."""
+    demand=re.search(r'\b(\d+)\+?\s*years?\b',criterion,re.I)
+    if not demand: return None
+    tools=mentions(criterion)
+    for fact in facts:
+        duration=re.search(r'\b(\d+)\+?\s*years?\b',fact['text'],re.I)
+        linked=bool((re.search(r'\bfor\s+\d+\+?\s*years?\s*[.!]?\s*$',fact['text'],re.I)
+            and not re.search(r'\bwhile|previously|before|after|working|worked\b',fact['text'],re.I))
+            or re.match(r'^\s*\d+\+?\s*years?\s+(?:of\s+)?(?:hands.on\s+)?(?:experience\s+(?:in|with)\s+)?(?:'+ '|'.join(TOOLS[t] for t in tools) +')',fact['text'],re.I)) if tools else False
+        if (duration and int(duration[1])>=int(demand[1]) and positive_evidence(fact['text'])
+            and linked and not re.search(QUALIFIED,fact['text'],re.I) and tools
+            and all(re.search(TOOLS[t],fact['text'],re.I) for t in tools)):
+            return fact
+    return None
+
+
+def criterion_facts(criterion, facts):
+    """Keep tool and delivery obligations in the same evidence clause."""
+    tools=mentions(criterion)
+    result=[]
+    for fact in facts:
+        for clause in re.split(r';\s*|,\s+(?:and|but)\s+|\s+(?:and|but)\s+(?=(?:built|developed|delivered|created|managed|administered|worked|supported|led|implemented)\b)',fact['text'],flags=re.I):
+            if clause.strip() and (not tools or all(re.search(TOOLS[t],clause,re.I) for t in tools)):
+                result.append({**fact,'text':clause.strip(),'original_text':fact['text']})
+    return result
+
+
 def sentences(view):
     for section in view.get('sections',[]):
         for block in section['blocks']:
@@ -120,14 +171,16 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     result={'version':VERSION,'percent':None,'status':'Needs profile','strengths':[],
             'reviews':[],'requirements':[],'breakdown':[],'cap':None,
             'assessment_state':'needs_profile','assessment_notice':'Save your confirmed profile to assess this role.','auto_eligible':False,'coverage':{'criteria_count':0,'work_examples':0},
-            'method':'Evidence coverage: skills 30%, work experience 40%, stated requirements 30%. Unknown criteria earn no points. Not a hiring probability.'}
+            'method':'Criterion-linked evidence: skills 30%, specific work examples 40%, stated requirements 30%. Unconfirmed requirements earn no full credit; review gates are separate. Not a hiring probability.'}
     if not profile or profile.is_example:
         result['reviews']=[{'label':'Save your confirmed résumé profile to assess this role.','requirement':''}]
         return result
-    if re.search(r'(?i)\b(?:summary|synopsis|excerpt)\b[^\n]{0,100}\bnot\s+(?:a\s+)?verbatim\b|\bnot\s+(?:a\s+)?verbatim\b[^\n]{0,100}\b(?:summary|synopsis|excerpt)\b',job.description):
-        full=False
-    if re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',job.description):
-        result.update(assessment_state='incomplete',assessment_notice='Verify the original role posting before assessment.',status='Needs review',reviews=[{'label':'The source returned a job-search results page instead of this role. Verify the original posting.','requirement':''}])
+    from .listing_view import source_problem
+    problem=source_problem(job.description,job.title)
+    if problem and problem[0]=='closed': closed=True
+    if problem and problem[0]!='closed':
+        result.update(assessment_state='incomplete',source_state=problem[0],assessment_notice=problem[1],status='Needs review',reviews=[{'label':problem[1],'requirement':''}])
+        result['breakdown']=[{'id':key,'label':label,'weight':WEIGHTS[key],'points':None,'covered':None,'total':0,'state':'pending'} for key,label in [('skills','Relevant skills'),('experience','Work experience'),('requirements','Stated requirements')]]
         return result
     from .role_types import matched_types
     rows=list(sentences(view))
@@ -183,6 +236,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     reviews=[]
     hard=False
     for criterion in criteria:
+        linked_facts=criterion_facts(criterion,facts)
         required_tools=mentions(criterion)
         found=[t for t in required_tools if t in supported_tools]
         missing=[t for t in required_tools if t not in supported_tools]
@@ -190,6 +244,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         evidence=[]
         value=0
         special=False
+        qualification=recorded_qualification(criterion,profile)
+        duration=recorded_duration(criterion,linked_facts)
         if re.search(r'\bworkshops?\b',criterion,re.I) and not any(re.search(r'\bworkshops?\b',f['text'],re.I) for f in facts):
             reasons.append('Workshop facilitation is not explicitly confirmed; process mapping, guides and demonstrations are transferable evidence.')
             special=True
@@ -199,18 +255,20 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             special=True
         if re.search(r'\b(?:nv1|nv2|baseline clearance|security clearance|australian citizen(?:ship)?|right to work|working rights|formal tertiary|degree in|qualifications? in|certified|(?:degree|tertiary|qualification|certification|licen[cs]e).{0,55}(?:required|essential)|(?:must|require).{0,55}(?:degree|certification|licen[cs]e))\b',criterion,re.I):
             # Credentials/eligibility need explicit, contextual confirmation, never keyword credit.
-            reasons.append('Eligibility or credential requirement needs confirmation against your records.')
-            special=True
+            if not qualification:
+                reasons.append('Eligibility or credential requirement needs confirmation against your records.')
+                special=True
         if re.search(r'\b(?:at least|minimum of)\s+(?:[2-9]\d*|two|three|four|five|six|ten)\s+(?:enterprise|production|commercial)',criterion,re.I):
             reasons.append('The required number and scale of delivered solutions need confirmation from specific source facts.')
             special=True
         if re.search(r'\b(?:\d+\+?|one|two|three|four|five|six|seven|eight|ten|twelve|eighteen|twenty)\s*(?:to\s*\d+\s*)?(?:years?|months?)\b',criterion,re.I):
-            reasons.append('Required duration of relevant experience needs confirmation; total IT tenure does not establish specialist tenure.')
-            special=True
+            if not duration:
+                reasons.append('Required duration of relevant experience needs confirmation; total IT tenure does not establish specialist tenure.')
+                special=True
         production=bool(re.search(PRODUCTION,criterion,re.I) and not re.search(r'\bor production\b',criterion,re.I)
                         and (required_tools or re.search(r'\bagents?\b|software',criterion,re.I)))
         if production:
-            candidates=[f for f in facts if re.search(PRODUCTION,f['text'],re.I) and evidence_value(f['text'])==1
+            candidates=[f for f in linked_facts if re.search(PRODUCTION,f['text'],re.I) and evidence_value(f['text'])==1
                         and (all(re.search(TOOLS[t],f['text'],re.I) for t in required_tools)
                              if required_tools else re.search(r'\bagents?\b|software',f['text'],re.I))]
             if candidates:
@@ -222,16 +280,24 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         if missing:
             reasons.append('Not confirmed in your profile: '+', '.join(missing)+'.')
             special=True
-        extra=unsupported_clauses(criterion,facts)
+        extra=unsupported_clauses(criterion,linked_facts)
+        if qualification and qualification_only(criterion) and not required_tools and not duration:
+            extra=[]
+            value=1
+            evidence=[{'text':qualification,'role':'Saved qualification','organisation':'Confirmed profile','dates':''}]
+        if duration and not qualification:
+            extra=[w for w in extra if w not in {'10','5','4','3','2','year'}]
+            if not extra:
+                value=1
+                evidence=[duration]
         if extra:
             reasons.append('Some details of this requirement are not confirmed in your saved evidence.')
-            special=True
         if not special and not evidence:
             if required_tools and len(found)==len(required_tools):
                 value=1
                 for tool in found:
                     pattern=TOOLS[tool] if tool!='Power Platform' else r'\bpower (?:platform|automate|apps)\b'
-                    work=[f for f in facts if re.search(pattern,f['text'],re.I)]
+                    work=[f for f in linked_facts if re.search(pattern,f['text'],re.I)]
                     solid=[f for f in work if evidence_value(f['text'])==1]
                     if solid:
                         evidence.append(solid[0])
@@ -250,11 +316,14 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                     reasons.append('Skills or qualified prototype/concept evidence is present; the required hands-on delivery experience needs confirmation.')
             elif not required_tools:
                 matches=[e for e in experience if re.search(next(d for label,d,_ in DOMAINS if label==e['label']),criterion,re.I)]
-                if matches and all(e['value'] for e in matches):
-                    value=min(e['value'] for e in matches)
-                    evidence=[e['evidence'] for e in matches if e['evidence']][:2]
+                direct=[f for f in linked_facts if len(requirement_words(criterion)&requirement_words(f['text']))>=1]
+                if direct:
+                    evidence=direct[:2]
+                    value=0.5 if extra else min(evidence_value(f['text']) for f in evidence)
                 if value<1:
                     reasons.append('Transferable evidence only; confirm the specific requirement.' if value else 'No specific supporting evidence found in your saved experience.')
+        if extra and value>0:
+            value=min(value,0.5)
         if special:
             hard=True
             value=0
@@ -264,20 +333,29 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             reviews.append({'label':reasons[0] if reasons else 'Requirement needs review.','requirement':criterion})
 
     skills_ratio=sum(tool_values.values())/len(tools) if tools else 0
-    experience_ratio=sum(e['value'] for e in experience)/len(experience) if experience else 0
+    work_criteria=[r for r in result['requirements'] if not re.search(r'(?i)degree|tertiary|qualification|certification|clearance|citizen|working rights|right to work',r['text'])]
+    work_values=[r['value']*max((evidence_value(e['text']) for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),default=0) for r in work_criteria]
+    experience_ratio=sum(work_values)/len(work_values) if work_values else 0
     requirements_ratio=sum(r['value'] for r in result['requirements'])/len(result['requirements']) if result['requirements'] else 0
     result['breakdown']=[
         {'id':'skills','label':'Relevant skills','weight':30,'points':round(30*skills_ratio),'covered':sum(tool_values.values()),'total':len(tools)},
-        {'id':'experience','label':'Work experience','weight':40,'points':round(40*experience_ratio),'covered':sum(e['value'] for e in experience),'total':len(experience)},
+        {'id':'experience','label':'Work experience','weight':40,'points':round(40*experience_ratio),'covered':sum(work_values),'total':len(work_values)},
         {'id':'requirements','label':'Stated requirements','weight':30,'points':round(30*requirements_ratio),'covered':sum(r['value'] for r in result['requirements']),'total':len(result['requirements'])},
     ]
+    strengths=[s for s in strengths if s['kind']!='Experience']
+    seen_work=set()
+    for criterion in result['requirements']:
+        for fact in criterion['evidence']:
+            if criterion['value']>0 and fact.get('role') not in {'Saved skill','Saved qualification'} and fact['text'] not in seen_work:
+                seen_work.add(fact['text'])
+                strengths.append({'label':'Work evidence: '+criterion['text'][:85],'kind':'Experience','evidence':fact['text'],'source':fact})
     result['strengths']=sorted(strengths,key=lambda s:s['kind']!='Experience')
     result['matched_skills']=supported_tools
     result['unconfirmed_skills']=missing_tools
-    result['experience']=experience
+    result['experience']=[{'label':r['text'],'value':v,'evidence':next((e for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),None)} for r,v in zip(work_criteria,work_values)]
     score=sum(b['points'] for b in result['breakdown'])
     caps=[]
-    work_examples={f['text'] for requirement in result['requirements'] for f in requirement['evidence'] if f.get('role')!='Saved skill'}
+    work_examples={f['text'] for requirement in result['requirements'] for f in requirement['evidence'] if f.get('role') not in {'Saved skill','Saved qualification'}}
     result['coverage']={'criteria_count':explicit_criteria,'work_examples':len(work_examples),
                         'supported':sum(r['value']==1 for r in result['requirements']),
                         'partial':sum(0<r['value']<1 for r in result['requirements']),
@@ -285,39 +363,23 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     if explicit_criteria<3 or len(work_examples)<2:
         reviews.append({'label':'Limited evidence: at least three distinct requirements and two work examples are needed for an automatic strong match.','requirement':''})
         caps.append((79,'Listing or evidence is too sparse for a strong-match judgement.'))
-    limited=[e['label'] for e in experience if e['value']<1]
-    if limited:
-        reviews.append({'label':'Work evidence is partial or unconfirmed for: '+', '.join(limited)+'.','requirement':''})
-        caps.append((69,'Some relevant work experience needs review.'))
     if not tools:
         reviews.append({'label':'Not enough explicit technical skill detail to assess the skills component.','requirement':''})
-        caps.append((69,'Skill detail is incomplete.'))
-    if hard:
-        caps.append((59,'Essential requirements need confirmation.'))
-    if any(not r['label'].startswith('Limited evidence:') for r in reviews):
-        caps.append((69,'Some stated requirements have partial or no supporting evidence.'))
     if not full:
         reviews.insert(0,{'label':'Read the full listing before assessing this role.','requirement':''})
-        caps.append((49,'Full listing not yet read.'))
     if not explicit_criteria:
         reviews.append({'label':'No explicit requirements could be assessed from the saved listing.','requirement':''})
-        caps.append((69,'Requirements are incomplete.'))
     if not matched_types(clean_job,preferences.role_types):
         reviews.append({'label':'Role falls outside your selected role types.','requirement':''})
-        caps.append((49,'Outside your selected role types.'))
     if not location.get('stated'):
         reviews.append({'label':'Listing location needs confirmation.','requirement':''})
-        caps.append((69,'Location is unconfirmed.'))
     from .listing_view import employer_known
     if not employer_known(view.get('employer') or job.employer):
         reviews.append({'label':'Employer identity needs verification.','requirement':''})
-        caps.append((69,'Employer identity is unconfirmed.'))
     for notice in view.get('notices',[]):
         reviews.append({'label':notice['message'],'requirement':notice['quote']})
-        caps.append((69,'Listing contains conflicting work details.'))
     if re.search(r'\b(?:senior|lead|manager|architect|principal|director|head|graduate|internship|apprentice)\b',view.get('title',job.title),re.I):
         reviews.append({'label':'Seniority and scope need review against your confirmed responsibilities.','requirement':''})
-        caps.append((69,'Seniority needs review.'))
     closed=closed or bool(re.search(r'\b(?:no longer (?:available|accepting applications)|position (?:has been )?(?:filled|closed)|job (?:has )?(?:expired|closed)|applications (?:have )?closed)\b',primary,re.I))
     if closed:
         reviews.insert(0,{'label':'The saved closing date has passed. Verify reopening before applying.','requirement':''})
@@ -336,6 +398,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     incomplete=bool(not closed and (notice or any('different role' in n['message'] for n in view.get('notices',[]))))
     result['assessment_state']='closed' if closed else 'incomplete' if incomplete else 'assessed'
     result['assessment_notice']=notice if incomplete else ''
+    result['source_state']='closed' if closed else 'unread' if not full else 'missing_requirements' if not explicit_criteria else 'employer_missing' if incomplete else 'ready'
     if incomplete:
         result.update(percent=None,cap=None,auto_eligible=False)
     for component in result['breakdown']:

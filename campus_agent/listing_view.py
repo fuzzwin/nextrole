@@ -23,7 +23,7 @@ HEADINGS = {
     'what you need to do now', 'other relevant information',
     'required experience', 'required skills', 'required skills and experience',
     'required experience & skills', 'required qualifications',
-    'job requirements', 'key requirements', 'skills required', 'key criteria', 'company description', 'company overview', 'our story',
+    'your background', 'what you will bring', 'required skills and qualifications', 'to be successful', 'to be successful in this role', 'your skills and experience', 'essential skills and experience', 'qualifications and experience', 'key capabilities', 'selection requirements', 'job requirements', 'key requirements', 'skills required', 'key criteria', 'company description', 'company overview', 'our story',
 }
 
 
@@ -31,6 +31,31 @@ def without_site_footer(text):
     # Recognize a navigation cluster, not the ordinary word "Research" in a role.
     return re.split(r'(?im)^\s*Research\s*\n+\s*[*•-]\s+Research Index\b', text, maxsplit=1)[0].rstrip()
 
+
+RECOMMENDATIONS = r'(?im)^\s*(?:#+\s*)?(?:Similar jobs|Related jobs|Find similar jobs|Recommended jobs|People also viewed|Jobs with similar titles|Search similar titles|More jobs like this|Explore more jobs|See also|What .+ jobs ask for|Tailor my CV Apply|Show more Show less|Show more\s*\n\s*Show less)\b'
+
+
+def source_problem(text, title=''):
+    """Classify unavailable or misdirected captures before reading criteria."""
+    clean = re.sub(r'(?m)^L\d+(?:@P[\d-]+)?: ?', '', text)
+    if re.search(r'(?i)L0 is out of bounds|Total lines:\s*0|Failed to fetch https?://|^\s*Access denied|^\s*Just a moment',clean):
+        return ('source_unavailable','The source returned an unavailable or blocked page, not a readable advert.')
+    if re.search(r'(?i)\b(?:summary|synopsis|excerpt)\b[^\n]{0,100}\bnot\s+(?:a\s+)?verbatim|\bnot\s+(?:a\s+)?verbatim\b[^\n]{0,100}\b(?:summary|synopsis|excerpt)',clean):
+        return ('source_summary','Only a non-verbatim summary is saved. Original employer requirements are needed.')
+    if re.search(r'(?i)\bjobs?\s+(?:in|near me)\b',title) or re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',clean):
+        return ('search_results','This source is a job-search directory, not the original individual advert.')
+    if re.search(r'(?im)^\s*#{1,6}\s*(?:Current openings at\b|\d+ results for\b|\d+ jobs\s*$)',clean) or re.search(r'(?i)Redirected to URL:[^\n]*(?:job_not_found|[?&]error=true)',clean):
+        return ('search_results','This source redirects to a list of vacancies instead of this individual advert.')
+    if re.search(r'(?im)^\s*#{1,6}\s*Job summary\s*$',clean) and not re.search(r'(?im)^\s*#{1,6}\s*(?:Full )?Job description\s*$',clean):
+        return ('source_summary','This board saved a job summary, not the complete original employer advert.')
+    primary = re.split(RECOMMENDATIONS,clean)[0]
+    if len(re.findall(r'(?m)^\s*####\s+[^\n]+',primary))>=6 and len(re.findall(r'(?m)^\s*###\s+[^\n]+',primary))>=6:
+        return ('search_results','The saved capture contains unrelated roles/employers. Verify the individual advert.')
+    if re.search(r'(?i)wurde besetzt|position (?:has been )?(?:filled|closed)|no longer accepting applications|job (?:has )?(?:expired|closed)', primary):
+        return ('closed','The original source says this listing is closed or filled.')
+    if '[wordlim' in clean and clean.count('...')>=2 and len(clean)<1200:
+        return ('source_summary','Only an indexed excerpt is saved. Read or paste the complete original advert.')
+    return None
 
 def title_matches_source(saved_title, text):
     """Require a role title in the captured single-role heading, not body mentions."""
@@ -105,7 +130,7 @@ def listing_view(text, title='', employer=''):
     text = re.sub(r'[^]*|【[^】]*】|\[wordlim\s*:?\s*\d+\]', '', text)
     text = without_site_footer(text)
     # Stop at explicit board recommendations, rather than folding other roles in.
-    text = re.split(r'(?im)^\s*(?:#+\s*)?(?:Similar jobs|Related jobs|Find similar jobs|Recommended jobs|People also viewed|More jobs like this|Explore more jobs|See also|What .+ jobs ask for|Tailor my CV Apply|Show more Show less)\b', text)[0]
+    text = re.split(RECOMMENDATIONS, text)[0]
     freehire = 'Sign in to see your match' in text and 'Profile match' in text
     if freehire:
         text = re.split(r'(?im)^\s*## Skills\s*$', text)[0]
@@ -135,7 +160,8 @@ def listing_view(text, title='', employer=''):
                 employer=line.split(' · ',1)[0]
                 break
     # Known board header ends before the actual employer-written description.
-    marker = next((i for i,line in enumerate(lines) if line=='Description Company' or re.fullmatch(r'(?:#+\s*)?Full Job Description',line,re.I)),None)
+    board_summary=any(re.fullmatch(r'(?:#+\s*)?Job summary',line,re.I) for line in lines)
+    marker = next((i for i,line in enumerate(lines) if line=='Description Company' or re.fullmatch(r'(?:#+\s*)?Full Job Description',line,re.I) or (board_summary and re.fullmatch(r'(?:#+\s*)?Job Description',line,re.I))),None)
     if marker is not None:
         lines=lines[marker+1:]
     sections=[{'title':'Overview','blocks':[]}]
@@ -153,7 +179,7 @@ def listing_view(text, title='', employer=''):
             continue
         if re.match(r'^(?:Posted\s+|Published:|Crawled:)',stripped,re.I) and len(stripped)<100:
             continue
-        if stripped.rstrip(':').casefold() in HEADINGS or (line.startswith('#') and 0<len(stripped)<100):
+        if stripped.rstrip(':?').casefold() in HEADINGS or (len(stripped)<80 and re.match(r'(?i)^(?:about [A-Za-z]|why [A-Za-z]|our benefits)',stripped)) or (line.startswith('#') and 0<len(stripped)<100):
             flush()
             sections.append({'title':stripped.rstrip(':'),'blocks':[]})
             continue
