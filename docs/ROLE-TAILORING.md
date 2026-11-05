@@ -83,7 +83,7 @@ flowchart TD
     F --> B
     E -->|Yes| G["Use the reviewed local files"]
     G --> H["Manual connected action: PDF review confirmation and delivery checks"]
-    D --> I["Optional automatic email setup: confirm both sample review boxes and approve"]
+    G --> I["Optional automatic email setup: confirm both sample review boxes and approve"]
     I --> J["Separate email opt-in and schedule; current approval still required"]
     H --> K["Connected delivery checks run again"]
     J --> K
