@@ -5,7 +5,7 @@ It prepares résumé and cover-letter PDFs from confirmed evidence for your revi
 You stay in control: it does not submit applications to employers.
 
 ![NextRole local workspace showing fictional example roles](assets/nextrole-workspace.jpg)
-*Actual app capture with synthetic sample data; no connected accounts or live listings. [Screenshot details](assets/README.md).*
+*Actual 0.8.4 app capture (26 October 2026) with synthetic sample data; no connected accounts or live listings. The current source is 0.9.12. [Screenshot details](assets/README.md).*
 
 ## Try it on your Mac
 
@@ -46,6 +46,14 @@ Changes to the profile, style or sample invalidate approval. Approval alone does
 not enable email or restart a schedule. NextRole never applies to jobs for you.
 
 [User guide](docs/USER-GUIDE.md) · [Evidence and tailoring](docs/ROLE-TAILORING.md) · [Privacy](PRIVACY.md)
+
+## Follow the evidence and review flow
+
+See the [visual proof loop and fictional worked examples](docs/ROLE-TAILORING.md#proof-loop)
+for the path from an original advert to evidence review, checked PDFs and optional
+delivery. Source completeness, match score, human approval and email opt-in are
+separate checks. A high score never overrides a source warning or submits an
+employer application.
 
 ## How it works
 

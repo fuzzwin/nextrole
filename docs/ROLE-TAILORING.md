@@ -37,6 +37,102 @@ For most Australian private-sector résumés, referee details are optional unles
 
 ## Proof loop
 
-Read source -> choose relevant *actual* evidence -> generate -> visually inspect both final PDFs -> check every claim, date, metric, employer, confidentiality and permission -> confirm both review boxes -> approve sample. Approval does not enable scheduled email or employer submissions. Changing the profile, style, generated PDFs or rules invalidates previous sample approval.
+This flow describes the current 0.9.12 source and review boundaries. It is a
+workflow illustration, not a screenshot or a report of a live application test.
 
-The programmatic check establishes source equality, paper format, identity, packet consistency and some disclosure rules; it does not independently prove achievements or predict hiring success. Check the real employer's attachment requirements and submit the actual application yourself.
+### 1. Establish the advert before interpreting a score
+
+```mermaid
+flowchart TD
+    A["Saved role or pasted advert"] --> B{"Complete original advert, same role and identified employer?"}
+    B -->|No| C["Assessment pending: inspect the source reason"]
+    C --> D["Read and assess, update missing details, or paste original advert"]
+    D --> B
+    B -->|Yes| E["Compare requirements with confirmed profile evidence"]
+    E --> F["Review score, supporting facts and gaps"]
+    F --> G{"Source availability and fit checks clear?"}
+    G -->|No| H["Keep review warning; no automatic Top listing"]
+    G -->|Yes| I["May qualify for automatic Top under saved preferences"]
+```
+
+A saved advert may support a score while a later availability check is blocked.
+Keep that warning: a score does not establish that the vacancy is still open.
+A position description also needs a current vacancy check. A closed role is
+marked closed, rather than treated as an ordinary incomplete assessment.
+
+**Plain-text route:** check the original advert and employer, resolve missing
+source information, then read the evidence explanation. A high score cannot
+remove source or fit warnings. A manual saved pick is separate from automatic Top.
+
+The background details queue is read-only with respect to delivery: it updates
+saved advert details, not applications. It preserves prior source revisions and
+tracking, pauses for connection problems, and permits one delayed retry after
+24 hours for blocked or incomplete sources before holding them for review.
+See [Updating saved advert details](USER-GUIDE.md#updating-saved-advert-details-0911)
+for the controls and restart behaviour.
+
+### 2. Review the actual documents before choosing delivery
+
+```mermaid
+flowchart TD
+    A["Confirmed profile and fully read role"] --> B["Choose Focused or Complete; generate local PDFs"]
+    B --> C["Programmatic packet checks"]
+    C --> D["Personally inspect both final PDFs"]
+    D --> E{"Facts, layout, permissions and application instructions checked?"}
+    E -->|Needs correction| F["Correct saved facts or style; regenerate"]
+    F --> B
+    E -->|Yes| G["Use the reviewed local files"]
+    G --> H["Manual connected action: PDF review confirmation and delivery checks"]
+    G --> I["Optional automatic email setup: confirm both sample review boxes and approve"]
+    I --> J["Separate email opt-in and schedule; current approval still required"]
+    H --> K["Connected delivery checks run again"]
+    J --> K
+```
+
+**Plain-text route:** choose relevant actual evidence, generate, inspect both
+PDFs, correct and regenerate when needed, then decide how to use the files.
+For automatic emails, personally confirm both sample review boxes and approve
+the exact sample, then separately opt in and configure the intended schedule.
+Approval alone sends nothing, creates no schedule and does not resume one.
+
+The two routes are distinct: a manual connected action requires its PDF review
+confirmation and packet checks; automatic email also requires a current approved
+sample. Profile or style changes, a new sample, changed or missing sample PDFs,
+and updated document rules invalidate that approval. Changed job source material
+can also make an existing packet stale: regenerate and inspect it before delivery.
+
+**You submit the employer application yourself.** Connected Gmail/Drive actions
+do not turn NextRole into an employer-application submission service. Check the
+employer's required files, selection criteria and submission method separately.
+
+The programmatic check establishes source equality, paper format, identity,
+packet consistency and some disclosure rules. It does not independently prove
+achievements or predict hiring success. Human review includes every claim, date,
+metric, employer, confidentiality restriction and permission.
+
+### Worked examples
+
+These are fictional teaching cases, not measured test results or real applicants.
+
+| Situation | What the evidence supports | Next step |
+| --- | --- | --- |
+| A saved board page contains only a summary and keyword tags. | The source is insufficient for a reliable assessment. | Read or paste the complete original advert; do not treat pending as zero fit. |
+| An original advert is saved, but the latest availability check is blocked. | A score may describe the saved text; current availability remains unresolved. | Keep the source warning and check the current vacancy. It cannot become automatic Top while the warning remains. |
+| The profile says “prototyped an automation”; the role requires production delivery. | The prototype is real evidence of its stated stage, not proof of production delivery. | Preserve “prototyped”, inspect the unmet requirement and add only genuinely supported facts. |
+| Both PDFs were reviewed and a sample approved, but automatic email is off. | The sample approval is current; email has not been enabled. | Keep using local files, or deliberately configure the separate email opt-in and schedule. |
+| A profile fact changes after approval. | The old sample no longer represents the current profile. | Generate and personally review a new sample before approving it again. |
+
+### Implementation references
+
+The explanation above is grounded in the current repository, rather than new
+live-connector testing:
+
+- [Source assessment and evidence scoring](../campus_agent/fit.py).
+- [Persistent detail-refresh queue](../campus_agent/detail_refresh.py).
+- [Sample approval and saved-source handling](../campus_agent/workspace.py).
+- [Content, PDF and delivery checks](../campus_agent/packet_checks.py).
+- [Synthetic source-completion regression cases](../tests/test_source_completion.py).
+
+See the [user guide](USER-GUIDE.md) for full controls and
+[asset provenance](../assets/README.md) for the version and limitations of the
+published UI screenshot.
