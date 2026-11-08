@@ -186,7 +186,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         result.update(assessment_state='incomplete',source_state=problem[0],assessment_notice=problem[1],status='Needs review',reviews=[{'label':problem[1],'requirement':''}])
         result['breakdown']=[{'id':key,'label':label,'weight':WEIGHTS[key],'points':None,'covered':None,'total':0,'state':'pending'} for key,label in [('skills','Relevant skills'),('experience','Work experience'),('requirements','Stated requirements')]]
         return result
-    from .role_types import matched_types
+    from .role_types import search_role_matches
     rows=list(sentences(view))
     primary=view.get('title',job.title)+'\n'+'\n'.join(text for _,text in rows)
     clean_job=Job.model_validate({**job.model_dump(mode='json'),'title':view.get('title',job.title),'description':primary[:100000]})
@@ -373,8 +373,6 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         reviews.insert(0,{'label':'Read the full listing before assessing this role.','requirement':''})
     if not explicit_criteria:
         reviews.append({'label':'No explicit requirements could be assessed from the saved listing.','requirement':''})
-    if not matched_types(clean_job,preferences.role_types):
-        reviews.append({'label':'Role falls outside your selected role types.','requirement':''})
     if not location.get('stated'):
         reviews.append({'label':'Listing location needs confirmation.','requirement':''})
     from .listing_view import employer_known
@@ -394,7 +392,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         score=min(score,limit)
     if score<70 and not reviews:
         reviews.append({'label':'The available evidence does not yet establish a strong fit across skills, experience and requirements.','requirement':''})
-    result['auto_eligible']=bool(full and not closed and not reviews and explicit_criteria>=3 and len(work_examples)>=2 and score>=75)
+    result['auto_eligible']=bool(preferences.role_search_mode=='presets' and search_role_matches(clean_job,preferences)
+        and full and not closed and not reviews and explicit_criteria>=3 and len(work_examples)>=2 and score>=75)
     result.update(percent=score,status='Closed' if closed else 'Good match' if score>=70 and not reviews else 'Needs review',reviews=reviews)
     notice=('Read the full listing before assessing this role.' if not full else
             'The saved listing has no assessable requirements. Paste the complete employer advert.' if not explicit_criteria else

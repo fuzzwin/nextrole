@@ -20,26 +20,6 @@ def application_kind(job: Job) -> str:
     return "cover_letter"
 
 
-def role_focus(job: Job) -> str:
-    """Describe a role using a small, fixed vocabulary, not generated claims."""
-    title = job.title.lower()
-    text = title + " " + job.description.lower()
-    options = (
-        (r"\b(?:ai|artificial intelligence|automation)\b", "AI and automation"),
-        (r"\b(?:netsuite|erp|business systems|applications)\b", "business systems"),
-        (r"\b(?:reporting|data analyst|dashboard|analytics)\b", "reporting and analysis"),
-        (r"\b(?:service delivery|support|it operations|systems)\b", "systems and service delivery"),
-        (r"\b(?:project|stakeholder|business analyst)\b", "business change and delivery"),
-    )
-    for pattern, label in options:
-        if re.search(pattern, title):
-            return label
-    for pattern, label in options:
-        if re.search(pattern, text):
-            return label
-    return ""
-
-
 def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
     """A three-paragraph letter grounded in source facts, not a list of software.
 
@@ -71,15 +51,12 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
             return "I " + first.lower() + bullet[len(first):]
         return bullet
 
-    focus = role_focus(job)
     if choice.tone == "direct":
         opening = f"Please consider my application for {job.title} at {job.employer}."
     elif choice.tone == "warm":
         opening = f"I would welcome the opportunity to join {job.employer} as {job.title}."
     else:
         opening = f"I am applying for the {job.title} role at {job.employer}."
-    if focus:
-        opening += f" Its emphasis on {focus} is especially relevant to my background."
 
     evidence = " ".join(sentence(fact) for fact in facts)
     if not evidence:
@@ -94,10 +71,7 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
          if b.strip() not in facts and people_pattern.search(b)), None
     )
     third = sentence(people_fact) + " " if people_fact else ""
-    if focus:
-        third += f"I am interested in contributing to {job.employer}'s work in {focus}. "
-    else:
-        third += f"I would welcome a conversation about the priorities of this role at {job.employer}. "
+    third += f"I would welcome a conversation about the priorities of this role at {job.employer}. "
     third += ("I would appreciate the opportunity to discuss my application."
               if short else
               "Thank you for considering my application. I would welcome the opportunity to discuss how I could contribute.")

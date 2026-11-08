@@ -120,6 +120,8 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
     if session not in {'morning', 'afternoon', 'standout'}:
         raise ValueError('Unknown email check session')
     prefs = workspace.preferences
+    if prefs.role_search_mode == 'custom':
+        return {'status': 'paused', 'reason': 'Custom searches use manual packet review.', 'packets': []}
     if not prefs.morning_enabled or not prefs.morning_recipient:
         raise ValueError('Morning emails are paused. Enable them in Search settings.')
     if session == 'standout' and not prefs.standout_enabled:

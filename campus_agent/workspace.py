@@ -11,11 +11,12 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit, parse_qs, unquote
 from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from .connectors import ConnectorBridge, ConnectorError
 from .documents import generate_documents
@@ -23,7 +24,7 @@ from .mail import build_email, save_preview
 from .models import Experience, Job, Profile, StrictModel, utcnow
 from .store import Store
 from .tailor import prepare_text, terms
-from .role_types import DEFAULT_ROLE_TYPES, matched_types, validate_types, example_types
+from .role_types import DEFAULT_ROLE_TYPES, matched_types, search_role_matches, title_terms, validate_types, example_types
 
 
 def public_listing_url(url):
@@ -43,6 +44,8 @@ def public_listing_url(url):
 
 class Preferences(StrictModel):
     role_types: list[str] = Field(default_factory=lambda: list(DEFAULT_ROLE_TYPES))
+    role_search_mode: Literal['presets', 'custom'] = 'presets'
+    custom_role_titles: list[str] = Field(default_factory=list, max_length=8)
     use_custom_keywords: bool = False
     keywords: list[str] = Field(default_factory=lambda: ["IT systems specialist", "Power Platform automation", "AI enablement"])
     location: str = "Melbourne Victoria Australia"
@@ -60,6 +63,19 @@ class Preferences(StrictModel):
     morning_save_drive: bool = True
     auto_top_enabled: bool = True
     auto_top_threshold: int = Field(default=80, ge=0, le=100)
+
+    @model_validator(mode='after')
+    def validate_custom_roles(self):
+        titles = [' '.join(title.split()) for title in self.custom_role_titles]
+        keys = [title_terms(title) for title in titles]
+        if self.role_search_mode == 'custom' and not titles:
+            raise ValueError('Enter at least one job title for custom search.')
+        if any(not key or len(title) > 100 or any(c in title for c in '"<>') for title, key in zip(titles, keys)):
+            raise ValueError('Use plain job titles of up to 100 characters.')
+        if len({tuple(key) for key in keys}) != len(keys):
+            raise ValueError('Enter each custom job title once.')
+        self.custom_role_titles = titles
+        return self
 
 
 def source_text(result):
@@ -267,7 +283,7 @@ class Workspace:
             self.require_style_approval()
         ZoneInfo(preferences.timezone)
         validate_types(preferences.role_types)
-        if preferences.use_custom_keywords and (not preferences.keywords or len(preferences.keywords) > 3 or not all(k.strip() for k in preferences.keywords)):
+        if preferences.role_search_mode == 'presets' and preferences.use_custom_keywords and (not preferences.keywords or len(preferences.keywords) > 3 or not all(k.strip() for k in preferences.keywords)):
             raise ValueError("Enter one to three extra search phrases, or turn off extra phrases")
         self.preferences = preferences
         self.set_meta("preferences", preferences.model_dump())
@@ -518,7 +534,11 @@ class Workspace:
         for row in rows:
             row.update(details.get(row["id"], {}))
             row.update(self.match(row["job"]))
-            row["role_types"] = [{"id": item["id"], "label": item["label"]} for item in matched_types(Job.model_validate(row["job"]))]
+            job = Job.model_validate(row["job"])
+            search_matches = search_role_matches(job, preferences)
+            categories = search_matches if preferences.role_search_mode == 'custom' else matched_types(job)
+            row["role_types"] = [{"id": item["id"], "label": item["label"]} for item in categories]
+            row['search_match'] = bool(search_matches)
             row['application'] = applications.get(application_key(row['job']['employer'], row['job']['title']))
             if row['application']:
                 row['stage'] = 'applied'
@@ -727,7 +747,8 @@ class Workspace:
         if not self.scan_lock.acquire(blocking=False):
             raise ValueError("A job search is already running")
         try:
-            queries = search_queries(self.preferences, extended)
+            preferences = self.preferences
+            queries = search_queries(preferences, extended)
             items, errors = [], []
             for offset in range(0, len(queries), 3):
                 batch = queries[offset:offset + 3]
@@ -764,10 +785,13 @@ class Workspace:
                 if ' at ' in title and 'Careers at ' not in title:
                     title = title.split(' at ')[0].strip()
                 job = Job(source_id="opportunity", title=title, employer=company,
-                    url=item["url"], description=description, location=self.preferences.location)
+                    url=item["url"], description=description, location=preferences.location)
+                matches = search_role_matches(job, preferences)
+                if preferences.role_search_mode == 'custom' and not matches:
+                    continue
                 is_new = self.add_job(job)
                 added += is_new
-                if is_new and matched_types(job, self.preferences.role_types): new_ids.append(job.identity)
+                if is_new and matches: new_ids.append(job.identity)
             try:
                 assessment = self.assess_batch(new_ids) if new_ids else {"assessed":0,"needs_source":0,"blocked":0,"remaining":0}
             except BatchInProgress:
@@ -897,7 +921,7 @@ class Workspace:
                 self.add_job(job, full=True)
             if re.fullmatch(r'(?:Employer on job listing|Employer in job alert|Unknown|TBD)', job.employer, re.I):
                 raise ValueError('Employer needs confirmation. Use Edit details & notes to enter the employer shown on the original listing, then prepare again.')
-            families = matched_types(job, self.preferences.role_types) or matched_types(job)
+            families = [] if self.preferences.role_search_mode == 'custom' else (matched_types(job, self.preferences.role_types) or matched_types(job))
             role_type = families[0]["id"] if families else None
             prepared = prepare_text(job, self.profile, "local", role_type_id=role_type)
             prepared['document_preferences'] = self.document_style().model_dump()
@@ -951,7 +975,15 @@ class Workspace:
             return {'held':True,'assessment':{'selected':False,'reasons':['Already applied; Gmail status: '+applied['status']],'source_url':applied['source_url']}}
         self.hydrate(job_id)
         _, job = self.job(job_id)
-        assessment = shortlist(job, self.profile, self.preferences)
+        if self.preferences.role_search_mode == 'custom':
+            assessed = next(row for row in self.jobs() if row['id'] == job_id)
+            fit = assessed['fit']
+            selected = fit['assessment_state'] == 'assessed' and not assessed['listing']['closed']
+            assessment = {'selected': selected, 'reasons': [] if selected else [
+                fit.get('assessment_notice') or 'Check the full advert and whether it is open before preparing.'
+            ]}
+        else:
+            assessment = shortlist(job, self.profile, self.preferences)
         self.set_meta("shortlist:" + job_id, assessment)
         if not assessment["selected"]:
             return {"held": True, "assessment": assessment}
