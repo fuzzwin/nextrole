@@ -14,6 +14,25 @@ from .workspace import Preferences, Workspace
 from .role_types import ROLE_TYPES
 
 
+FIELD_NAMES = {"url": "Original job URL", "description": "Job description", "title": "Job title",
+               "employer": "Employer", "summary": "Summary", "name": "Name", "bullets": "Experience facts",
+               "interval_minutes": "Search interval", "morning_max_packets": "Packets per run",
+               "auto_top_threshold": "Top-listing threshold"}
+
+
+def readable_validation(error: ValidationError) -> str:
+    """Plain-language form errors instead of raw pydantic output."""
+    problems = []
+    for item in error.errors()[:6]:
+        field = next((str(part) for part in reversed(item.get("loc", ())) if isinstance(part, str)), "")
+        label = FIELD_NAMES.get(field, field.replace("_", " ").capitalize() or "Value")
+        if item.get("type") == "extra_forbidden":
+            problems.append(f"{label} is not a recognised field")
+        else:
+            problems.append(f"{label}: {item.get('msg', 'is invalid')}")
+    return "Please check: " + "; ".join(problems) + "."
+
+
 def create_workspace_app(workspace: Workspace):
     @asynccontextmanager
     async def lifespan(app):
@@ -40,6 +59,10 @@ def create_workspace_app(workspace: Workspace):
     @app.exception_handler(ValueError)
     async def invalid(request, error):
         return JSONResponse({"detail": str(error)[:1500]}, status_code=400)
+
+    @app.exception_handler(ValidationError)
+    async def invalid_fields(request, error):
+        return JSONResponse({"detail": readable_validation(error)}, status_code=400)
 
     @app.get("/", response_class=HTMLResponse)
     def index():
@@ -207,11 +230,18 @@ def create_workspace_app(workspace: Workspace):
                 db.execute("UPDATE job_details SET stage=?,notes=? WHERE job_id=?", (str(data.get("stage", "saved"))[:40], str(data.get("notes", ""))[:12000], job_id))
         return {"saved": True}
 
+    def read_and_report(job_id):
+        result = workspace.hydrate(job_id)
+        row = next((r for r in workspace.jobs() if r["id"] == job_id), None)
+        # Say what still blocks scoring (e.g. a missing employer) instead of a bare "completed".
+        notice = row["fit"].get("assessment_notice", "") if row and row["fit"]["assessment_state"] == "incomplete" else ""
+        return {**result, "notice": notice}
+
     @app.post("/api/jobs/{job_id}/{action}")
     async def job_action(job_id: str, action: str, request: Request):
         operations = {
             "check-prepare": ("Check role and prepare packet", lambda: workspace.check_prepare(job_id)),
-            "read": ("Read full job listing", lambda: workspace.hydrate(job_id)),
+            "read": ("Read full job listing", lambda: read_and_report(job_id)),
             "prepare": ("Prepare application PDFs", lambda: workspace.prepare(job_id)),
             "drive-resume": ("Save résumé to Drive", lambda: workspace.upload(job_id, "resume")),
             "drive-cover": ("Save cover letter to Drive", lambda: workspace.upload(job_id, "cover")),

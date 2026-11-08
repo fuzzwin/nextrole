@@ -1,3 +1,11 @@
+## Unreleased — 8 November 2026 (jump-in reliability)
+
+- Fit scoring: another tense of a requirement's own verb (administering/administered, resolving/resolved) no longer counts as an unconfirmed detail; salary, closing-date and how-to-apply lines inside a requirements section are no longer scored as requirements; Power Automate/Power Apps work evidences a Power Platform role title. Rubric version is now `criterion-evidence-v5`, so pending roles are re-read once.
+- When a listing states nothing for a component (for example it names no recognised tools), that component shows Not stated and its weight is shared by the stated components instead of silently scoring zero. The percentage still equals the sum of the shown component points, and review flags still block automatic Top listings.
+- Without Codex, Check & prepare, Refresh listing, Read & assess filtered roles and details refresh no longer mark roles as "source check blocked". Check & prepare on a fully saved advert prepares from it and says the live listing was not re-checked; unread leads explain how to paste the advert instead.
+- Search setup and other floating panels close on an outside click or Escape, so they no longer hide job cards' scores and buttons. Find job-alert emails moved from the hidden sidebar to Activity.
+- Saving the profile, settings, document style, Drive destination or a role now confirms. Check connections reports which account is not connected; Read & assess reports what still blocks a score; incomplete cards offer Add employer or Paste full advert. Form errors are plain language instead of raw validation output.
+
 ## 0.9.12 — 3 November 2026 (source completion)
 
 - Read additional genuine applicant qualification headings while excluding optional, company and platform-generated summary material.

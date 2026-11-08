@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from .models import Job
 
-VERSION = 'criterion-evidence-v4'
+VERSION = 'criterion-evidence-v5'
 # These are deliberate product weights, not a probability of being hired.
 WEIGHTS = {'skills':30, 'experience':40, 'requirements':30}
 TOOLS = {
@@ -42,8 +42,22 @@ DOMAINS = [
 ]
 REQUIRED = r'your background|what you will bring|required skills and qualifications|to be successful(?: in this role)?|your skills and experience|essential skills and experience|qualifications and experience|key capabilities|selection requirements|what you[’\x27]ll need to succeed|key requirements|skills required|what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
 OPTIONAL = r'you will ideally have|^why\b|our benefits|highly regarded|is an advantage|bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
+# Advert logistics often sit inside a requirements section; they are never candidate criteria.
+LOGISTICS = (r'^\s*(?:applications?\s+(?:close|closing|are\s+due|due|open\s+until)\b|(?:closing|close)\s+date\b|'
+             r'(?:salary|remuneration|pay|package|compensation|rate)(?:\s+(?:range|band|package|rate))?\s*(?::|[-–]\s)|'
+             r'(?:start\s+date|job\s+ref(?:erence)?|reference\s+(?:no|number))\b|'
+             r'(?:to apply|how to apply|apply\s+(?:now|online|today|via|through|by|with))\b)')
 QUALIFIED = r'\b(?:prototyp\w*|concept|propos\w*|paused|before rollout|ahead of rollout|not (?:yet )?(?:deployed|live)|proof.of.concept|planned|planning|intended|learning|studying|tutorial|training exercise|not implemented|not yet rolled out)\b'
 PRODUCTION = r'\b(?:production|deployed|live|real (?:people|users)|used monthly)\b'
+
+
+# Listing-side mentions stay literal; on the candidate side a product family is
+# evidenced by its members (Power Automate/Power Apps work is Power Platform work).
+EVIDENCE_ALIASES = {'Power Platform': r'\bpower (?:platform|automate|apps)\b'}
+
+
+def evidence_pattern(tool):
+    return EVIDENCE_ALIASES.get(tool, TOOLS[tool])
 
 
 def positive_evidence(text):
@@ -67,16 +81,29 @@ def evidence_value(text):
     return 1 if affirmed else 0.5
 
 
+def word_stem(word):
+    """Fold inflections of one word together (administering/administered/administer),
+    so a fact is never flagged for using another tense of the requirement's own verb."""
+    for suffix in ('ing','ed','es','s'):
+        if word.endswith(suffix) and not (suffix=='s' and word.endswith('ss')) and len(word)-len(suffix)>=4:
+            word=word[:-len(suffix)]
+            break
+    return word[:-1] if len(word)>4 and word.endswith('e') else word
+
+
+STOP_WORDS=set(('a an the in on of to for with as is are be have has must required essential '
+    'experience professional hands strong proven demonstrated ability skills knowledge working '
+    'design designing build building create creating develop developing development deliver delivering delivery '
+    'implement implementing expert expertise advanced using use core tool role title and plus '
+    'or that which who your our their this relevant including related good excellent solid '
+    'effective effectively practical modern complex appropriate clear confident strong highly collaborative scalable successfully excellent material materials user users years year months month least at').split())
+STOP_STEMS={word_stem(w) for w in STOP_WORDS}
+
+
 def requirement_words(text):
     # Conservative literal audit of obligations left after known tools/domains.
-    stop=set(('a an the in on of to for with as is are be have has must required essential '
-        'experience professional hands strong proven demonstrated ability skills knowledge working '
-        'design designing build building create creating develop developing development deliver delivering delivery '
-        'implement implementing expert expertise advanced using use core tool role title and plus '
-        'or that which who your our their this relevant including related good excellent solid '
-        'effective effectively practical modern complex appropriate clear confident strong highly collaborative scalable successfully excellent material materials user users years year months month least at').split())
-    words=set(re.findall(r'[a-z][a-z0-9]+',text.lower()))-stop
-    return {w[:-1] if len(w)>4 and w.endswith('s') else w for w in words}
+    words=set(re.findall(r'[a-z][a-z0-9]+',text.lower()))-STOP_WORDS
+    return {word_stem(w) for w in words}-STOP_STEMS
 
 
 def unsupported_clauses(criterion, facts):
@@ -141,14 +168,14 @@ def recorded_duration(criterion, facts):
         duration=re.search(r'\b(\d+)\+?\s*years?\b',fact['text'],re.I)
         linked=bool((re.search(r'\bfor\s+\d+\+?\s*years?\s*[.!]?\s*$',fact['text'],re.I)
             and not re.search(r'\bwhile|previously|before|after|working|worked\b',fact['text'],re.I))
-            or re.match(r'^\s*\d+\+?\s*years?\s+(?:of\s+)?(?:hands.on\s+)?(?:experience\s+(?:in|with)\s+)?(?:'+ '|'.join(TOOLS[t] for t in tools) +')',fact['text'],re.I)) if tools else False
+            or re.match(r'^\s*\d+\+?\s*years?\s+(?:of\s+)?(?:hands.on\s+)?(?:experience\s+(?:in|with)\s+)?(?:'+ '|'.join(evidence_pattern(t) for t in tools) +')',fact['text'],re.I)) if tools else False
         # Accept only a direct tenure statement about the requested activity.
         # Extra subjects (company age, client employment, other duties) need review.
-        allowed=requirement_words(criterion)|set('built developed supported administered maintained configured operated programmed used provided worked i'.split())
+        allowed=requirement_words(criterion)|requirement_words('built developed supported administered maintained configured operated programmed used provided worked i')
         linked=linked and not (requirement_words(fact['text'])-allowed)
         if (duration and int(duration[1])>=int(demand[1]) and positive_evidence(fact['text'])
             and linked and not re.search(QUALIFIED,fact['text'],re.I) and tools
-            and all(re.search(TOOLS[t],fact['text'],re.I) for t in tools)):
+            and all(re.search(evidence_pattern(t),fact['text'],re.I) for t in tools)):
             return fact
     return None
 
@@ -159,9 +186,24 @@ def criterion_facts(criterion, facts):
     result=[]
     for fact in facts:
         for clause in re.split(r';\s*|,\s+(?:and|but)\s+|\s+(?:and|but)\s+(?=(?:built|developed|delivered|created|managed|administered|worked|supported|led|implemented)\b)',fact['text'],flags=re.I):
-            if clause.strip() and (not tools or all(re.search(TOOLS[t],clause,re.I) for t in tools)):
+            if clause.strip() and (not tools or all(re.search(evidence_pattern(t),clause,re.I) for t in tools)):
                 result.append({**fact,'text':clause.strip(),'original_text':fact['text']})
     return result
+
+
+def stated_weights(totals):
+    """A component the listing never states (e.g. it names no recognised tools) is
+    shown as 'Not stated'; its weight is shared by the stated components instead of
+    silently scoring zero. Integer weights always sum to 100."""
+    stated=[key for key in WEIGHTS if totals.get(key)]
+    if not stated or len(stated)==len(WEIGHTS):
+        return dict(WEIGHTS)
+    base=sum(WEIGHTS[key] for key in stated)
+    exact={key:100*WEIGHTS[key]/base for key in stated}
+    weights={key:int(exact[key]) for key in WEIGHTS if key in exact}
+    for key in sorted(stated,key=lambda k:exact[k]-weights[k],reverse=True)[:100-sum(weights.values())]:
+        weights[key]+=1
+    return {key:weights.get(key,0) for key in WEIGHTS}
 
 
 def sentences(view):
@@ -175,7 +217,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     result={'version':VERSION,'percent':None,'status':'Needs profile','strengths':[],
             'reviews':[],'requirements':[],'breakdown':[],'cap':None,
             'assessment_state':'needs_profile','assessment_notice':'Save your confirmed profile to assess this role.','auto_eligible':False,'coverage':{'criteria_count':0,'work_examples':0},
-            'method':'Criterion-linked evidence: skills 30%, specific work examples 40%, stated requirements 30%. Unconfirmed requirements earn no full credit; review gates are separate. Not a hiring probability.'}
+            'method':'Criterion-linked evidence: skills 30%, specific work examples 40%, stated requirements 30%; a component the listing does not state shares its weight with the others. Unconfirmed requirements earn no full credit; review gates are separate. Not a hiring probability.'}
     if not profile or profile.is_example:
         result['reviews']=[{'label':'Save your confirmed résumé profile to assess this role.','requirement':''}]
         return result
@@ -197,14 +239,14 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     scoring_text=view.get('title',job.title)+'\n'+'\n'.join(text for heading,text in rows
         if not re.search(OPTIONAL,heading,re.I) and not company_section(heading))
     tools=mentions(scoring_text)
-    supported_tools=[t for t in tools if re.search(TOOLS[t],profile_text,re.I)]
-    tool_values={t:(1 if any(re.search(TOOLS[t],f['text'],re.I) and evidence_value(f['text'])==1 for f in facts) else 0.5) for t in supported_tools}
+    supported_tools=[t for t in tools if re.search(evidence_pattern(t),profile_text,re.I)]
+    tool_values={t:(1 if any(re.search(evidence_pattern(t),f['text'],re.I) and evidence_value(f['text'])==1 for f in facts) else 0.5) for t in supported_tools}
     missing_tools=[t for t in tools if t not in supported_tools]
     strengths=[]
     for tool in supported_tools:
-        work=[f for f in facts if re.search(TOOLS[tool],f['text'],re.I)]
+        work=[f for f in facts if re.search(evidence_pattern(tool),f['text'],re.I)]
         fact=next((f for f in work if evidence_value(f['text'])==1),work[0] if work else None)
-        skill=next((s for s in profile.skills if positive_evidence(s) and re.search(TOOLS[tool],s,re.I)),None)
+        skill=next((s for s in profile.skills if positive_evidence(s) and re.search(evidence_pattern(tool),s,re.I)),None)
         strengths.append({'label':tool,'kind':'Skill','evidence':fact['text'] if fact else skill or 'Saved profile summary',
                           'source':fact or None})
     experience=[]
@@ -227,7 +269,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         optional=bool(re.search(OPTIONAL,heading,re.I)) or company_section(heading) or heading.casefold() in {'benefits','what we offer'} or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
         explicit=re.search(r'\b(?:must|required|at least|mandatory|seeking a certified)\b|^(?:Requires|You need|Demonstrated|Strong|Proven|Experience|Commercial experience|Hands.on experience|Working knowledge|Ability to)\b',text,re.I)
         if not optional and (re.fullmatch(REQUIRED,heading,re.I) or requirement_heading(heading) or explicit):
-            if len(text.strip())>15 and not re.fullmatch(r'Beyond that:?',text,re.I):
+            if len(text.strip())>15 and not re.fullmatch(r'Beyond that:?',text,re.I) and not re.search(LOGISTICS,text,re.I):
                 criteria.append(text)
     criteria=list(dict.fromkeys(criteria))
     explicit_criteria=len(criteria)
@@ -273,7 +315,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                         and (required_tools or re.search(r'\bagents?\b|software',criterion,re.I)))
         if production:
             candidates=[f for f in linked_facts if re.search(PRODUCTION,f['text'],re.I) and evidence_value(f['text'])==1
-                        and (all(re.search(TOOLS[t],f['text'],re.I) for t in required_tools)
+                        and (all(re.search(evidence_pattern(t),f['text'],re.I) for t in required_tools)
                              if required_tools else re.search(r'\bagents?\b|software',f['text'],re.I))]
             if candidates:
                 evidence=candidates[:2]
@@ -300,7 +342,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             if required_tools and len(found)==len(required_tools):
                 value=1
                 for tool in found:
-                    pattern=TOOLS[tool] if tool!='Power Platform' else r'\bpower (?:platform|automate|apps)\b'
+                    pattern=evidence_pattern(tool)
                     work=[f for f in linked_facts if re.search(pattern,f['text'],re.I)]
                     solid=[f for f in work if evidence_value(f['text'])==1]
                     if solid:
@@ -341,10 +383,12 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     work_values=[r['value']*max((evidence_value(e['text']) for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),default=0) for r in work_criteria]
     experience_ratio=sum(work_values)/len(work_values) if work_values else 0
     requirements_ratio=sum(r['value'] for r in result['requirements'])/len(result['requirements']) if result['requirements'] else 0
+    totals={'skills':len(tools),'experience':len(work_values),'requirements':len(result['requirements'])}
+    weights=stated_weights(totals)
     result['breakdown']=[
-        {'id':'skills','label':'Relevant skills','weight':30,'points':round(30*skills_ratio),'covered':sum(tool_values.values()),'total':len(tools)},
-        {'id':'experience','label':'Work experience','weight':40,'points':round(40*experience_ratio),'covered':sum(work_values),'total':len(work_values)},
-        {'id':'requirements','label':'Stated requirements','weight':30,'points':round(30*requirements_ratio),'covered':sum(r['value'] for r in result['requirements']),'total':len(result['requirements'])},
+        {'id':'skills','label':'Relevant skills','weight':weights['skills'],'points':round(weights['skills']*skills_ratio),'covered':sum(tool_values.values()),'total':len(tools)},
+        {'id':'experience','label':'Work experience','weight':weights['experience'],'points':round(weights['experience']*experience_ratio),'covered':sum(work_values),'total':len(work_values)},
+        {'id':'requirements','label':'Stated requirements','weight':weights['requirements'],'points':round(weights['requirements']*requirements_ratio),'covered':sum(r['value'] for r in result['requirements']),'total':len(result['requirements'])},
     ]
     strengths=[s for s in strengths if s['kind']!='Experience']
     seen_work=set()
