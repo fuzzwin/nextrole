@@ -20,7 +20,7 @@ def check_content(job, profile, prepared):
     errors, pending = [], []
     from .role_types import matched_types
     families = matched_types(job)
-    allowed_roles = [family['id'] for family in families] or [None]
+    allowed_roles = [None, *(family['id'] for family in families)]
     if prepared.get('role_type_id') not in allowed_roles:
         errors.append('Application focus does not match the job role type')
     if prepared.get('document_style_version') != DOCUMENT_STYLE_VERSION:

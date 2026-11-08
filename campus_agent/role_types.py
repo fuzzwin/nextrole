@@ -1,6 +1,8 @@
 """Role families grounded in the user's application examples, not new credentials."""
 from __future__ import annotations
 import re
+import hashlib
+import html
 from collections import deque
 
 DAILY_QUERY_LIMIT = 10
@@ -58,6 +60,30 @@ def validate_types(ids):
     return ids
 
 
+def title_terms(title):
+    return re.findall(r"[^\W_]+(?:[+#]+)?", html.unescape(title).casefold())
+
+
+def custom_role_options(preferences):
+    options = []
+    for title in preferences.custom_role_titles:
+        key = ' '.join(title_terms(title))
+        options.append({'id': 'custom-' + hashlib.sha256(key.encode()).hexdigest()[:16], 'label': title})
+    return options
+
+
+def search_role_matches(job, preferences):
+    if preferences.role_search_mode == 'presets':
+        return matched_types(job, preferences.role_types)
+    title = title_terms(job.title)
+    matches = []
+    for role in custom_role_options(preferences):
+        terms = title_terms(role['label'])
+        if terms and any(title[i:i+len(terms)] == terms for i in range(len(title)-len(terms)+1)):
+            matches.append(role)
+    return matches
+
+
 def example_types(name, text=''):
     known = {'bellroy':['ai_enablement'], 'businessai':['business_analysis'], 'cleanaway':['ai_operations'],
              'jemena':['ai_enablement','automation'], 'avanade':['automation'],
@@ -73,6 +99,15 @@ def example_types(name, text=''):
 
 
 def query_plan(preferences, extended=False):
+    if getattr(preferences, 'role_search_mode', 'presets') == 'custom':
+        titles = [role['label'] for role in custom_role_options(preferences)]
+        queries = [f'"{title}" jobs {preferences.location}' for title in titles]
+        if extended:
+            queries += [f'"{title}" remote jobs Australia' for title in titles]
+            group = ' OR '.join(f'"{title}"' for title in titles)
+            queries += [f'site:{domain} ({group}) jobs {preferences.location}'
+                        for domain in ['seek.com.au/job', 'au.linkedin.com/jobs/view', 'au.indeed.com/viewjob']]
+        return queries[:EXTENDED_QUERY_LIMIT if extended else DAILY_QUERY_LIMIT]
     ids = getattr(preferences, 'role_types', DEFAULT_ROLE_TYPES)
     chosen = [BY_ID[item] for item in validate_types(ids)]
     local = preferences.location

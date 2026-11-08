@@ -11,7 +11,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .models import Job, Profile
 from .workspace import Preferences, Workspace
-from .role_types import ROLE_TYPES
+from .role_types import ROLE_TYPES, custom_role_options
 
 
 def create_workspace_app(workspace: Workspace):
@@ -47,7 +47,8 @@ def create_workspace_app(workspace: Workspace):
 
     @app.get("/api/state")
     def state():
-        return {"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES, "kind": "job-workspace", "path": str(workspace.root), "jobs": workspace.jobs(),
+        return {"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES,
+            "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": workspace.jobs(),
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
