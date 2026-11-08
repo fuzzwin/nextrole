@@ -81,9 +81,9 @@ Check Python 3.12 or later, the project dependencies and Codex CLI. Help install
 
 Check whether my existing Gmail, Google Drive and search connections are available in this local Codex setup. Reuse authorized connections where available; guide me through connecting anything missing. I will complete sign-in and consent screens myself. Confirm my accounts and explain unavailable tools rather than promising they will work.
 
-Use my attached current resume to draft my profile. If I named a Drive file instead, help find it and confirm the correct document with me before importing it. If versions conflict, ask which is current. Treat cover-letter examples as style references, not proof of additional experience. Show me extracted contact details, employment dates, skills, qualifications and factual bullets for review before saving my confirmed profile. Preserve prototype, proposal, deployment and unmeasured-outcome qualifiers. Do not use the sample profile as my information or invent missing details.
+Use my attached current resume to draft my profile. If I named a Drive file instead, help find it and confirm the correct document with me before importing it. If versions conflict, ask which is current. Treat cover-letter examples as style references, not proof of additional experience. Show me extracted contact details, employment dates, skills, qualifications and factual bullets for review before saving my confirmed profile. Put any licences, registrations, cards or tickets I currently hold under Licences & registrations, not Education. Preserve qualifiers such as prototype, proposal, trial, in progress and unmeasured outcomes. Do not use the sample profile as my information or invent missing details.
 
-Help me choose role types and location, run one manual search, then open Document style so I can choose a layout, tone and length. Generate a local sample for a fully read role and show me both PDFs. I will review both documents and click their review boxes and Approve myself; do not approve on my behalf. Keep automatic sending, extra daytime discovery, standout alerts and application-email tracking off during setup. Do not create schedules, email packets, upload generated PDFs or submit employer applications. Let me review my profile and sample packet first.
+Ask what work I am looking for and save my own job titles in Search setup (use the IT presets only if they fit my work), set my location, run one manual search, then open Document style so I can choose a layout, tone and length. Generate a local sample for a fully read role and show me both PDFs. I will review both documents and click their review boxes and Approve myself; do not approve on my behalf. Keep automatic sending, extra daytime discovery, standout alerts and application-email tracking off during setup. Do not create schedules, email packets, upload generated PDFs or submit employer applications. Let me review my profile and sample packet first.
 
 Finish by telling me the exact folder and launcher to open tomorrow, which windows to keep open, and how to stop the app. Reuse this chat for future help; I should not need a new chat every day.
 ```
@@ -146,14 +146,20 @@ Next, work through these buttons in the site, with Codex's help if needed:
    does not send mail or upload files.
 2. **Profile & sources**: review the profile Codex drafted from your attached
    resume or chosen Drive source. Confirm contact details, employment dates,
-   skills, qualifications and factual bullets before saving. If it is still
+   skills, qualifications, licences and factual bullets before saving. List current
+   licences, registrations, cards and tickets under **Licences & registrations**:
+   requirements for them only count as met from that list (or Education), and they
+   appear on your résumé. If it is still
    blank, ask the same chat to help, or enter facts yourself and **Save profile**.
    Drive imports are also available here. Correct extraction errors manually.
 3. **References**: choose omit, available on request or named referees. Only
    enter contact details you have permission to share and confirm sharing.
-4. **Optional headline, projects and interests**: a professional headline does not change your formal employment titles; keep personal technical projects in their own section with honest stages and interests to one line. The job packet explains which items were selected and what was left out.
-5. **Opportunities**: open **Change search roles & preferred location**, choose
-   the role types you want, change Melbourne if needed, then **Save my search**.
+4. **Optional headline, projects and interests**: a professional headline does not change your formal employment titles; keep personal projects in their own section with honest stages and interests to one line. The job packet explains which items were selected and what was left out.
+5. **Opportunities**: open **Search setup**. Under **What work are you looking for?**
+   type your job titles in your own words, one per line (for example Registered
+   Nurse, Electrician, Accountant). Tick the **IT & technology presets** only if they
+   fit your work. Change Melbourne if needed, then **Save my search**. **Find jobs**
+   asks for this first on a new workspace.
 6. Click **Find jobs**, then open **View details** and **Why this match** for
    one role. Check its employer, location, requirements and review flags.
 7. Click **Check & prepare** for a suitable role. Open and read both PDFs.
@@ -458,9 +464,35 @@ python3 launcher.py --check
 It checks Python/dependency/CLI presence, not private account access.
 
 
+## Any kind of work (role-agnostic matching)
+
+NextRole is not limited to IT. Type the job titles you want in **Search setup**;
+searches use those titles (and any IT presets you tick), and a role whose title
+contains every word of one of your titles is treated as the kind of work you want.
+With no titles and no presets saved, no role is flagged as out of scope.
+
+Match scores work the same way for every trade:
+
+- **Licences, registrations and tickets** (AHPRA, VIT, A Grade electrical licence,
+  White Card, RSA, CPA, forklift licence…) count as met only when a current record
+  naming them is in **Licences & registrations** or Education. Expired, lapsed,
+  pending or "studying" records never count, and "A Grade" is not "B Grade". A
+  required licence you have not recorded holds the score below 70% and keeps the
+  role in review.
+- **Work examples** still need a bullet showing you did the work. Bullets that start
+  with what you did (Installed, Planned and delivered, Prepared, Picked…) earn full
+  credit; Attended, Observed, Experienced in and plans for the future do not.
+- **Skills** include any of your own saved skills that the advert names (Xero,
+  Canva, Barista…). An advert can never lower your score for a skill you did not list
+  unless it names a recognised tool you have not confirmed.
+- Cover letters only describe a role's emphasis (for example "systems and service
+  delivery") for IT and business roles; for other work they say nothing rather than
+  something wrong.
+
 ## Evidence fit and compact browsing (0.9.7)
 
-Use **Role types** to tick several families. A role matches any selected family;
+Use **Role types** to tick several families, or **My job titles** for roles whose
+title contains every word of one of your saved titles. A role matches any selected family;
 location, minimum fit, date and status filters still combine with that selection.
 Remove individual chips or use **Clear filters**. These browsing choices do not
 change the role families used by discovery.

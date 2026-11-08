@@ -67,7 +67,11 @@ def generate_documents(directory: Path, job: Job, profile: Profile, prepared: di
     resume=header()
     if profile.headline:
         resume.append(para(profile.headline, "role"))
-    resume += [para("PROFILE","section"),para(profile.summary),para("SKILLS","section"),
+    resume += [para("PROFILE","section"),para(profile.summary)]
+    if profile.licences:
+        # Licences, registrations and tickets are often the first thing an employer checks.
+        resume += [para("LICENCES AND REGISTRATIONS","section")] + [para(item) for item in profile.licences]
+    resume += [para("SKILLS","section"),
                para(" | ".join(prepared["skills"])),para("EXPERIENCE","section")]
     for exp in prepared["experience"]:
         resume += [para(" - ".join(x for x in [exp["role"],exp["organization"]] if x),"role")]

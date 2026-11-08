@@ -20,10 +20,10 @@ def shortlist(job, profile, preferences=None):
     title = job.title.lower()
     text = job.description.lower()
     reasons = []
-    from .role_types import matched_types
+    from .role_types import in_scope, matched_types
     families = matched_types(job, preferences.role_types if preferences else None)
-    if not families:
-        reasons.append('Role title is outside your selected role types')
+    if not (in_scope(job, preferences) if preferences else families):
+        reasons.append('Role title is outside the job titles and role types you chose')
     if re.search(r'\b(chief|director|head of|principal|technical lead|graduate|internship|apprentice)\b', title):
         reasons.append('Role seniority needs manual review')
     # Only the listing text counts: discovery location is a search hint, not evidence.

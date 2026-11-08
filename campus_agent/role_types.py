@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from collections import deque
 
+from .language import word_stem
+
 DAILY_QUERY_LIMIT = 10
 EXTENDED_QUERY_LIMIT = 24
 DAILY_LISTING_LIMIT = 12
@@ -52,10 +54,56 @@ def matched_types(job, selected=None):
     return sorted(matches, key=lambda item: (item['id']=='it_systems', ROLE_TYPES.index(item)))
 
 
-def validate_types(ids):
-    if not ids or any(item not in BY_ID for item in ids) or len(ids) != len(set(ids)):
+def validate_types(ids, allow_empty=False):
+    if (not ids and not allow_empty) or any(item not in BY_ID for item in ids) or len(ids) != len(set(ids)):
         raise ValueError('Select at least one known role type without duplicates')
     return ids
+
+
+MAX_JOB_TITLES = 6
+TITLE_FILLER = {'a', 'an', 'the', 'and', 'of', 'in', 'for', 'to', 'at', 'with', 'or'}
+
+
+def clean_titles(values):
+    """Job titles the person is looking for, in their own words: trimmed, de-duplicated, bounded."""
+    titles = []
+    for value in values or []:
+        title = re.sub(r'\s+', ' ', str(value)).strip(' ,;')
+        if not title:
+            continue
+        if not 2 <= len(title) <= 80 or re.search(r'[<>]|https?://', title):
+            raise ValueError('Each job title should be 2 to 80 characters of plain text')
+        if title.casefold() not in {item.casefold() for item in titles}:
+            titles.append(title)
+    if len(titles) > MAX_JOB_TITLES:
+        raise ValueError(f'Enter up to {MAX_JOB_TITLES} job titles')
+    return titles
+
+
+def title_words(text):
+    return {word_stem(word) for word in re.findall(r"[a-z][a-z0-9+#']*", text.lower()) if word not in TITLE_FILLER}
+
+
+def title_matches(job_title, titles):
+    """A wanted title matches when every one of its words appears in the listing title
+    ('Registered Nurse' matches 'Registered Nurse – Aged Care', not 'Enrolled Nurse')."""
+    have = title_words(job_title)
+    return any(wanted and wanted <= have for wanted in (title_words(title) for title in titles or []))
+
+
+def in_scope(job, preferences):
+    """True when the role is something this person said they want.
+
+    Presets cover the IT families; the person's own job titles cover everything else. With
+    neither chosen there is nothing to be outside of, so no role is flagged.
+    """
+    titles = getattr(preferences, 'job_titles', None) or []
+    types = getattr(preferences, 'role_types', None)
+    if matched_types(job, types):
+        return True
+    if title_matches(job.title, titles):
+        return True
+    return not titles and not types
 
 
 def example_types(name, text=''):
@@ -74,16 +122,17 @@ def example_types(name, text=''):
 
 def query_plan(preferences, extended=False):
     ids = getattr(preferences, 'role_types', DEFAULT_ROLE_TYPES)
-    chosen = [BY_ID[item] for item in validate_types(ids)]
+    titles = clean_titles(getattr(preferences, 'job_titles', []))
+    chosen = [BY_ID[item] for item in validate_types(ids, allow_empty=bool(titles))]
     local = preferences.location
-    primary = [f"{item['queries'][0]} jobs {local}" for item in chosen]
-    secondary = [f"{item['queries'][1]} jobs Australia" for item in chosen]
+    primary = [f"{item['queries'][0]} jobs {local}" for item in chosen] + [f'{title} jobs {local}' for title in titles]
+    secondary = [f"{item['queries'][1]} jobs Australia" for item in chosen] + [f'{title} jobs Australia' for title in titles]
     custom = [f'{keyword} jobs {local}' for keyword in preferences.keywords[:3]] if getattr(preferences,'use_custom_keywords',False) else []
     queries = primary + custom + secondary
     if extended:
-        focus = ' OR '.join(f'"{item["queries"][1]}"' for item in chosen)
+        focus = ' OR '.join(f'"{query}"' for query in [item["queries"][1] for item in chosen] + titles)
         queries += [f'site:{domain} ({focus}) Australia' for domain in ['seek.com.au/job','au.linkedin.com/jobs/view','au.indeed.com/viewjob']]
-        queries += [f'{item["queries"][0]} remote Australia' for item in chosen]
+        queries += [f'{item["queries"][0]} remote Australia' for item in chosen] + [f'{title} remote Australia' for title in titles]
     return list(dict.fromkeys(queries))[:EXTENDED_QUERY_LIMIT if extended else DAILY_QUERY_LIMIT]
 
 
