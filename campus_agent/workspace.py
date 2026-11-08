@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
 from pydantic import Field
 
-from .connectors import ConnectorBridge, ConnectorError
+from .connectors import ConnectorBridge, ConnectorError, ConnectorUnavailable
 from .documents import generate_documents
 from .mail import build_email, save_preview
 from .models import Experience, Job, Profile, StrictModel, utcnow
@@ -798,7 +798,8 @@ class Workspace:
             available = [i for i in eligible if i not in busy]
             counts = {'assessed':0, 'closed':0, 'needs_source':0, 'blocked':0, 'remaining':max(0,len(available)-12)+len(eligible)-len(available), 'processed':0, 'total':min(12,len(available))}
             self.set_meta('assessment_progress', counts)
-            for job_id in available[:12]:
+            batch = available[:12]
+            for index, job_id in enumerate(batch):
                 try:
                     self.hydrate(job_id)
                     row = next(r for r in self.jobs() if r['id']==job_id)
@@ -810,6 +811,11 @@ class Workspace:
                     counts['remaining'] += 1
                     self.set_meta('assessment_progress',counts)
                     continue
+                except ConnectorUnavailable:
+                    # Stop the batch instead of marking every saved role as blocked.
+                    counts['remaining'] += len(batch) - index
+                    self.set_meta('assessment_progress',counts)
+                    raise
                 except Exception as exc:
                     status, note = 'blocked', str(exc)[:500]
                 self.set_meta('assessment_source:'+job_id, {'status':status,'message':note,'at':utcnow(),'revision':self.job(job_id)[0]['revision'],'version':VERSION})
@@ -833,7 +839,8 @@ class Workspace:
             self.set_meta('assessment_source:'+job_id, None)
             return result
         except Exception as exc:
-            if snapshot is None: raise
+            # No connector means the listing was never contacted: not a blocked source.
+            if snapshot is None or isinstance(exc, ConnectorUnavailable): raise
             with self.write_lock:
                 current,_ = self.job(job_id)
                 if current['payload'] != snapshot[0]['payload']:
@@ -949,13 +956,36 @@ class Workspace:
         applied = application_for_job(self, stored_job)
         if applied:
             return {'held':True,'assessment':{'selected':False,'reasons':['Already applied; Gmail status: '+applied['status']],'source_url':applied['source_url']}}
-        self.hydrate(job_id)
+        notice = ''
+        try:
+            self.hydrate(job_id)
+        except ConnectorUnavailable as exc:
+            # Pasted roles still work locally; nothing was contacted, so say so plainly.
+            if not self.has_full_description(job_id):
+                raise ValueError(f'{exc} Or paste the full advert with Edit details & notes, then prepare again.') from exc
+            notice = ('The live listing was not re-checked because connected search is unavailable; '
+                      'your saved advert was used. Confirm the role is still open before applying.')
+        except (SourceChanged, ReadInProgress):
+            raise
+        except Exception as exc:
+            if self.has_full_description(job_id) and not re.search(
+                    r'(?i)closing date|expired|search results|another role|different role|mismatch', str(exc)):
+                reason = str(exc).rstrip()
+                reason += '' if reason.endswith(('.', '!', '?')) else '.'
+                raise ValueError(f'{reason} Your saved advert is unchanged: open View details and choose '
+                                 'Prepare résumé & cover letter to use it.') from exc
+            raise
         _, job = self.job(job_id)
         assessment = shortlist(job, self.profile, self.preferences)
         self.set_meta("shortlist:" + job_id, assessment)
         if not assessment["selected"]:
-            return {"held": True, "assessment": assessment}
-        return {**self.prepare(job_id), "assessment": assessment}
+            return {"held": True, "assessment": assessment, "notice": notice}
+        return {**self.prepare(job_id), "assessment": assessment, "notice": notice}
+
+    def has_full_description(self, job_id):
+        with self.store.connect() as db:
+            row = db.execute("SELECT full_description FROM job_details WHERE job_id=?", (job_id,)).fetchone()
+        return bool(row and row[0])
 
     def action(self, job_id, kind, operation):
         with self.write_lock:

@@ -165,7 +165,8 @@ class DetailRefreshQueue:
                     if isinstance(exc, ReadInProgress): outcome = 'busy'
                     elif isinstance(exc, SourceChanged): outcome = 'edited'
                     message = str(exc)[:500]
-                    connection_error = bool(re.search(r'(?i)reconnect|not connected|authentication|not signed in|connector process|approval required|tool not found',message))
+                    from .connectors import ConnectorUnavailable
+                    connection_error = isinstance(exc, ConnectorUnavailable) or bool(re.search(r'(?i)reconnect|not connected|authentication|not signed in|connector process|approval required|tool not found',message))
                 with self.state_lock:
                     state = self._state()  # Preserve a Pause received during network I/O.
                     item = state['items'][job_id]

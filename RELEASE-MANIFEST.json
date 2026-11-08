@@ -40,8 +40,8 @@
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 49993,
-      "sha256": "30399f06575ae61b3df8087da6c3324a63817747791d89ecd71e3934a901053b",
+      "bytes": 50470,
+      "sha256": "a61e78295897581626233d80c9cacc1c90a1b72c1bd7079298535310d82986da",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 9495,
-      "sha256": "8fc3db914f7e24d2cb9cc217c5a8eebf9c56d8a57199098ffa9e724defbc992a",
+      "bytes": 11116,
+      "sha256": "b9c2d94df492f0d97ae2ac0efb0eba29ac76cb3fbc21bcd39831af071848f590",
       "mode": "0o644"
     },
     {
@@ -130,8 +130,8 @@
     },
     {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 39695,
-      "sha256": "8c7de45c4454f7722dfe87b974a030410ef16a175699fe7c47266a63d6d106d1",
+      "bytes": 40142,
+      "sha256": "6bbeb9473072c81f7b2d4a18c739e53b16c8509084d25372b8c6c6871ba58c83",
       "mode": "0o644"
     },
     {
@@ -190,8 +190,8 @@
     },
     {
       "path": "campus_agent/connectors.py",
-      "bytes": 8919,
-      "sha256": "58cdfa3ac173f9ed1dbb6de74611494b26f7303858983852e2e001d4f84efa61",
+      "bytes": 9674,
+      "sha256": "6324a42dfd30ba6dd43f530a9a87923907b941087df9b78d8f89dd7ee6b7aae1",
       "mode": "0o644"
     },
     {
@@ -202,8 +202,8 @@
     },
     {
       "path": "campus_agent/detail_refresh.py",
-      "bytes": 10229,
-      "sha256": "8a33320848ac06f491cc704615f2fa86ea0a17d10734944a79210a8f12b0290f",
+      "bytes": 10335,
+      "sha256": "f8ef054f13db86f0beb15b231dd95f8a550b434881024ac56b4d228178cb73a2",
       "mode": "0o644"
     },
     {
@@ -220,8 +220,8 @@
     },
     {
       "path": "campus_agent/fit.py",
-      "bytes": 31547,
-      "sha256": "ab18c4d01901ab9fecf7c1df53cc39c785d2e50e03e9d1fd96bbc8fb54ad4b2f",
+      "bytes": 34015,
+      "sha256": "fc0a694d65535216f5185ba089cadb1e9327de4fbe2975ffb31f0defe18b55c2",
       "mode": "0o644"
     },
     {
@@ -310,20 +310,20 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 155855,
-      "sha256": "f02b32e261021f858c9a4fc349aca69093bae2de7e4ef5048c72b152a891b2d7",
+      "bytes": 158371,
+      "sha256": "9899591af9378fd9509a65841420936fe8eee0551126dbee5c7d778e27eaff8b",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace.py",
-      "bytes": 72506,
-      "sha256": "d1f3aff85be8794583ea1f0e8d77cd29fd2ef45f5178d782d410f3566483fdc2",
+      "bytes": 74411,
+      "sha256": "199776e950411f14bdb109d2fd291d2b415cf542141aa3e4120fd5cbf53f9dfb",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace_web.py",
-      "bytes": 13186,
-      "sha256": "442ad3bbc48197dfe21b5cda08b1b12a490870dc407ed046b4fd6f3c10425fc1",
+      "bytes": 14777,
+      "sha256": "e09308fd75f5e6b4acec968fd23403525cdb2395941b29fe01e89464efda85b7",
       "mode": "0o644"
     }
   ]

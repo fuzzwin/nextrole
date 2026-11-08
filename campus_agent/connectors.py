@@ -30,6 +30,14 @@ class ConnectorError(RuntimeError):
         super().__init__(message)
 
 
+DISCONNECTED = "Connector process disconnected"
+
+
+class ConnectorUnavailable(ConnectorError):
+    """Codex or the connected tool could not be reached, so no website or account
+    was contacted. Never evidence that a listing or account blocked access."""
+
+
 def unpack(result: dict) -> dict:
     if result.get("isError"):
         message = " ".join(c.get("text", "") for c in result.get("content", []) if c.get("type") == "text")
@@ -67,7 +75,7 @@ class ConnectorBridge:
     def _send(self, value):
         with self.write_lock:
             if not self.proc or self.proc.poll() is not None:
-                raise ConnectorError("Codex connector process has stopped. Reconnect in Connections.")
+                raise ConnectorUnavailable("Codex connector process has stopped. Reconnect in Connections.")
             self.proc.stdin.write(json.dumps(value) + "\n")
             self.proc.stdin.flush()
 
@@ -95,7 +103,7 @@ class ConnectorBridge:
         finally:
             with self.lock:
                 for request in self.pending.values():
-                    request.setdefault("response", {"error": {"message": "Connector process disconnected"}})
+                    request.setdefault("response", {"error": {"message": DISCONNECTED}})
                     request["event"].set()
 
     def request(self, method, params):
@@ -110,7 +118,10 @@ class ConnectorBridge:
                 raise ConnectorError("Connector request timed out. Check Activity before retrying a write.")
             response = request["response"]
             if "error" in response:
-                raise ConnectorError(response["error"].get("message", "Connector request failed")[:1000])
+                message = response["error"].get("message", "Connector request failed")[:1000]
+                if message == DISCONNECTED:
+                    raise ConnectorUnavailable(message + ". Reconnect in Connections.")
+                raise ConnectorError(message)
             return response["result"]
         finally:
             with self.lock:
@@ -126,10 +137,13 @@ class ConnectorBridge:
                 if candidate.is_file():
                     binary = str(candidate)
             if not binary:
-                raise ConnectorError("Install Codex CLI and sign in with the same ChatGPT account, then reconnect.")
-            self.proc = subprocess.Popen([binary, "app-server", "--listen", "stdio://"], cwd=self.workspace,
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                text=True, encoding="utf-8", bufsize=1)
+                raise ConnectorUnavailable("Install Codex CLI and sign in with the same ChatGPT account, then reconnect.")
+            try:
+                self.proc = subprocess.Popen([binary, "app-server", "--listen", "stdio://"], cwd=self.workspace,
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                    text=True, encoding="utf-8", bufsize=1)
+            except OSError as exc:
+                raise ConnectorUnavailable(f"Codex could not be started ({exc.strerror or exc}). Reinstall Codex CLI, then reconnect.") from exc
             threading.Thread(target=self._read, args=(self.proc,), daemon=True).start()
             try:
                 self.request("initialize", {"clientInfo": {"name": "job_agent_workspace", "title": "Job Agent", "version": "0.2.0"},
@@ -151,8 +165,10 @@ class ConnectorBridge:
                     cursor = inventory.get("nextCursor")
                     if not cursor:
                         break
-            except Exception:
+            except Exception as exc:
                 self.close()
+                if isinstance(exc, ConnectorError):
+                    raise ConnectorUnavailable(str(exc)) from exc
                 raise
 
     def call(self, tool: str, arguments: dict | None = None) -> dict:
@@ -160,7 +176,7 @@ class ConnectorBridge:
             raise ConnectorError("This app does not permit that connector action")
         self.start()
         if tool not in self.tools:
-            raise ConnectorError(f"{tool.split('.')[0]} is unavailable. Connect its plugin in Codex, then reconnect.")
+            raise ConnectorUnavailable(f"{tool.split('.')[0]} is unavailable. Connect its plugin in Codex, then reconnect.")
         result = self.request("mcpServer/tool/call", {"threadId": self.thread_id,
             "server": self.tools[tool]["server"], "tool": tool, "arguments": arguments or {}})
         return unpack(result)
