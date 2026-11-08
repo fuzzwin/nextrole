@@ -278,15 +278,16 @@ class Workspace:
             db.execute("INSERT INTO workspace_meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value)))
 
     def save_preferences(self, preferences):
-        if ((preferences.morning_enabled and not self.preferences.morning_enabled)
-                or (preferences.standout_enabled and not self.preferences.standout_enabled)):
-            self.require_style_approval()
-        ZoneInfo(preferences.timezone)
-        validate_types(preferences.role_types)
-        if preferences.role_search_mode == 'presets' and preferences.use_custom_keywords and (not preferences.keywords or len(preferences.keywords) > 3 or not all(k.strip() for k in preferences.keywords)):
-            raise ValueError("Enter one to three extra search phrases, or turn off extra phrases")
-        self.preferences = preferences
-        self.set_meta("preferences", preferences.model_dump())
+        with self.write_lock:
+            if ((preferences.morning_enabled and not self.preferences.morning_enabled)
+                    or (preferences.standout_enabled and not self.preferences.standout_enabled)):
+                self.require_style_approval()
+            ZoneInfo(preferences.timezone)
+            validate_types(preferences.role_types)
+            if preferences.role_search_mode == 'presets' and preferences.use_custom_keywords and (not preferences.keywords or len(preferences.keywords) > 3 or not all(k.strip() for k in preferences.keywords)):
+                raise ValueError("Enter one to three extra search phrases, or turn off extra phrases")
+            self.preferences = preferences
+            self.set_meta("preferences", preferences.model_dump())
 
     def save_profile(self, profile):
         with self.write_lock:
@@ -500,6 +501,7 @@ class Workspace:
                 "headline": self.profile.headline,
                 "interests": self.profile.interests,
                 "technical_projects": self.profile.technical_projects,
+                "credentials": self.profile.credentials,
             })
         self.save_profile(profile)
         self.save_preferences(self.preferences.model_copy(update={"active_resume_id": file_id}))
@@ -530,6 +532,8 @@ class Workspace:
         applications = {a['id']:a for a in self.get_meta('applications', [])}
         profile, preferences = self.profile, self.preferences
         context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
+        if preferences.role_search_mode == 'custom':
+            context += '|' + datetime.now(ZoneInfo('Australia/Melbourne')).date().isoformat()
         context_hash = hashlib.sha256(context.encode()).hexdigest()
         for row in rows:
             row.update(details.get(row["id"], {}))
@@ -973,16 +977,19 @@ class Workspace:
         applied = application_for_job(self, stored_job)
         if applied:
             return {'held':True,'assessment':{'selected':False,'reasons':['Already applied; Gmail status: '+applied['status']],'source_url':applied['source_url']}}
-        self.hydrate(job_id)
-        _, job = self.job(job_id)
         if self.preferences.role_search_mode == 'custom':
             assessed = next(row for row in self.jobs() if row['id'] == job_id)
+            if not assessed['full_description']:
+                self.hydrate(job_id)
+                assessed = next(row for row in self.jobs() if row['id'] == job_id)
             fit = assessed['fit']
             selected = fit['assessment_state'] == 'assessed' and not assessed['listing']['closed']
             assessment = {'selected': selected, 'reasons': [] if selected else [
                 fit.get('assessment_notice') or 'Check the full advert and whether it is open before preparing.'
             ]}
         else:
+            self.hydrate(job_id)
+            _, job = self.job(job_id)
             assessment = shortlist(job, self.profile, self.preferences)
         self.set_meta("shortlist:" + job_id, assessment)
         if not assessment["selected"]:
@@ -1093,11 +1100,15 @@ class Workspace:
         return self.action(job_id, "drive_" + kind, write)
 
     def gmail_packet(self, job_id, send=False, standout=False, automatic=False):
-        if automatic:
+        def check_automatic():
+            if self.preferences.role_search_mode == 'custom':
+                raise ValueError('Custom searches use manual packet review.')
             self.require_style_approval()
+        if automatic:
+            check_automatic()
         def write(row, job):
             if automatic:
-                self.require_style_approval()
+                check_automatic()
             account = self.require_account("gmail")
             directory = Path(row["packet_dir"])
             parts = [{"mime_type": "text/html", "charset": "utf-8", "body": {"content": (directory / "notification.html").read_text()}}]

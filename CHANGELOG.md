@@ -1,3 +1,10 @@
+## 0.9.13 — 8 November 2026
+
+- Search Australian roles using your own job titles, with IT presets available as a separate mode.
+- Show search relevance separately from evidence fit. Generate cover letters with recorded facts and a neutral opening.
+- Save licences and registrations with scope, status and expiry. Use bounded work and credential evidence for custom roles.
+- Keep custom results in manual review for automatic Top listings and packets.
+
 ## 0.9.12 — 3 November 2026 (source completion)
 
 - Read additional genuine applicant qualification headings while excluding optional, company and platform-generated summary material.

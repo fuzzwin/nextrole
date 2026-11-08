@@ -1,4 +1,4 @@
-name: Publish NextRole 0.9.12
+name: Publish NextRole 0.9.13
 
 on:
   pull_request:
@@ -41,7 +41,7 @@ jobs:
         run: |
           python - <<'PY'
           import json, pathlib, zipfile
-          name="NextRole-Mac-0.9.12"
+          name="NextRole-Mac-0.9.13"
           z=pathlib.Path("dist")/(name+".zip")
           assert z.exists()
           with zipfile.ZipFile(z) as archive:
@@ -50,15 +50,15 @@ jobs:
               assert any(x.endswith("/docs/ROLE-TAILORING.md") for x in files)
               assert not any("/workspace/" in x or "/artifacts/" in x for x in files)
               m=json.loads(archive.read(name+"/RELEASE-MANIFEST.json"))
-              assert m["version"]=="0.9.12"
+              assert m["version"]=="0.9.13"
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.9.12-Verified
+          name: NextRole-Mac-0.9.13-Verified
           path: |
-            dist/NextRole-Mac-0.9.12.zip
-            dist/NextRole-Mac-0.9.12.zip.sha256
-            dist/NextRole-Mac-0.9.12.manifest.json
+            dist/NextRole-Mac-0.9.13.zip
+            dist/NextRole-Mac-0.9.13.zip.sha256
+            dist/NextRole-Mac-0.9.13.manifest.json
           if-no-files-found: error
 
   publish-release:
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: NextRole-Mac-0.9.12-Verified
+          name: NextRole-Mac-0.9.13-Verified
           path: dist
       - name: Release verified Mac package
         env:
@@ -78,15 +78,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if gh release view v0.9.12 --repo "$GH_REPO" >/dev/null 2>&1; then
-            echo "Release v0.9.12 already exists; refusing to overwrite artifacts."
+          if gh release view v0.9.13 --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release v0.9.13 already exists; refusing to overwrite artifacts."
           else
-            gh release create v0.9.12 \
-              dist/NextRole-Mac-0.9.12.zip \
-              dist/NextRole-Mac-0.9.12.zip.sha256 \
-              dist/NextRole-Mac-0.9.12.manifest.json \
+            gh release create v0.9.13 \
+              dist/NextRole-Mac-0.9.13.zip \
+              dist/NextRole-Mac-0.9.13.zip.sha256 \
+              dist/NextRole-Mac-0.9.13.manifest.json \
               --repo "$GH_REPO" \
               --target "$GITHUB_SHA" \
-              --title "NextRole Mac 0.9.12" \
-              --notes "Independent Location and multi-select Work arrangement filters. Combine Melbourne hybrid roles with Australian remote listings elsewhere, preserve saved choices and migrate legacy work-mode filters. Requires Python3.12+ and local Mac setup. Existing jobs, profile, scoring and approval gates are unchanged."
+              --title "NextRole Mac 0.9.13" \
+              --notes "Australian custom job-title searches, grounded cover letters, licence and registration records, and cross-industry work evidence. Custom roles use manual packet review."
           fi

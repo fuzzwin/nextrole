@@ -53,3 +53,19 @@ def test_automatic_custom_check_stops_before_any_connector(workspace, monkeypatc
     workspace.save_preferences(custom('Electrician'))
     monkeypatch.setattr(workspace.bridge, 'call', lambda *_: pytest.fail('Automatic connector called'))
     assert run_morning(workspace)['status'] == 'paused'
+
+
+def test_switch_to_custom_during_scheduled_read_holds_delivery(workspace, role, monkeypatch):
+    from test_workspace import morning_profile
+    from campus_agent.morning import run_morning
+    morning_profile(workspace)
+    workspace.add_job(role, full=True)
+    monkeypatch.setattr(workspace,'discover',lambda extended=False:{'found':1,'errors':[]})
+    monkeypatch.setattr(workspace,'alerts',lambda:{'message_ids':[]})
+    def hydrate(_):
+        workspace.save_preferences(workspace.preferences.model_copy(
+            update={'role_search_mode':'custom','custom_role_titles':['Systems Specialist']}))
+    monkeypatch.setattr(workspace,'hydrate',hydrate)
+    monkeypatch.setattr(workspace,'prepare',lambda *_: pytest.fail('Automatic prepare after switching mode'))
+    assert run_morning(workspace)['paused']
+    assert not any(n in {'gmail.send_email','google_drive.upload_file'} for n,_ in workspace.bridge.calls)

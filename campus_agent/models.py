@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -41,6 +41,24 @@ class TechnicalProject(StrictModel):
     stage: Literal["proposed", "prototype", "tested", "private_release", "in_use", "paused"] = "prototype"
     summary: str = Field(min_length=10, max_length=2000)
 
+class Credential(StrictModel):
+    name: str = Field(min_length=2, max_length=120)
+    jurisdiction: Literal['', 'Australia', 'ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] = ''
+    status: Literal['unconfirmed', 'current', 'expired', 'pending'] = 'unconfirmed'
+    expires_on: str = ''
+
+    @model_validator(mode='after')
+    def validate_record(self):
+        self.name = self.name.strip()
+        if len(self.name) < 2:
+            raise ValueError('Enter the licence or registration name.')
+        if self.expires_on:
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', self.expires_on):
+                raise ValueError('Enter expiry as a calendar date.')
+            date.fromisoformat(self.expires_on)
+        return self
+
+
 class Profile(StrictModel):
     name: str = Field(min_length=1, max_length=160)
     headline: str = Field(default="", max_length=160)
@@ -52,6 +70,7 @@ class Profile(StrictModel):
     summary: str = Field(min_length=10, max_length=2000)
     education: list[str]
     skills: list[str]
+    credentials: list[Credential] = Field(default_factory=list, max_length=40, exclude_if=lambda records: not records)
     experience: list[Experience]
     availability: str = ""
     is_example: bool = False

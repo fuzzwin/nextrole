@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.12.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.13.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.12** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.13** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -548,3 +548,12 @@ Resuming detail refresh also rechecks already-saved adverts for supported employ
 A score can describe the saved advert even when a later source check is blocked. Those cards retain a review warning and cannot become automatic Top listings until the source issue is resolved. A recruiting agency or platform name does not establish an undisclosed client employer. Truncated adverts, role mismatches and anonymous employers can still need the original employer posting or a deliberate review.
 
 A position-description document also needs a current vacancy check. Original saved links and previous source revisions remain available locally; source completion does not claim a vacancy is currently accepting applications without evidence.
+
+
+## Search beyond IT
+
+Open **Search setup**, select **My job titles**, and enter the Australian job titles you want, one per line. Save the search and choose **Find jobs**. To use your saved IT presets, switch to **IT role presets**. The match panel shows search relevance separately from evidence fit.
+
+Under **Profile & sources → Licences & registrations**, save credential names, jurisdictions, statuses and expiry dates where known. Use **Australia** for a national credential. Enter a class or registration scope when the advert asks for it. Leave out licence and registration numbers. The app compares your recorded details with the advert and flags missing evidence for review.
+
+Custom searches use manual packet review and manual Top stars. Use **Check & prepare** on a complete advert to generate a résumé and cover letter for review.
