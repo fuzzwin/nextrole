@@ -171,6 +171,233 @@ def sentences(view):
                 yield section['title'],value
 
 
+# Custom search uses explicit equivalences, never similarity scores for obligations.
+CUSTOM_SKILLS = {
+    'Xero': r'\bxero\b', 'MYOB': r'\bmyob\b', 'Canva': r'\bcanva\b', 'HubSpot': r'\bhubspot\b',
+    'Point of sale': r'\b(?:point[ -]of[ -]sale|POS)\b',
+    'Espresso machine': r'\bespresso machines?\b',
+    'Multimeter': r'\bmultimeters?\b',
+}
+CREDENTIAL_NAMES = {
+    'ahpra-rn': r'\b(?:AHPRA registration as (?:a )?registered nurse|registered nurse registration with AHPRA)\b',
+    'forklift-lf': r'\b(?:forklift licen[cs]e (?:class )?LF|LF forklift licen[cs]e)\b',
+    'forklift-lo': r'\b(?:forklift licen[cs]e (?:class )?LO|LO forklift licen[cs]e)\b',
+    'ahpra': r'\b(?:AHPRA(?: registration)?|registration with AHPRA|registered with AHPRA)\b',
+    'vit': r'\b(?:VIT(?: registration)?|registration with VIT|registered with VIT)\b',
+    'electrical-a': r"\b(?:a[ -]grade (?:electrical|electrician(?:['’]s)?) licen[cs]e)\b",
+    'white-card': r'\bwhite card\b',
+    'rsa': r'\b(?:RSA(?: certificate)?|responsible service of alcohol(?: certificate)?)\b',
+    'cpa': r'\b(?:CPA(?: designation)?|certified practising accountant)\b',
+    'forklift': r'\bforklift licen[cs]e\b',
+}
+CREDENTIAL_WORD = r'\b(?:licen[cs]e|registration|credential|certification|certificate|certified|registered|permit|endorsement)\b'
+STATE_ALIASES = {
+    'ACT': 'ACT|Australian Capital Territory', 'NSW': 'NSW|New South Wales',
+    'NT': 'NT|Northern Territory', 'QLD': 'QLD|Queensland', 'SA': 'SA|South Australia',
+    'TAS': 'TAS|Tasmania', 'VIC': 'VIC|Victoria', 'WA': 'WA|Western Australia',
+}
+TASK_FORMS = {
+    'install': r'install(?:ed|ation|ing|s)?', 'inspect': r'inspect(?:ed|ion|ing|s)?',
+    'administer': r'administ(?:er(?:ed|ing|s)?|ration)', 'prepare': r'prepar(?:e[ds]?|ation|ing)',
+    'plan': r'plan(?:ned|ning|s)?', 'supervise': r'supervis(?:e[ds]?|ion|ing)',
+    'reconcile': r'reconcil(?:e[ds]?|iation|ing)', 'differentiate': r'differentiat(?:e[ds]?|ion|ing)',
+    'pick': r'pick(?:ed|ing|s)?', 'document': r'document(?:ed|ation|ing|s)?',
+    'operate': r'operat(?:e[ds]?|ion|ing)', 'dispense': r'dispens(?:e[ds]?|ing)',
+    'maintain': r'maint(?:ain(?:ed|ing|s)?|enance)', 'teach': r'teach(?:ing|es)?|taught',
+    'serve': r'serv(?:e[ds]?|ing)', 'assess': r'assess(?:ed|ment|ing|es)?',
+    'monitor': r'monitor(?:ed|ing|s)?', 'clean': r'clean(?:ed|ing|s)?',
+    'repair': r'repair(?:ed|ing|s)?', 'test': r'test(?:ed|ing|s)?',
+}
+TASK_PAST = {
+    'installed', 'inspected', 'administered', 'prepared', 'planned', 'supervised',
+    'reconciled', 'differentiated', 'picked', 'documented', 'operated', 'dispensed',
+    'maintained', 'taught', 'served', 'assessed', 'monitored', 'cleaned', 'repaired', 'tested',
+}
+TASK_PREFIX = r'^\s*(?:(?:I|We)\s+)?(?:(?:have|personally|independently|regularly)\s+)*'
+UNCONFIRMED_WORK = (
+    r"\b(?:no|not|never|without|would|could|might|may|will|future|pending|expect\w*|hop\w*|intend\w*|"
+    r"plan(?:s|ned|ning)? to|simulat\w*|mock|synthetic|practice|practi[cs]ed|coursework|"
+    r"training (?:exercise|scenario|lab|program|course|assessment|cent[re]+|mannequins?)|classroom skills assessment|"
+    r"skills assessment|practice lab|starting next|mannequins?|manikins?|role[ -]?play\w*|demonstrat\w*|hypothetical|sandbox)\b|\b\w+n['’]t\b"
+)
+TASK_CONTEXT = r'\b(?:with|using|under|in|for|at|on|during|alongside|near|beside|by|around|behind|above|below|next to|after|before|to|which|where|that)\b'
+ACTION_BREAK = re.compile(
+    r'(?<=[.!?])\s+|;\s*|\b(?:but|whereas|while)\s+|'
+    r'\band\s+(?=(?:(?:I|we|independently|personally|then|also)\s+)*(?:\w{3,}ed|built|ran|led|taught)\b)',
+    re.I,
+)
+
+
+
+def custom_work_value(text):
+    if not positive_evidence(text):
+        return 0
+    if re.search(UNCONFIRMED_WORK, text, re.I):
+        return 0.5
+    # Teaching in a classroom can be work. Training, plans and prototypes still
+    # pass through the original evidence gate when the action is not explicit.
+    if re.match(TASK_PREFIX + r'(?:' + '|'.join(sorted(TASK_PAST)) + r')\b', text, re.I):
+        if re.search(r'\b(?:prototyp\w*|propos\w*|concept|learning|studying|tutorial|before rollout)\b', text, re.I):
+            return 0.5
+        return 1
+    return evidence_value(text)
+
+
+def task_text(text):
+    text = re.sub(r'\b(?:vital signs|vital observations)\b', 'vitals', text, flags=re.I)
+    text = re.sub(r'\bmedicines?\b', 'medication', text, flags=re.I)
+    text = re.sub(CUSTOM_SKILLS['Point of sale'], 'pointofsale', text, flags=re.I)
+    for word, variants in TASK_FORMS.items():
+        text = re.sub(r'\b(?:' + variants + r')\b', word, text, flags=re.I)
+    return text
+
+
+def task_words(text):
+    return requirement_words(task_text(text)) - {'current', 'valid', 'hold', 'holding', 'demonstrated'}
+
+
+def custom_facts(facts):
+    for fact in facts:
+        if custom_work_value(fact['text']) < 1:
+            yield fact
+            continue
+        for clause in ACTION_BREAK.split(fact['text']):
+            if clause.strip():
+                yield {**fact, 'text': clause.strip(), 'original_text': fact['text']}
+
+
+def task_supported(criterion, fact):
+    text = fact['text']
+    if custom_work_value(text) != 1:
+        return False
+    required = task_words(criterion)
+    demands = re.findall(r'\b(\d+)\+?\s*(years?|months?)\b', criterion, re.I)
+    if re.search(r'\b(?:years?|months?|yrs?|mos?)\b', criterion, re.I):
+        stated = re.search(r'\bfor\s+(\d+)\+?\s*(years?|months?)\s*[.!]?$', text, re.I)
+        if len(demands) != 1 or not stated:
+            return False
+        amount, unit = demands[0]
+        if stated[2].lower().rstrip('s') != unit.lower().rstrip('s') or int(stated[1]) < int(amount):
+            return False
+        required -= {'minimum'}
+    numeric_scope = re.sub(r'\b\d+\+?\s*(?:years?|months?)\b', '', criterion, flags=re.I)
+    if not set(re.findall(r'\d+(?:\.\d+)?', numeric_scope)) <= set(re.findall(r'\d+(?:\.\d+)?', text)):
+        return False
+    if len(required) < 2 or not required <= task_words(text):
+        return False
+    actions = required & TASK_FORMS.keys()
+    if not actions:
+        return True
+    action = re.match(TASK_PREFIX + r'([a-z]+)\b', task_text(text), re.I)
+    if not action or actions != {action[1].lower()}:
+        return False
+    required_object = requirement_words(re.split(TASK_CONTEXT, task_text(criterion), maxsplit=1, flags=re.I)[0]) - actions
+    recorded_object = requirement_words(re.split(TASK_CONTEXT, task_text(text), maxsplit=1, flags=re.I)[0]) - actions
+    return bool(required_object and required_object <= recorded_object)
+
+
+
+def credential_evidence(criterion, profile, location):
+    """Return named records and the still-unproved part of a compound condition."""
+    from datetime import date, datetime
+    from zoneinfo import ZoneInfo
+
+    matches = []
+    remainder = criterion
+    for key, pattern in CREDENTIAL_NAMES.items():
+        if re.search(pattern, remainder, re.I):
+            matches.append(key)
+            remainder = re.sub(pattern, ' ', remainder, flags=re.I)
+    if not matches and not re.search(CREDENTIAL_WORD, criterion, re.I):
+        return None
+    today = datetime.now(ZoneInfo('Australia/Melbourne')).date()
+    regions = {code for code, aliases in STATE_ALIASES.items()
+               if re.search(r'\b(?:' + aliases + r')\b', criterion, re.I)}
+    national = bool(re.search(r'\bAustralia\b', criterion, re.I))
+    evidence = []
+    for key in matches:
+        expected = regions or ({'Australia'} if national else set())
+        if key.startswith('ahpra'):
+            if regions:
+                return [], criterion
+            expected = {'Australia'}
+        if key in {'electrical-a', 'rsa', 'vit'} and not expected:
+            expected = set(location.get('states', []))
+            if len(expected) != 1:
+                return [], criterion
+        names = [pattern for name, pattern in CREDENTIAL_NAMES.items() if name == key or name.startswith(key + '-')]
+        candidate = next((record for record in profile.credentials
+            if record.status == 'current'
+            and (not record.expires_on or date.fromisoformat(record.expires_on) >= today)
+            and any(re.fullmatch(pattern, record.name, re.I) for pattern in names)
+            and (not expected or expected == {record.jurisdiction})), None)
+        if candidate is None:
+            return [], criterion
+        detail = ' · '.join(part for part in (candidate.name, candidate.jurisdiction, 'Recorded current',
+                                             'Expires '+candidate.expires_on if candidate.expires_on else '') if part)
+        evidence.append({'text': detail, 'role': 'Saved qualification', 'organisation': 'Confirmed profile', 'dates': ''})
+    if not evidence:
+        return [], criterion
+    for region in regions:
+        remainder = re.sub(r'\b(?:' + STATE_ALIASES[region] + r')\b', ' ', remainder, flags=re.I)
+    if national:
+        remainder = re.sub(r'\bAustralia\b', ' ', remainder, flags=re.I)
+    return evidence, remainder
+
+
+ACADEMIC_LEVELS = {
+    'bachelor': r"\bbachelor(?:['’]s|s)?\b", 'master': r"\bmaster(?:['’]s|s)?\b",
+    'diploma': r'\bdiploma\b', 'doctorate': r'\b(?:doctorate|phd)\b',
+}
+
+
+def recorded_academic_requirement(criterion, profile):
+    levels = {name for name, pattern in ACADEMIC_LEVELS.items() if re.search(pattern, criterion, re.I)}
+    if len(levels) != 1:
+        return None
+    level = next(iter(levels))
+    pattern = ACADEMIC_LEVELS[level]
+    ignore = {'degree', 'tertiary', 'formal', 'qualification', 'qualifications', 'completed', 'awarded'}
+    needed = task_words(re.sub(pattern, ' ', criterion, flags=re.I)) - ignore
+    for record in profile.education:
+        if not re.search(pattern, record, re.I) or not positive_evidence(record):
+            continue
+        if re.search(r'\b(?:not|never|studying|pursuing|pending|planned|expected|anticipated|incomplete|withdrawn|abandoned|enrolled|working towards|in progress)\b', record, re.I):
+            continue
+        subject = task_words(re.sub(pattern, ' ', record, flags=re.I)) - ignore
+        if needed <= subject:
+            return record
+    return None
+
+
+def custom_requirement(criterion, profile, facts, location):
+    credential = credential_evidence(criterion, profile, location)
+    if credential is not None:
+        evidence, remaining = credential
+        if not evidence:
+            return 0, [], ['Confirm the named credential, its current status and any stated jurisdiction.'], False
+        # A record never establishes additional scope, work, eligibility or tenure.
+        if re.search(r'\b(?:years?|months?|experience)\b|\d', remaining, re.I) or task_words(remaining) - {'applicant', 'candidate', 'mandatory', 'required', 'posses'}:
+            return 0.5, evidence, ['Credential recorded. Check the additional requirements in this clause.'], False
+        return 1, evidence, [], False
+    if re.search(r'\b(?:clearance|citizen(?:ship)?|right to work|working rights|visa)\b', criterion, re.I):
+        return 0, [], ['Confirm the specific eligibility requirement.'], False
+    if re.search(r'\b(?:degree|tertiary|qualification|bachelor|master|diploma|doctorate|phd)\b', criterion, re.I):
+        qualification = recorded_academic_requirement(criterion, profile)
+        if qualification:
+            return 1, [{'text':qualification,'role':'Saved qualification','organisation':'Confirmed profile','dates':''}], [], False
+        return 0, [], ['Confirm the specific qualification or eligibility requirement.'], False
+    words = task_words(criterion)
+    candidates = list(custom_facts(facts))
+    supported = next((fact for fact in candidates if task_supported(criterion, fact)), None)
+    if supported:
+        return 1, [supported], [], True
+    partial = next((fact for fact in candidates if len(words & task_words(fact['text'])) >= 2), None)
+    if partial:
+        return 0.5, [partial], ['Some related work is recorded. Check the specific task, context and scope.'], True
+    return 0, [], ['No specific supporting work evidence found.'], True
+
+
 def fit_assessment(job, profile, preferences, view, location, *, full=False, closed=False):
     result={'version':VERSION,'percent':None,'status':'Needs profile','strengths':[],
             'reviews':[],'requirements':[],'breakdown':[],'cap':None,
@@ -187,24 +414,32 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         result['breakdown']=[{'id':key,'label':label,'weight':WEIGHTS[key],'points':None,'covered':None,'total':0,'state':'pending'} for key,label in [('skills','Relevant skills'),('experience','Work experience'),('requirements','Stated requirements')]]
         return result
     from .role_types import search_role_matches
+    custom = preferences.role_search_mode == 'custom'
+    if custom:
+        result['version'] = 'criterion-evidence-custom-v1'
+    work_value = custom_work_value if custom else evidence_value
+    skill_patterns = CUSTOM_SKILLS if custom else TOOLS
     rows=list(sentences(view))
     primary=view.get('title',job.title)+'\n'+'\n'.join(text for _,text in rows)
     clean_job=Job.model_validate({**job.model_dump(mode='json'),'title':view.get('title',job.title),'description':primary[:100000]})
     facts=[{'text':b,'role':e.role,'organisation':e.organization,'dates':e.dates}
-           for e in profile.experience for b in e.bullets if evidence_value(b)>0]
+           for e in profile.experience for b in e.bullets if work_value(b)>0]
     # Referees' titles and example cover letters cannot become candidate experience.
     profile_text='\n'.join([s for s in profile.skills if positive_evidence(s)]+[f['text'] for f in facts])
     scoring_text=view.get('title',job.title)+'\n'+'\n'.join(text for heading,text in rows
         if not re.search(OPTIONAL,heading,re.I) and not company_section(heading))
-    tools=mentions(scoring_text)
-    supported_tools=[t for t in tools if re.search(TOOLS[t],profile_text,re.I)]
-    tool_values={t:(1 if any(re.search(TOOLS[t],f['text'],re.I) and evidence_value(f['text'])==1 for f in facts) else 0.5) for t in supported_tools}
-    missing_tools=[t for t in tools if t not in supported_tools]
-    strengths=[]
+    tools = [name for name, pattern in skill_patterns.items() if re.search(pattern, scoring_text, re.I)]
+    supported_tools = [name for name in tools if re.search(skill_patterns[name], profile_text, re.I)]
+    tool_values = {
+        name: (1 if any(work_value(fact['text']) == 1 and re.search(skill_patterns[name], fact['text'], re.I) for fact in facts) else 0.5)
+        for name in supported_tools
+    }
+    missing_tools = [name for name in tools if name not in supported_tools]
+    strengths = []
     for tool in supported_tools:
-        work=[f for f in facts if re.search(TOOLS[tool],f['text'],re.I)]
-        fact=next((f for f in work if evidence_value(f['text'])==1),work[0] if work else None)
-        skill=next((s for s in profile.skills if positive_evidence(s) and re.search(TOOLS[tool],s,re.I)),None)
+        work = [fact for fact in facts if re.search(skill_patterns[tool], fact['text'], re.I)]
+        fact = next((f for f in work if work_value(f['text']) == 1), work[0] if work else None)
+        skill = next((item for item in profile.skills if positive_evidence(item) and re.search(skill_patterns[tool], item, re.I)), None)
         strengths.append({'label':tool,'kind':'Skill','evidence':fact['text'] if fact else skill or 'Saved profile summary',
                           'source':fact or None})
     experience=[]
@@ -232,7 +467,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     criteria=list(dict.fromkeys(criteria))
     explicit_criteria=len(criteria)
     # The job title can establish a core technical requirement even in a short lead.
-    title_tools=mentions(view.get('title',job.title))
+    title_tools=[] if custom else mentions(view.get('title',job.title))
     for tool in title_tools:
         if not any(re.search(TOOLS[tool],c,re.I) for c in criteria):
             criteria.append('Core tool in role title: '+tool)
@@ -240,6 +475,14 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     reviews=[]
     hard=False
     for criterion in criteria:
+        if custom:
+            value, evidence, reasons, work = custom_requirement(criterion, profile, facts, location)
+            status = 'Supported' if value == 1 else 'Transferable' if value else 'Needs confirmation'
+            result['requirements'].append({'text':criterion, 'status':status, 'value':value,
+                                           'evidence':evidence, 'reasons':reasons, 'work':work})
+            if value < 1:
+                reviews.append({'label':reasons[0], 'requirement':criterion})
+            continue
         linked_facts=criterion_facts(criterion,facts)
         required_tools=mentions(criterion)
         found=[t for t in required_tools if t in supported_tools]
@@ -337,8 +580,11 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             reviews.append({'label':reasons[0] if reasons else 'Requirement needs review.','requirement':criterion})
 
     skills_ratio=sum(tool_values.values())/len(tools) if tools else 0
-    work_criteria=[r for r in result['requirements'] if not re.search(r'(?i)degree|tertiary|qualification|certification|clearance|citizen|working rights|right to work',r['text'])]
-    work_values=[r['value']*max((evidence_value(e['text']) for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),default=0) for r in work_criteria]
+    if custom:
+        work_criteria = [r for r in result['requirements'] if r['work']]
+    else:
+        work_criteria = [r for r in result['requirements'] if not re.search(r'(?i)degree|tertiary|qualification|certification|clearance|citizen|working rights|right to work', r['text'])]
+    work_values=[r['value']*max((work_value(e['text']) for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),default=0) for r in work_criteria]
     experience_ratio=sum(work_values)/len(work_values) if work_values else 0
     requirements_ratio=sum(r['value'] for r in result['requirements'])/len(result['requirements']) if result['requirements'] else 0
     result['breakdown']=[
@@ -346,6 +592,10 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         {'id':'experience','label':'Work experience','weight':40,'points':round(40*experience_ratio),'covered':sum(work_values),'total':len(work_values)},
         {'id':'requirements','label':'Stated requirements','weight':30,'points':round(30*requirements_ratio),'covered':sum(r['value'] for r in result['requirements']),'total':len(result['requirements'])},
     ]
+    if custom and not tools:
+        result['method'] = 'Work examples 57%, stated requirements 43%. The advert has no separately scored tools. Each requirement links to recorded evidence.'
+        for component, weight, ratio in zip(result['breakdown'], (0,57,43), (0,experience_ratio,requirements_ratio)):
+            component.update(weight=weight, points=round(weight * ratio))
     strengths=[s for s in strengths if s['kind']!='Experience']
     seen_work=set()
     for criterion in result['requirements']:
@@ -367,7 +617,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     if explicit_criteria<3 or len(work_examples)<2:
         reviews.append({'label':'Limited evidence: at least three distinct requirements and two work examples are needed for an automatic strong match.','requirement':''})
         caps.append((79,'Listing or evidence is too sparse for a strong-match judgement.'))
-    if not tools:
+    if not tools and not custom:
         reviews.append({'label':'Not enough explicit technical skill detail to assess the skills component.','requirement':''})
     if not full:
         reviews.insert(0,{'label':'Read the full listing before assessing this role.','requirement':''})

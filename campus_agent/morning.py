@@ -154,6 +154,13 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
         def persist():
             workspace.set_meta(key, report)
             workspace.set_meta('last_morning', report)
+
+        def pause_if_custom():
+            if workspace.preferences.role_search_mode != 'custom':
+                return False
+            report.update(status='done', paused=True, reason='Custom searches use manual packet review.', finished_at=utcnow())
+            persist()
+            return True
         try:
             if prefs.application_sync_enabled:
                 report['applications'] = workspace.sync_applications()
@@ -200,16 +207,19 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
                 if signature(job) in sent_signatures:
                     continue
                 try:
-                    workspace.prepare(job_id)
-                    # Sending to the user's inbox is authorized by this routine; employer submission is separate.
-                    sent = workspace.gmail_packet(job_id, send=True, standout=session == 'standout', automatic=True)
-                    packet = {'job_id': job_id, 'title': job.title, 'employer': job.employer, 'url': str(job.url), 'email': sent}
-                    report['packets'].append(packet)
-                    sent_signatures.add(signature(job))
-                    persist()  # Preserve delivery acknowledgement before optional Drive writes.
-                    if prefs.morning_save_drive:
-                        packet['drive'] = {kind: workspace.upload(job_id, kind) for kind in ('resume', 'cover')}
-                    persist()
+                    with workspace.write_lock:
+                        if pause_if_custom():
+                            return report
+                        workspace.prepare(job_id)
+                        # Sending to the user's inbox is authorized by this routine; employer submission is separate.
+                        sent = workspace.gmail_packet(job_id, send=True, standout=session == 'standout', automatic=True)
+                        packet = {'job_id': job_id, 'title': job.title, 'employer': job.employer, 'url': str(job.url), 'email': sent}
+                        report['packets'].append(packet)
+                        sent_signatures.add(signature(job))
+                        persist()  # Preserve delivery acknowledgement before optional Drive writes.
+                        if prefs.morning_save_drive:
+                            packet['drive'] = {kind: workspace.upload(job_id, kind) for kind in ('resume', 'cover')}
+                        persist()
                 except Exception as exc:
                     report['errors'].append(job.title + ': ' + str(exc)[:400])
                     persist()
@@ -233,13 +243,16 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
             lines += [p['title'] + ' — ' + p['employer'] + ': ' + p['url'] for p in report['packets']]
             lines += ['Skipped: ' + s['title'] + ' — ' + '; '.join(s['reasons']) for s in report['skipped']]
             lines += ['Issue: ' + e for e in report['errors'] + report['search'].get('errors', [])]
-            report['summary_pending'] = True
-            persist()
-            workspace.require_style_approval()
-            summary = workspace.bridge.call('gmail.send_email', {
-                'to': account['email'], 'subject': f'Job Agent {session} check: {date} — {len(report["packets"])} packets',
-                'payload': {'mime_type': 'text/plain', 'charset': 'utf-8', 'body': {'content': '\n\n'.join(lines)}},
-                'response_fields': ['id']})
+            with workspace.write_lock:
+                if pause_if_custom():
+                    return report
+                report['summary_pending'] = True
+                persist()
+                workspace.require_style_approval()
+                summary = workspace.bridge.call('gmail.send_email', {
+                    'to': account['email'], 'subject': f'Job Agent {session} check: {date} — {len(report["packets"])} packets',
+                    'payload': {'mime_type': 'text/plain', 'charset': 'utf-8', 'body': {'content': '\n\n'.join(lines)}},
+                    'response_fields': ['id']})
             if not summary.get('id'):
                 raise ValueError('Gmail did not acknowledge the morning summary; inspect Sent before retrying')
             report.update(status='done', summary_id=summary['id'], summary_pending=False, finished_at=utcnow())
