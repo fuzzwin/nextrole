@@ -121,7 +121,7 @@ def check_pdfs(directory, job, profile, style=None, prepared=None):
             displayed = prepared or {'skills':profile.skills,
                                     'experience':[e.model_dump() for e in profile.experience],
                                     'technical_projects':[]}
-            facts = [profile.summary, *displayed['skills'], *profile.education,
+            facts = [profile.summary, *displayed['skills'], *profile.education, *profile.licences,
                      *(b for entry in displayed['experience'] for b in entry['bullets'])]
             if profile.headline:
                 facts.append(profile.headline)

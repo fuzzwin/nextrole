@@ -52,6 +52,7 @@ class Profile(StrictModel):
     summary: str = Field(min_length=10, max_length=2000)
     education: list[str]
     skills: list[str]
+    licences: list[str] = Field(default_factory=list, max_length=30)
     experience: list[Experience]
     availability: str = ""
     is_example: bool = False

@@ -1,3 +1,11 @@
+## Unreleased — 9 November 2026 (any kind of work)
+
+- Search setup now asks "What work are you looking for?" and saves your own job titles (up to 6). Searches use them, a role whose title contains every word of one of your titles is in scope, and the eight IT families become optional presets. A new workspace asks for this before Find jobs runs; saved searches are unchanged.
+- New **Licences & registrations** profile field, shown on the résumé. Licence, registration, card and membership requirements are met only by a current saved record that names them; expired, pending or studying records, a different grade or an unrelated degree never count, and a missing required credential holds the score below 70%.
+- Matching works across trades: any past-tense work verb earns full credit (weak openers such as Attended or Experienced in do not), care/lesson plans and learning tasks are no longer read as intentions, word forms are compared by stem, and your headline, role titles and verbatim saved skills can confirm a requirement's trade words. Requirements naming recognised IT tools keep the existing strict checks.
+- Your own saved skills that an advert names count in the skills component; the "technical skill detail" warning only appears for IT roles. Rubric version is now `criterion-evidence-v6`.
+- Cover letters no longer claim an IT "emphasis" (business systems, service delivery…) for non-IT roles, and write any opening work verb in the first person. Cards no longer repeat the same evidence line.
+
 ## Unreleased — 8 November 2026 (jump-in reliability)
 
 - Fit scoring: another tense of a requirement's own verb (administering/administered, resolving/resolved) no longer counts as an unconfirmed detail; salary, closing-date and how-to-apply lines inside a requirements section are no longer scored as requirements; Power Automate/Power Apps work evidences a Power Platform role title. Rubric version is now `criterion-evidence-v5`, so pending roles are re-read once.

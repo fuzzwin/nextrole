@@ -5,6 +5,7 @@ import re
 import math
 from collections import Counter
 from pydantic import BaseModel, Field
+from .language import sentence_start
 from .models import Job, Profile
 
 def application_kind(job: Job) -> str:
@@ -22,6 +23,11 @@ def application_kind(job: Job) -> str:
 
 def role_focus(job: Job) -> str:
     """Describe a role using a small, fixed vocabulary, not generated claims."""
+    from .role_types import matched_types
+    if not matched_types(job):
+        # The fixed vocabulary below describes IT and business roles. For any other kind of
+        # work (nursing, trades, teaching, hospitality…) say nothing rather than something wrong.
+        return ""
     title = job.title.lower()
     text = title + " " + job.description.lower()
     options = (
@@ -58,18 +64,14 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
     summary = summary.replace(". Supports ", ". I support ").replace(". Builds ", ". I build ")
     facts = [b.strip() for entry in prepared["experience"] if entry["organization"]
              for b in entry["bullets"] if b.strip()][:1 if short else 2]
-    verbs = {"created", "delivered", "built", "supported", "simplified", "mapped",
-             "implemented", "managed", "administered", "deployed", "investigated",
-             "ran", "led", "recreated", "developed", "configured", "coordinated",
-             "trained", "tested", "designed", "reduced", "improved", "maintained",
-             "create", "deliver", "build", "support", "simplify", "map",
+    verbs = {"create", "deliver", "build", "support", "simplify", "map",
              "implement", "manage", "administer", "deploy", "investigate",
              "run", "lead", "develop", "configure", "coordinate"}
     def sentence(bullet: str) -> str:
         first = bullet.split(maxsplit=1)[0]
         if first.lower() in verbs:
             return "I " + first.lower() + bullet[len(first):]
-        return bullet
+        return sentence_start(bullet)
 
     focus = role_focus(job)
     if choice.tone == "direct":

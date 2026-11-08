@@ -23,7 +23,7 @@ from .mail import build_email, save_preview
 from .models import Experience, Job, Profile, StrictModel, utcnow
 from .store import Store
 from .tailor import prepare_text, terms
-from .role_types import DEFAULT_ROLE_TYPES, matched_types, validate_types, example_types
+from .role_types import DEFAULT_ROLE_TYPES, clean_titles, in_scope, matched_types, title_matches, validate_types, example_types
 
 
 def public_listing_url(url):
@@ -43,6 +43,7 @@ def public_listing_url(url):
 
 class Preferences(StrictModel):
     role_types: list[str] = Field(default_factory=lambda: list(DEFAULT_ROLE_TYPES))
+    job_titles: list[str] = Field(default_factory=list, max_length=12)
     use_custom_keywords: bool = False
     keywords: list[str] = Field(default_factory=lambda: ["IT systems specialist", "Power Platform automation", "AI enablement"])
     location: str = "Melbourne Victoria Australia"
@@ -261,12 +262,19 @@ class Workspace:
         with self.store.connect() as db:
             db.execute("INSERT INTO workspace_meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value)))
 
+    @property
+    def preferences_saved(self):
+        return bool(self.get_meta("preferences", {}))
+
     def save_preferences(self, preferences):
         if ((preferences.morning_enabled and not self.preferences.morning_enabled)
                 or (preferences.standout_enabled and not self.preferences.standout_enabled)):
             self.require_style_approval()
         ZoneInfo(preferences.timezone)
-        validate_types(preferences.role_types)
+        preferences = preferences.model_copy(update={'job_titles': clean_titles(preferences.job_titles)})
+        if not preferences.role_types and not preferences.job_titles:
+            raise ValueError('Choose at least one role type or enter a job title')
+        validate_types(preferences.role_types, allow_empty=bool(preferences.job_titles))
         if preferences.use_custom_keywords and (not preferences.keywords or len(preferences.keywords) > 3 or not all(k.strip() for k in preferences.keywords)):
             raise ValueError("Enter one to three extra search phrases, or turn off extra phrases")
         self.preferences = preferences
@@ -519,6 +527,8 @@ class Workspace:
             row.update(details.get(row["id"], {}))
             row.update(self.match(row["job"]))
             row["role_types"] = [{"id": item["id"], "label": item["label"]} for item in matched_types(Job.model_validate(row["job"]))]
+            if title_matches(row["job"]["title"], preferences.job_titles):
+                row["role_types"].append({"id": "my_titles", "label": "My job titles"})
             row['application'] = applications.get(application_key(row['job']['employer'], row['job']['title']))
             if row['application']:
                 row['stage'] = 'applied'
@@ -767,7 +777,7 @@ class Workspace:
                     url=item["url"], description=description, location=self.preferences.location)
                 is_new = self.add_job(job)
                 added += is_new
-                if is_new and matched_types(job, self.preferences.role_types): new_ids.append(job.identity)
+                if is_new and in_scope(job, self.preferences): new_ids.append(job.identity)
             try:
                 assessment = self.assess_batch(new_ids) if new_ids else {"assessed":0,"needs_source":0,"blocked":0,"remaining":0}
             except BatchInProgress:
