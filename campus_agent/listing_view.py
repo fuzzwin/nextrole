@@ -69,7 +69,7 @@ def source_problem(text, title=''):
     primary = re.split(RECOMMENDATIONS,clean)[0]
     if len(re.findall(r'(?m)^\s*####\s+[^\n]+',primary))>=6 and len(re.findall(r'(?m)^\s*###\s+[^\n]+',primary))>=6:
         return ('search_results','The saved capture contains unrelated roles/employers. Verify the individual advert.')
-    if re.search(r'(?i)wurde besetzt|position (?:has been )?(?:filled|closed)|no longer accepting applications|job (?:has )?(?:expired|closed)|this job post has expired|sorry, this job was removed', primary):
+    if re.search(r'(?i)wurde besetzt|position (?:has been )?(?:filled|closed)|no longer accepting applications|job (?:has )?(?:expired|closed)|this job post has expired|the job you are trying to view has expired|sorry, this job was removed', primary):
         return ('closed','The original source says this listing is closed or filled.')
     if re.search(r'(?im)^\s*#{1,6}\s*Job summary\s*$',primary):
         body=re.split(r'(?im)^\s*#{1,6}\s*(?:Full )?Job description\s*$',primary,maxsplit=1)
@@ -267,13 +267,15 @@ def listing_view(text, title='', employer=''):
                           if line.startswith('#') and len(re.sub(r'^#+\s*','',line))>8
                           and title.casefold().startswith(re.sub(r'^#+\s*','',line).casefold())),title)
     facts = []
-    for label in ['Work format', 'Work type', 'Grade']:
-        for i,line in enumerate(lines):
-            if line.casefold() == label.casefold():
-                value = next((v for v in lines[i+1:] if v), '')
-                if value and len(value)<=80:
-                    facts.append({'label': 'Listed level' if label=='Grade' else label, 'value':value})
-                break
+    for label, aliases in [('Work format', ['Work format']), ('Work type', ['Work type','Employment type','Job type']), ('Listed level', ['Grade'])]:
+        for i, line in enumerate(lines):
+            match = re.fullmatch(r'(?:'+ '|'.join(aliases) + r')\s*(?::\s*(.*))?', re.sub(r'^#+\s*','',line), re.I)
+            if not match:
+                continue
+            value = (match[1] or '').strip() or next((v for v in lines[i+1:] if v), '')
+            if value and len(value) <= 80:
+                facts.append({'label':label, 'value':value})
+            break
     salary = salary_info(text)
     if salary['status'] != 'not_stated':
         facts.insert(0, {'label':'Salary', 'value':salary['display']})
@@ -397,6 +399,18 @@ def normalize_listing(text, title=''):
             address=place.get('address',{}) if isinstance(place,dict) else {}
             if isinstance(address,dict): labels.append(', '.join(str(address[k]) for k in ['addressLocality','addressRegion','addressCountry'] if address.get(k)))
         if labels: fields.append('Location: '+' / '.join(labels))
+        if posting.get('jobLocationType') == 'TELECOMMUTE':
+            fields.append('Work format: Remote')
+            eligibility = posting.get('applicantLocationRequirements', [])
+            if isinstance(eligibility, dict):
+                eligibility = [eligibility]
+            names = [place['name'] for place in eligibility if isinstance(place,dict)
+                     and isinstance(place.get('name'),str)] if isinstance(eligibility,list) else []
+            if names:
+                fields.append('Applicants must be based in '+ ' or '.join(names)+'.')
+        employment = posting.get('employmentType')
+        if isinstance(employment,list) and employment and all(isinstance(value,str) for value in employment):
+            fields.append('Work type: '+ ' / '.join(employment))
         for field,label in [('datePosted','Posted on'),('validThrough','Applications close'),('employmentType','Work type')]:
             if isinstance(posting.get(field),str): fields.append(label+': '+posting[field])
         return '\n'.join(fields)+ '\n'+body

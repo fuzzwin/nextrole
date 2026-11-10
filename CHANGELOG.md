@@ -1,3 +1,9 @@
+## 0.9.17 — 10 November 2026
+
+- Simplify primary filters and add vacancy status for open/unconfirmed, closing soon and closed roles.
+- Save bounded searches for other copies of a role, with dated source links and excerpts for verification.
+- Read explicit employment types and structured remote eligibility; recognise additional expiry notices.
+
 ## 0.9.16 — 10 November 2026
 
 - Redistribute the tool component across work evidence and requirements when an advert names no recognised tools.
