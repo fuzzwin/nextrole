@@ -62,7 +62,7 @@ class Preferences(StrictModel):
     morning_max_packets: int = Field(default=3, ge=1, le=10)
     morning_save_drive: bool = True
     auto_top_enabled: bool = True
-    auto_top_threshold: int = Field(default=80, ge=0, le=100)
+    auto_top_threshold: int = Field(default=70, ge=0, le=100)
 
     @model_validator(mode='after')
     def validate_custom_roles(self):
@@ -598,8 +598,8 @@ class Workspace:
                 and row['fit']['auto_eligible'] and row['preferred_location']
                 and row['reading_view']['salary']['status']!='conflicting'
                 and row['fit']['status']=='Good match' and not row['fit']['reviews']
-                and row['fit']['percent'] is not None and row['fit']['percent']>=max(75,self.preferences.auto_top_threshold))
-            row['top_reason'] = ('Meets '+str(max(75,self.preferences.auto_top_threshold))+'% threshold; full listing, supported requirements, employer and preferred location checked.' if row['top_match'] else 'Saved by you; independent of the fit assessment.' if row['top_saved'] else '')
+                and row['fit']['percent'] is not None and row['fit']['percent']>=max(70,self.preferences.auto_top_threshold))
+            row['top_reason'] = ('Meets '+str(max(70,self.preferences.auto_top_threshold))+'% threshold; full listing, supported requirements, employer and preferred location checked.' if row['top_match'] else 'Saved by you; independent of the fit assessment.' if row['top_saved'] else '')
             row['top_listing'] = row['top_saved'] or row['top_match']
             quality_path = Path(row["packet_dir"]) / "quality-report.json" if row.get("packet_dir") else None
             row["quality"] = json.loads(quality_path.read_text()) if quality_path and quality_path.is_relative_to(self.artifacts) and quality_path.is_file() else None

@@ -1,3 +1,9 @@
+## 0.9.18 — 10 November 2026
+
+- Allow automatic Top listings from 70% with a user-selected threshold of 70–100%; default to 70% for new settings.
+- Add a shortcut from the Top listings view and a separate save action that preserves all other preferences.
+- Retain source, requirement, location and vacancy checks and manually starred jobs.
+
 ## 0.9.17 — 10 November 2026
 
 - Simplify primary filters and add vacancy status for open/unconfirmed, closing soon and closed roles.

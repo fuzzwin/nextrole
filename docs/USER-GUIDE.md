@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.17.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.18.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.17** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.18** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -570,3 +570,7 @@ A directory is a link to several listings. Use an individual vacancy's exact tit
 Use **Vacancy status** to hide closed roles, find roles closing within seven days, or inspect closed records. Open / unconfirmed includes roles without a confirmed closing status; it does not guarantee that applications remain open. **View** groups matches, unrated roles, prepared packets and application stages. Role types, minimum score, posting date and page size are under **More filters**.
 
 Inside a job, **Search other listings** looks for possible copies using its title and confirmed employer. Results are saved with their source links and check time. Open and verify the exact vacancy before using any quoted pay, location or requirements: reposts can be expired, estimated or for a similar role. Search excerpts do not change the saved advert or fit score. **Refresh listing** reads the saved original source.
+
+### Choose your automatic Top listings percentage
+
+Select **Top listings** in View, then **Change auto-top percentage**. Choose a whole percentage from **70 to 100** and select **Save Top listings preferences**. The default for new workspaces is 70%. Existing saved choices are retained. Full listing, evidence, employer and preferred-location checks still apply; closed, applied, archived and unresolved roles are excluded from automatic selection. Manually starred roles remain saved independently of their score. This setting does not submit applications or enable emails.

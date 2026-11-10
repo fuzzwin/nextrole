@@ -1,4 +1,4 @@
-name: Publish NextRole 0.9.17
+name: Publish NextRole 0.9.18
 
 on:
   pull_request:
@@ -41,7 +41,7 @@ jobs:
         run: |
           python - <<'PY'
           import json, pathlib, zipfile
-          name="NextRole-Mac-0.9.17"
+          name="NextRole-Mac-0.9.18"
           z=pathlib.Path("dist")/(name+".zip")
           assert z.exists()
           with zipfile.ZipFile(z) as archive:
@@ -50,15 +50,15 @@ jobs:
               assert any(x.endswith("/docs/ROLE-TAILORING.md") for x in files)
               assert not any("/workspace/" in x or "/artifacts/" in x for x in files)
               m=json.loads(archive.read(name+"/RELEASE-MANIFEST.json"))
-              assert m["version"]=="0.9.17"
+              assert m["version"]=="0.9.18"
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.9.17-Verified
+          name: NextRole-Mac-0.9.18-Verified
           path: |
-            dist/NextRole-Mac-0.9.17.zip
-            dist/NextRole-Mac-0.9.17.zip.sha256
-            dist/NextRole-Mac-0.9.17.manifest.json
+            dist/NextRole-Mac-0.9.18.zip
+            dist/NextRole-Mac-0.9.18.zip.sha256
+            dist/NextRole-Mac-0.9.18.manifest.json
           if-no-files-found: error
 
   publish-release:
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: NextRole-Mac-0.9.17-Verified
+          name: NextRole-Mac-0.9.18-Verified
           path: dist
       - name: Release verified Mac package
         env:
@@ -78,15 +78,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if gh release view v0.9.17 --repo "$GH_REPO" >/dev/null 2>&1; then
-            echo "Release v0.9.17 already exists; refusing to overwrite artifacts."
+          if gh release view v0.9.18 --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release v0.9.18 already exists; refusing to overwrite artifacts."
           else
-            gh release create v0.9.17 \
-              dist/NextRole-Mac-0.9.17.zip \
-              dist/NextRole-Mac-0.9.17.zip.sha256 \
-              dist/NextRole-Mac-0.9.17.manifest.json \
+            gh release create v0.9.18 \
+              dist/NextRole-Mac-0.9.18.zip \
+              dist/NextRole-Mac-0.9.18.zip.sha256 \
+              dist/NextRole-Mac-0.9.18.manifest.json \
               --repo "$GH_REPO" \
               --target "$GITHUB_SHA" \
-              --title "NextRole Mac 0.9.17" \
-              --notes "Compact filters with vacancy status, saved alternate-listing research and improved employment-type and remote metadata. Source links remain labelled for verification."
+              --title "NextRole Mac 0.9.18" \
+              --notes "Choose an automatic Top listings threshold from 70 to 100 percent, with a 70 percent default and unchanged source and evidence review checks."
           fi
