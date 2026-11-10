@@ -1,3 +1,7 @@
+## 0.9.21 — 10 November 2026
+
+- Refined requirement extraction and evidence scoring; separates evidence confidence and eligibility checks.
+
 ## 0.9.20 — 10 November 2026
 
 - Added per-role research and interview preparation with private saved runs, explicit scope and bounded search.

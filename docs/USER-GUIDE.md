@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.20.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.21.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.20** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.21** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -589,3 +589,8 @@ The status line shows jobs checked, fields filled and unresolved jobs. An unsucc
 ## Per-role research and interview preparation
 
 Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Choose the scope, stage and frameworks before starting. Review the evidence and any missing details, then download the editable guide and quick sheet or practise one question at a time. Research uses bounded connected searches; rehearsal drafts use your saved evidence. These are reviewable evidence workbooks, not independently verified company conclusions or a generative interview-writing service. See [Career Harness guide](CAREER-HARNESS.md) for limits and usage.
+
+
+## Evidence scoring
+
+The score measures recorded evidence, not your chance of being hired. Explicit essential requirements count twice standard requirements; desirable extras do not currently contribute. Weak single-word overlap receives less credit than broader transferable evidence. Known credential requirements still contribute to the score and are also shown as eligibility checks; location and schedule are checked separately. Evidence confidence identifies sparse or unresolved assessments. Adverts containing only logistics remain unrated. Some repeated scores are legitimate.

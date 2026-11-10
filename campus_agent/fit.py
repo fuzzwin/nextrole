@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from .models import Job
 
-VERSION = 'criterion-evidence-v5'
+VERSION = 'criterion-evidence-v6'
 # These are deliberate product weights, not a probability of being hired.
 WEIGHTS = {'skills':30, 'experience':40, 'requirements':30}
 TOOLS = {
@@ -450,6 +450,26 @@ def custom_requirement(criterion, profile, facts, location):
     return 0, [], ['No specific supporting work evidence found.'], True
 
 
+def criterion_kind(text):
+    """Keep job logistics and boilerplate out of competence evidence."""
+    value=text.strip(' ·•-:').strip()
+    value=re.sub(r"(?i)^what you(?:['’]ll| will) bring(?: will include)?[: ]*",'',value).strip()
+    if not value: return 'heading'
+    if re.fullmatch(r'(?i)(?:proofs? of concept|demonstrations?|prototypes?)(?:\s+and\s+(?:proofs? of concept|demonstrations?|prototypes?))*\s+do not count[.!]?',value): return 'administrative'
+    if re.fullmatch(r"(?i)(?:what you(?:['’]ll| will) bring(?: will include)?|beyond that|requirements|about you|key skills)[: ]*",value): return 'heading'
+    if re.search(r'(?i)^(?:to (?:learn|find out) more|visit (?:our|the)|apply (?:now|before|here)|published |posted |click |all applicants are required to complete.{0,40}screening)',value): return 'administrative'
+    # Only explicit logistics markers: leading 'Location' alone may be a duty
+    # (location scouting/management), and collaboration prose can contain real work.
+    if re.search(r'(?i)^(?:the (?:position|role) is based (?:in|at) |location\s*:\s*|location\s*remote\s+in\b|a note on location\s*(?:this is|remote)\b|located in |remote in |this is a remote role|salary\s*:)',value): return 'logistics'
+    return 'competency'
+
+
+def criterion_parts(text):
+    # Only split explicit independent clauses; preserve AND/OR tool and credential obligations.
+    parts=re.split(r';\s*(?=(?:must|demonstrated|strong|proven|experience|ability|working knowledge)\b)',text,flags=re.I)
+    return [p.strip() for p in parts if criterion_kind(p)=='competency']
+
+
 def fit_assessment(job, profile, preferences, view, location, *, full=False, closed=False):
     result={'version':VERSION,'percent':None,'status':'Needs profile','strengths':[],
             'reviews':[],'requirements':[],'breakdown':[],'cap':None,
@@ -468,7 +488,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     from .role_types import search_role_matches
     custom = preferences.role_search_mode == 'custom'
     if custom:
-        result['version'] = 'criterion-evidence-custom-v1'
+        result['version'] = 'criterion-evidence-custom-v2'
     work_value = custom_work_value if custom else evidence_value
     skill_patterns = CUSTOM_SKILLS if custom else TOOLS
     rows=list(sentences(view))
@@ -511,15 +531,23 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                               'kind':'Experience','evidence':fact['text'],'source':fact})
 
     criteria=[]
+    importance={}
+    separate_checks=[]
     for heading,block_text in rows:
       for text in re.split(r'(?<=[.!?])\s+(?=[A-Z])', block_text):
         optional=bool(re.search(OPTIONAL,heading,re.I)) or company_section(heading) or heading.casefold() in {'benefits','what we offer'} or bool(re.search(r'\b(?:nice to have|helpful.{0,12}not required|desirable|preferred but not required)\b',text,re.I))
         explicit=re.search(r'\b(?:must|required|at least|mandatory|seeking a certified)\b|^(?:Requires|You need|Demonstrated|Strong|Proven|Experience|Commercial experience|Hands.on experience|Working knowledge|Ability to)\b',text,re.I)
         if not optional and (re.fullmatch(REQUIRED,heading,re.I) or requirement_heading(heading) or explicit):
             if len(text.strip())>15 and not re.fullmatch(r'Beyond that:?',text,re.I):
-                criteria.append(text)
+                kind=criterion_kind(text)
+                if kind=='competency':
+                    for part in criterion_parts(text):
+                        criteria.append(part)
+                        importance[part]=2 if re.search(r'\b(?:essential|mandatory|must have|must demonstrate|required)\b',heading+' '+part,re.I) else 1
+                elif kind=='logistics': separate_checks.append({'text':text,'status':'Check separately','kind':'location_or_schedule'})
     criteria=list(dict.fromkeys(criteria))
     explicit_criteria=len(criteria)
+    result['separate_checks']=separate_checks
     # The job title can establish a core technical requirement even in a short lead.
     title_tools=[] if custom else mentions(view.get('title',job.title))
     for tool in title_tools:
@@ -627,7 +655,9 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                         evidence_value(fact['text'])
                     ), reverse=True)
                     evidence=direct[:2]
-                    value=0.5 if extra else min(evidence_value(f['text']) for f in evidence)
+                    overlap=max(len(criterion_words & requirement_words(f['text'])) for f in evidence)
+                    value=(0.25 if overlap==1 else 0.5) if extra else min(evidence_value(f['text']) for f in evidence)
+                    if value==0.25: reasons.append('Weak lexical overlap only; this does not establish the specific task or context.')
                 if value<1:
                     reasons.append('Transferable evidence only; confirm the specific requirement.' if value else 'No specific supporting evidence found in your saved experience.')
         if extra and value>0:
@@ -640,14 +670,19 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         if value<1:
             reviews.append({'label':reasons[0] if reasons else 'Requirement needs review.','requirement':original_criterion})
 
+    for requirement in result['requirements']:
+        requirement['importance_weight']=importance.get(requirement['text'],1)
+        requirement['importance']='Essential' if requirement['importance_weight']==2 else 'Standard'
+        if re.search(r'(?i)clearance|citizen|right to work|working rights|licen[cs]e|registration|degree|qualification|certification',requirement['text']):
+            separate_checks.append({'text':requirement['text'],'status':requirement['status'],'kind':'eligibility'})
     skills_ratio=sum(tool_values.values())/len(tools) if tools else 0
     if custom:
         work_criteria = [r for r in result['requirements'] if r['work']]
     else:
         work_criteria = [r for r in result['requirements'] if not re.search(r'(?i)degree|tertiary|qualification|certification|clearance|citizen|working rights|right to work', r['text'])]
     work_values=[r['value']*max((work_value(e['text']) for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),default=0) for r in work_criteria]
-    experience_ratio=sum(work_values)/len(work_values) if work_values else 0
-    requirements_ratio=sum(r['value'] for r in result['requirements'])/len(result['requirements']) if result['requirements'] else 0
+    experience_ratio=sum(v*r['importance_weight'] for v,r in zip(work_values,work_criteria))/sum(r['importance_weight'] for r in work_criteria) if work_values else 0
+    requirements_ratio=sum(r['value']*r['importance_weight'] for r in result['requirements'])/sum(r['importance_weight'] for r in result['requirements']) if result['requirements'] else 0
     result['breakdown']=[
         {'id':'skills','label':'Relevant skills','weight':30,'points':round(30*skills_ratio),'covered':sum(tool_values.values()),'total':len(tools)},
         {'id':'experience','label':'Work experience','weight':40,'points':round(40*experience_ratio),'covered':sum(work_values),'total':len(work_values)},
@@ -669,6 +704,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     result['unconfirmed_skills']=missing_tools
     result['experience']=[{'label':r['text'],'value':v,'evidence':next((e for e in r['evidence'] if e.get('role') not in {'Saved skill','Saved qualification'}),None)} for r,v in zip(work_criteria,work_values)]
     score=sum(b['points'] for b in result['breakdown'])
+    result['confidence']={'level':'limited' if explicit_criteria<3 else 'needs_review' if any(r['value']<1 for r in result['requirements']) else 'supported', 'criteria_count':explicit_criteria, 'meaning':'Evidence completeness, not hiring probability. Unknown requirements are not demonstrated inability.'}
+    result['method'] += ' Explicit essential criteria count twice standard criteria; weak lexical overlap receives quarter credit. Component points use importance weights, while covered/total show unweighted evidence counts.'
     caps=[]
     work_examples={f['text'] for requirement in result['requirements'] for f in requirement['evidence'] if f.get('role') not in {'Saved skill','Saved qualification'}}
     result['coverage']={'criteria_count':explicit_criteria,'work_examples':len(work_examples),
