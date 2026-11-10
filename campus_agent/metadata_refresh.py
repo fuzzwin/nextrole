@@ -16,6 +16,7 @@ LABELS = {'employer':'Employer', 'salary':'Pay', 'location':'Location',
           'arrangement':'Work arrangement', 'employment_type':'Employment type',
           'posted':'Posted date', 'closes':'Closing date'}
 BATCH_LIMIT = 10
+VERSION = 1
 
 
 def source_hash(job):
@@ -48,7 +49,7 @@ def eligible(row):
 
 
 def cooling_down(report):
-    if not report: return False
+    if not report or report.get('version') != VERSION: return False
     try: return (datetime.fromisoformat(utcnow())-datetime.fromisoformat(report['checked_at'])).total_seconds()<86400
     except (ValueError,KeyError,TypeError): return False
 
@@ -124,6 +125,11 @@ def extract_fields(text, job, search_area):
         value={'hybrid':'Hybrid','remote':'Remote'}.get(mode[1].casefold(),'On-site')
         # Retain explicit remote eligibility in the field evidence.
         fields['arrangement']={'value':value,'evidence':'\n'.join([mode[0],*restrictions])[:1500]}
+    else:
+        board_mode=re.search(r'(?im)^\s*(In-Office|On-site|Onsite|Hybrid|Remote)\s*$',primary[:2000])
+        if board_mode:
+            value={'hybrid':'Hybrid','remote':'Remote'}.get(board_mode[1].casefold(),'On-site')
+            fields['arrangement']={'value':value,'evidence':'\n'.join([board_mode[0],*restrictions])[:1500]}
     for fact in view['facts']:
         if fact['label']=='Work type' and re.fullmatch(r'(?i)(?:permanent|temporary|full[ _-]?time|part[ _-]?time|contract(?:or)?|casual|fixed[ -]term|salaried|internship|other|[ /,])+',fact['value']):
             fields['employment_type']={'value':fact['value'],'evidence':'Employment type: '+fact['value']}
@@ -138,7 +144,7 @@ def refresh_one(workspace, row):
     from .workspace import source_text, search_results, public_listing_url, SourceChanged, ReadInProgress
     job=Job.model_validate(row['job'])
     wanted=missing_fields(row)
-    report={'source_hash':source_hash(row['job']),'checked_at':utcnow(),'requested':wanted,
+    report={'version':VERSION,'source_hash':source_hash(row['job']),'checked_at':utcnow(),'requested':wanted,
             'fields':copy.deepcopy((row.get('metadata_refresh') or {}).get('fields',{})),
             'sources':[],'candidates':[],'outcome':'not_found'}
     original=public_listing_url(str(job.url))
@@ -189,18 +195,28 @@ def refresh_one(workspace, row):
         if remaining and 'closed_notice' not in report['fields']:
             # One metadata-only search per role. No profile, CV or private notes are sent.
             employer=job.employer if employer_known(job.employer) else urlsplit(original).hostname
-            query='"'+job.title.replace('"',' ')[:180]+'" "'+employer.replace('"',' ')[:100]+'" '+ ' '.join(LABELS[k] for k in remaining)
+            query='"'+job.title.replace('"',' ')[:180]+'" '+employer.replace('"',' ')[:100]
             try:
                 result=workspace.bridge.call('search_service.web_run',{'system2_search_query':[{'q':query}],'response_length':'long'})
                 seen={original}
                 for candidate in search_results(result):
                     try:url=public_listing_url(candidate['url'])
                     except ValueError:continue
-                    if url in seen or not same_role(job.title,candidate['title'],job.employer):continue
+                    title=candidate['title'].split(' | ')[0]
+                    title_match=same_role(job.title,title,job.employer) or bool(re.search(r'(?<!\w)'+re.escape(job.title)+r'(?!\w)',title,re.I))
+                    if not title_match:continue
+                    same_vacancy_alias=False
+                    if url==original and report['sources'][0]['status']=='unavailable':
+                        parsed=urlsplit(candidate['url'])
+                        if parsed.hostname and (parsed.hostname=='linkedin.com' or parsed.hostname.endswith('.linkedin.com')):
+                            alias=parsed._replace(query='',fragment='').geturl()
+                            if alias!=original:
+                                url=alias;same_vacancy_alias=True
+                    if url in seen:continue
                     seen.add(url)
                     if employer_known(job.employer) and job.employer.casefold() not in (candidate['title']+' '+str(candidate['description'])).casefold():continue
                     report['candidates'].append({'url':url,'title':candidate['title'][:250]})
-                    inspect(url,alternate=True)
+                    inspect(url,alternate=not same_vacancy_alias)
                     if len(report['candidates'])>=2 or all(k in report['fields'] for k in wanted):break
             except Exception as exc:report['search_error']=str(exc)[:400]
         report['filled']=[k for k in wanted if k in report['fields']]

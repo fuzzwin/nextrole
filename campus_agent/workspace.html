@@ -651,7 +651,7 @@ let lastFitKey='';
 const METADATA_LABELS={employer:'Employer',salary:'Pay',location:'Location',arrangement:'Work arrangement',employment_type:'Employment type',posted:'Posted date',closes:'Closing date',closed_notice:'Vacancy closed'};
 function renderMetadataRefresh(rows){
  const pending=rows.filter(r=>r.missing_metadata?.length&&!r.listing.closed&&!['applied','archived'].includes(r.stage));
- const eligible=pending.filter(r=>!r.metadata_refresh||Date.now()-Date.parse(r.metadata_refresh.checked_at)>=86400000);
+ const eligible=pending.filter(r=>!r.metadata_refresh||r.metadata_refresh.version!==1||Date.now()-Date.parse(r.metadata_refresh.checked_at)>=86400000);
  const busy=state.activity.tasks.some(t=>t.status==='running'&&['Refresh missing listing details','Read and assess saved roles'].includes(t.kind));
  $('refresh-missing-metadata').disabled=busy||!eligible.length;
  $('refresh-missing-metadata').textContent=busy?'Checking missing details…':'Refresh missing details'+(eligible.length?' ('+Math.min(10,eligible.length)+')':'');

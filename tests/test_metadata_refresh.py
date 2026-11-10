@@ -213,3 +213,37 @@ def test_literal_not_stated_fields_are_missing(workspace,role):
     updated=workspace.jobs()[0]
     assert updated['location_info']['display']=='Sydney NSW'
     assert [f['value'] for f in updated['reading_view']['facts'] if f['label']=='Work type']==['Full-time']
+
+
+def test_decorated_search_titles_are_opened_but_not_assumed_same_vacancy(workspace,role):
+    row=setup(workspace,role);calls=[]
+    def bridge(tool,args):
+        calls.append(args)
+        if 'system2_search_query' in args:
+            query=args['system2_search_query'][0]['q']
+            assert 'Employment type' not in query and 'Closing date' not in query
+            return {'results':[{'title':'Systems Specialist - Example Employer | Job Board','url':'https://board.example/job/copy','snippet':'Example Employer.'}]}
+        return {'content':'Access denied' if args['open'][0]['ref_id']==str(role.url) else AD}
+    workspace.bridge.call=bridge
+    report=refresh_one(workspace,row)
+    assert len(report['candidates'])==1 and report['sources'][-1]['status']=='needs_review'
+    assert not report['filled']
+
+
+def test_linkedin_url_alias_must_have_identical_vacancy_id(workspace,role):
+    from pydantic import HttpUrl
+    role=role.model_copy(update={'url':HttpUrl('https://au.linkedin.com/jobs/view/systems-specialist-at-example-employer-123456/')})
+    row=setup(workspace,role)
+    alias=str(role.url)
+    def bridge(tool,args):
+        if 'system2_search_query' in args:return {'results':[{'title':'Systems Specialist at Example Employer — Melbourne | LinkedIn Jobs','url':alias,'snippet':'Example Employer.'}]}
+        return {'content':AD if args['open'][0]['ref_id']==alias else 'Access denied'}
+    workspace.bridge.call=bridge
+    report=refresh_one(workspace,row)
+    assert 'salary' in report['filled']
+    assert report['fields']['salary']['url']==alias
+
+
+def test_explicit_in_office_board_header_is_recognised(role):
+    values,_=extract_fields(AD.replace('Work arrangement: Remote','In-Office'),role,'Melbourne')
+    assert values['arrangement']['value']=='On-site'
