@@ -13,8 +13,9 @@ def test_inline_requirements_and_nonverbatim_summary(workspace):
     job=make_job(1,'About the role: Support systems. Requirements: Requires hands-on Python automation experience. You need experience supporting Microsoft 365 systems.')
     workspace.add_job(job,full=True)
     row=workspace.jobs()[0]
-    assert row['fit']['assessment_state']=='assessed'
-    assert row['fit']['percent'] is not None
+    assert row['fit']['assessment_state']=='rating_pending'
+    assert row['fit']['percent'] is None
+    assert row['legacy_fit']['percent'] is not None
     lead=make_job(2,'LINKEDIN LISTING SUMMARY (not verbatim employer text)\nRequirements\n- Python experience is required for the role.')
     workspace.add_job(lead,full=True)
     assert next(r for r in workspace.jobs() if r['id']==lead.identity)['fit']['percent'] is None
@@ -34,11 +35,11 @@ def test_batch_caps_reads_persists_block_and_continues(workspace):
     assert blocked['assessment_source']['status']=='blocked'
     second=workspace.assess_batch([j.identity for j in jobs])
     assert second['processed']==2 and second['remaining']==0
-    assert next(r for r in workspace.jobs() if r['id']==jobs[1].identity)['fit']['percent'] is not None
+    assert next(r for r in workspace.jobs() if r['id']==jobs[1].identity)['legacy_fit']['percent'] is not None
 
 
 def test_new_rubric_version_allows_one_retry_then_stops(workspace):
-    from campus_agent.fit import VERSION
+    from campus_agent.fit import SOURCE_VERSION as VERSION
     job=make_job(999)
     workspace.add_job(job)
     workspace.set_meta('assessment_source:'+job.identity,{'status':'blocked','revision':job.revision,'version':'older'})
@@ -58,7 +59,7 @@ def test_discovery_reads_new_relevant_listing_and_assesses(workspace):
     workspace.bridge.call=call
     result=workspace.discover()
     assert result['new']==1 and result['assessment']['processed']==1
-    assert workspace.jobs()[0]['fit']['percent'] is not None
+    assert workspace.jobs()[0]['legacy_fit']['percent'] is not None
     assert sum('open' in c for c in calls)==1
 
 
@@ -66,7 +67,7 @@ def test_requirement_sentence_and_company_or_benefit_prose(workspace):
     text = 'Overview\nSupport company systems. Requires hands-on Python automation experience.\nAbout us\nOur company requires integrity and builds great tools.\nBenefits\nYou need a holiday and our generous leave supports you.'
     job=make_job(120,text)
     workspace.add_job(job,full=True)
-    fit=workspace.jobs()[0]['fit']
+    fit=workspace.jobs()[0]['legacy_fit']
     assert fit['percent'] is not None
     requirements=[r['text'] for r in fit['requirements']]
     assert any('Requires hands-on Python' in r for r in requirements)
@@ -90,7 +91,7 @@ def test_skips_archived_and_applied_and_retries_changed_source(workspace):
 def test_inline_company_benefits_and_generic_summary(workspace):
     job=make_job(320,'Requirements: Python automation experience. Benefits: We offer free lunch and generous leave. About us: Our company is seeking a certified sustainability partner.')
     workspace.add_job(job,full=True)
-    fit=workspace.jobs()[0]['fit']
+    fit=workspace.jobs()[0]['legacy_fit']
     texts=[r['text'] for r in fit['requirements']]
     assert any('Python automation' in t for t in texts)
     assert not any('lunch' in t or 'sustainability' in t for t in texts)

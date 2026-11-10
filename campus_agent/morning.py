@@ -177,7 +177,7 @@ def run_morning(workspace, extended=False, now=None, session='morning'):
             except Exception as exc:
                 report['errors'].append('Job alerts: ' + str(exc)[:300])
             sent_ids, sent_signatures = _sent_roles(workspace)
-            candidates = [r for r in workspace.jobs() if r.get('stage') not in {'archived', 'applied'} and r['id'] not in sent_ids]
+            candidates = [r for r in workspace.jobs() if not r.get('source_policy') and r.get('stage') not in {'archived', 'applied'} and r['id'] not in sent_ids]
             candidates.sort(key=lambda r: (workspace.get_meta('listing_checked:' + r['id'], ''), -r['score']))
             from .role_types import spread_candidates, BY_ID
             candidates = spread_candidates(candidates, prefs.role_types)

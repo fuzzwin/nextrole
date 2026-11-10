@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from urllib.parse import urlsplit
 
-from .fit import VERSION
+from .fit import SOURCE_VERSION as VERSION
 
 KEY = 'saved_detail_refresh'
 MAX_ATTEMPTS = 2
@@ -57,12 +57,12 @@ class DetailRefreshQueue:
         present = {r['id']: r for r in rows}
         for job_id, item in state['items'].items():
             row = present.get(job_id)
-            if not row or row.get('stage') in {'applied', 'archived'}:
+            if not row or row.get('source_policy') or row.get('stage') in {'applied', 'archived'}:
                 item['status'] = 'skipped'
             elif row['fit']['assessment_state'] == 'closed':
                 item['status'] = 'closed'
-            elif row['fit']['assessment_state'] == 'assessed':
-                item['status'] = 'assessed'
+            elif row['fit']['assessment_state'] in {'assessed', 'rating_pending'}:
+                item['status'] = row['fit']['assessment_state']
         for row in sorted(rows, key=lambda r:r.get('seen_at',''), reverse=True):
             if (row.get('stage') in {'applied','archived'} or row['listing']['closed']
                 or row['fit']['assessment_state'] != 'incomplete'):
@@ -116,8 +116,9 @@ class DetailRefreshQueue:
                      'needs_connection' if state.get('error') else 'paused' if not state['enabled'] else
                      'waiting' if waiting and next_at > self.clock() else 'queued' if waiting else 'finished')
             return {'enabled': state['enabled'], 'phase': phase, 'current': current,
-                    'total': len(items), 'checked': sum(i['attempts'] > 0 or i['status'] in {'held','assessed','closed','skipped'} for i in items),
+                    'total': len(items), 'checked': sum(i['attempts'] > 0 or i['status'] in {'held','assessed','rating_pending','closed','skipped'} for i in items),
                     'assessed': sum(i['status']=='assessed' for i in items),
+                    'rating_pending': sum(i['status']=='rating_pending' for i in items),
                     'closed': sum(i['status']=='closed' for i in items),
                     'needs_source': sum(i['status'] in {'needs_source','held'} for i in items),
                     'waiting': len(waiting), 'next_attempt': next_at, 'error': state.get('error','')}
@@ -129,7 +130,7 @@ class DetailRefreshQueue:
             self._reconcile(snapshot, rows)
         now = self.clock()
         counts = dict.fromkeys(
-            ('scored', 'reading', 'ready', 'waiting', 'manual', 'profile', 'closed', 'inactive'), 0
+            ('scored', 'reading', 'ready', 'waiting', 'manual', 'profile', 'model', 'closed', 'inactive'), 0
         )
         by_job = {}
         reasons = {}
@@ -138,12 +139,14 @@ class DetailRefreshQueue:
         for row in rows:
             fit = row['fit']
             job_id = row['id']
-            if row.get('stage') in {'archived', 'applied'}:
+            if row.get('source_policy') or row.get('stage') in {'archived', 'applied'}:
                 status = 'inactive'
             elif row['listing']['closed'] or fit['assessment_state'] == 'closed':
                 status = 'closed'
             elif fit['assessment_state'] == 'assessed' and fit.get('percent') is not None:
                 status = 'scored'
+            elif fit['assessment_state'] == 'rating_pending':
+                status = 'model'
             elif fit['assessment_state'] == 'needs_profile':
                 status = 'profile'
             elif job_id == current:
@@ -204,7 +207,7 @@ class DetailRefreshQueue:
                     saved_hash=saved.get('source_hash')
                     updated = next(r for r in self.workspace.jobs() if r['id']==job_id)
                     outcome = 'edited' if saved.get('revision') and saved['revision']!=updated['revision'] else updated['fit']['assessment_state']
-                    if outcome not in {'assessed','closed','edited'}: outcome = 'needs_source'
+                    if outcome not in {'assessed','rating_pending','closed','edited'}: outcome = 'needs_source'
                     message = updated['fit'].get('assessment_notice','')
                 except Exception as exc:
                     from .workspace import ReadInProgress, SourceChanged

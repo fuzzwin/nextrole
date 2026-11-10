@@ -97,3 +97,35 @@ def test_different_arrangements_keep_independent_application_histories():
     applications=rebuild_applications([received,cancelled])
     assert len(applications)==2
     assert {a['title']:a['status'] for a in applications}=={'Nurse Lead (Remote - Canada)':'received','Nurse Lead (Remote - Australia)':'vacancy_cancelled'}
+
+
+@pytest.mark.parametrize('subject,body,company,title',[
+ ('Acknowledgement of Example Health Application - People Technology & Automation Analyst','We received your application for People Technology & Automation Analyst position.','Example Health','People Technology & Automation Analyst'),
+ ('Example5 Application Update | AI Process Transformation Consultant','Thank you for applying for the AI Process Transformation Consultant position with Example5.','Example5','AI Process Transformation Consultant'),
+ ('Application received','Thank you for your recent application for the position of Technology Adoption Specialist with Example Australia.','Example Australia','Technology Adoption Specialist'),
+])
+def test_explicit_subject_and_receipt_identities(subject,body,company,title):
+    event=parse_application(application_mail(subject=subject,body=body))
+    assert (event['company'],event['title'],event['needs_review'])==(company,title,False)
+
+
+def test_interview_guide_is_not_invitation_and_missing_role_is_explained():
+    event=parse_application(application_mail(subject='Thank you for applying to ExampleAI',body='Your application has been received. We invite you to learn more about our hiring philosophy and interview process.'))
+    assert event['status']=='received'
+    assert event['company']=='ExampleAI' and not event['title']
+    assert 'Employer confirmed: ExampleAI' in event['review_reason']
+
+
+def test_previous_parser_repair_does_not_suppress_new_version(workspace,monkeypatch):
+    old=parse_application(application_mail());old['parser_version']=2
+    workspace.set_meta('application_events',[old])
+    workspace.set_meta('application_mail_seen',[old['message_id']])
+    workspace.set_meta('application_parser_v2_checked',[old['message_id']])
+    def call(name,args):
+        if name=='gmail.search_email_ids':return {'message_ids':[]}
+        if name=='gmail.read_email':return application_mail()
+        if name=='gmail.batch_read_email':return {'responses':[application_mail()]}
+        pytest.fail(name)
+    monkeypatch.setattr(workspace.bridge,'call',call)
+    assert sync_applications(workspace)['bodies_read']==1
+    assert sync_applications(workspace)['bodies_read']==0

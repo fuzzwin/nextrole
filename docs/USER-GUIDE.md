@@ -599,3 +599,29 @@ The score measures recorded evidence, not your chance of being hired. Explicit e
 ## Reading your application tracker
 
 Applications uses compact rows with employer, role, latest status, dates and a source email link. Expand the email details to inspect the evidence. The tracker reads message contents; it does not assume every email from a company proves a new application. Prior-thread identity can help resolve a reply, while ambiguous company-only messages remain for review. Position cancellation is distinct from rejection. Older receipts are rechecked in bounded batches as the parser changes. Checking Gmail never sends, archives or labels mail.
+
+
+## Local Qwen evidence review
+
+Open a fully read, open role and choose **Assess with local Qwen**. List actions can review up to ten eligible filtered roles. Allow several minutes per advert. This requires a local llama.cpp service at 127.0.0.1:9931 with model alias `qwen3.5:9B`; the tested model is Qwen3.5-9B Q4_K_M, with a 4096-token context and one request at a time. The model itself is not included in the download.
+
+The model interprets requirements and selects saved profile facts by ID. Original quotations are retrieved by code. An independent pass reviews the selected evidence without seeing the initial verdict. Code computes documented evidence coverage: supported = 1, partial = 0.5, undocumented = 0; explicit essential criteria count twice, optional criteria and conditions are separate. This is not a verified ability score or hiring probability. Low coverage must not dismiss a role. Review each quoted fact and the original requirement. A second model pass is not independent human verification.
+
+Reviews remain marked Needs review and cannot automatically become strong matches or trigger application actions. Existing rule estimates remain clearly labelled until a current local review is available. Saved reviews become stale after profile, advert or date changes. Incomplete or excluded adverts are not sent to the model. The local service receives only the saved advert and relevant profile records, excluding contact details and referees. Requests cannot redirect to an external endpoint and have no cloud fallback or tools.
+
+Malformed, incomplete, oversized or timed-out output is rejected without replacing a saved review. Check the task result for failures. If the model service is offline, start your local model service and retry. An 8 GB machine has not been qualified; memory measurements on a larger Mac do not establish smooth 8 GB operation.
+
+Before assessment, choose **Check local Qwen rules** in List actions. The harness checks alternative requirements, compound abilities, source-link and instruction exclusion, prototype/production claims, absent credentials, strongest-evidence selection, tenure, fixed arithmetic and the actual full assessment pipeline. Every check must pass. A failed or incomplete run cannot qualify the model. Qualification is bound to the model weights, model name and rule-code hash; changing those invalidates it. Even after passing, every assessment remains subject to source/evidence validation and human review. Passing a finite test set is not proof of correctness for every advert.
+
+The same harness can run from the installation directory with `python -m campus_agent.qwen_harness --output /path/to/report.json --workspace /path/to/workspace`. It exits nonzero on failure and stores a readable JSON report. All fixtures are synthetic; private career facts are not part of the distributed harness.
+
+
+## Compare evidence coverage
+
+Open a complete, active job and expand **Compare evidence coverage** under **Requirements and your evidence**. **Run rules only** gives a conservative check against recorded work and dates. **Compare with local AI** also runs Qwen on this Mac and shows both percentages and the quotes behind each decision.
+
+The methods share the same explicit requirements from the saved advert. Essential requirements count twice. Full evidence earns one point, partial evidence earns half a point, and missing evidence earns zero. The rules-only arm awards full credit for direct work evidence or dated general support and leaves other cases for review. The comparison covers the extracted requirements and may miss requirements that the advert parser did not identify.
+
+Comparison previews leave saved ratings and automatic recommendations alone. From the source folder, run `python -m campus_agent.scoring_comparison` for the labelled controls. Add `--with-qwen` to run both arms against the same controls using the local model service.
+
+Use **Update saved jobs** for missing facts and adverts. In a job, **Next steps** contains the research document, interview preparation document, and résumé and cover letter. Research can use public search service credits. The research setup explains its scope before you start.

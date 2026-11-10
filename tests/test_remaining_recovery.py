@@ -23,7 +23,7 @@ def test_requirement_heading_variants_and_optional_scope(workspace):
     text='# Systems Specialist\nCompany: Example Energy Ltd\nWhat you\'ll need to succeed: Python automation experience and Microsoft 365 support.\nBenefits: Free training allowance.\nKey Requirements: Proven experience delivering enterprise automation.\nSkills Required: Python and PowerShell experience.'
     j=job().model_copy(update={'description':text})
     workspace.add_job(j,full=True)
-    fit=workspace.jobs()[0]['fit']
+    fit=workspace.jobs()[0]['legacy_fit']
     assert fit['percent'] is not None
     assert any('Python automation' in x['text'] for x in fit['requirements'])
     assert not any('training allowance' in x['text'] for x in fit['requirements'])
@@ -38,7 +38,7 @@ def test_linkedin_public_url_drops_secrets_and_rejects_ambiguity():
 def test_bonus_bullets_remain_optional(workspace):
     text="# Systems Specialist\nCompany: Example Energy Ltd\nRequirements\n- Python automation experience.\n- Bonus points if you have:\n- Advanced finance experience.\n- Government project experience."
     j=job().model_copy(update={'description':text});workspace.add_job(j,full=True)
-    texts=[r['text'] for r in workspace.jobs()[0]['fit']['requirements']]
+    texts=[r['text'] for r in workspace.jobs()[0]['legacy_fit']['requirements']]
     assert any('Python automation' in t for t in texts)
     assert not any('finance' in t or 'Government' in t for t in texts)
 

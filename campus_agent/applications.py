@@ -15,7 +15,7 @@ APPLICATION_QUERY = ('newer_than:365d -in:trash -in:spam -from:me '
     '-subject:"Job Agent" -subject:"Standout job" '
     '{subject:application subject:interview subject:"position cancelled" subject:"position canceled" '
     '"received your application" "thank you for applying" "thanks for applying"}')
-PARSER_VERSION = 2
+PARSER_VERSION = 3
 _SYNC_LOCK_GUARD = threading.Lock()
 ATS = r'myworkday\.com|greenhouse(?:-mail)?\.(?:io|com)|pageuppeople\.com|smartrecruiters\.com|lever\.co|ashbyhq\.com|teamtailor\.com|successfactors\.'
 
@@ -84,7 +84,9 @@ def parse_application(message, applications=()):
     compact = re.sub(r'\s+', ' ', text)
     company = title = ''
     for pattern,source in [
-        (r'^(.+?) Application Update for\b',subject),
+        (r'^Acknowledg(?:e)?ment of (.+?) Application\s*[-–—]',subject),
+        (r'^(.+?) Application Update\s*(?:for\b|[|:])',subject),
+        (r'^Thank(?: you|s) for applying to ([^!\n.]+)',subject),
         (r'(?:Role|position|Interview) at\s+([^!\n.]+)',subject),
         (r'(?:application with|interest in (?:joining (?:the|our) team|working with us) at)\s+([^!\n.]+)',subject),
         (r'^(.+?)\s*[-–—]\s*Application Received',subject),
@@ -97,6 +99,8 @@ def parse_application(message, applications=()):
             company=clean_identity(match[1],'company')
             if company: break
     for pattern,source in [
+        (r'^Acknowledg(?:e)?ment of .+? Application\s*[-–—]\s*(.+)$',subject),
+        (r'Application Update\s*[|:]\s*(.+)$',subject),
         (r'(?:Application Update for|Interview Invitation\s*[|:]\s*)\s*(.+?)(?: Role at | at |$)',subject),
         (r'for (?:the )?([A-Za-z][A-Za-z &+/-]{3,100}?) position at\s+',text),
         (r'following position:\s*(?:[A-Z]-?\d+\s*[-–—]\s*)?([^\n.]+)',text),
@@ -108,6 +112,16 @@ def parse_application(message, applications=()):
         if match:
             title=clean_identity(match[1],'title')
             if title: break
+    # Parse employer and title together when a receipt explicitly binds them.
+    pair = re.search(r'(?:application for (?:the )?position of|applying for (?:the )?)\s+([^.!?\n]{3,140}?)\s+(?:position |role )?(?:with|at)\s+([^.!?\n]+)', text, re.I)
+    if pair:
+        paired_title = clean_identity(pair[1], 'title')
+        paired_company = clean_identity(pair[2], 'company')
+        if paired_title and paired_company:
+            title, company = paired_title, paired_company
+    if not company:
+        match = re.search(r'Thank you for considering (.+?) as a (?:potential|prospective)', compact, re.I)
+        if match: company = clean_identity(match[1], 'company')
     known_apps=[a for a in applications if identity_valid(a)]
     sender_name,sender_address=parseaddr(h.get('from',''))
     sender_domain=sender_address.rsplit('@',1)[-1].lower() if '@' in sender_address else ''
@@ -137,11 +151,12 @@ def parse_application(message, applications=()):
         ('offer', r'(?:offer of employment|pleased to offer you.{0,80}(?:position|role|job))'),
         ('interview', r'(?:invite you (?:to|for).{0,80}interview|your interview (?:is|has been)|interview invitation)'),
         ('assessment', r'invite you (?:to|for).{0,80}assessment'),
-        ('under_review', r'your application is (?:currently )?under review'),
+        ('under_review', r'your application is (?:currently )?under review|we are (?:currently )?reviewing your application'),
         ('received', r'(?:received your application|thank you for.{0,90}application|thank you for applying|thanks for (?:your application|applying))'),
     ]
     for label, pattern in signals:
         for sentence in [subject]+re.split(r'(?<=[.!?;])\s+|\n+',text):
+            if label=='interview' and re.search(r'(?i)invite you to (?:learn|read|explore)|interview (?:guide|process|tips)',sentence): continue
             if label=='vacancy_cancelled' and re.search(r'(?i)\b(?:not|never|no longer)\b.{0,50}\bcancel',sentence): continue
             if label=='rejected' and re.search(r'(?i)\bnot\b.{0,25}\bunsuccessful\b',sentence): continue
             if label in {'interview','assessment','offer','rejected'}:
@@ -164,7 +179,7 @@ def parse_application(message, applications=()):
             'source_url':'https://mail.google.com/mail/u/0/#all/'+message['id'],
             'evidence':evidence,'summary':{'vacancy_cancelled':'Employer reports vacancy cancelled','received':'Application receipt confirmed','under_review':'Application is under review','rejected':'Employer reports application unsuccessful','withdrawn':'Application withdrawal confirmed','offer':'Employment offer mentioned; review terms','interview':'Interview invitation received','assessment':'Assessment invitation received'}[status]+': '+evidence[:220],
             'parser_version':PARSER_VERSION,'sender':h.get('from',''),'needs_review':not(company and title),
-            'review_reason':'Employer or exact role is not established. Company contact alone does not identify an application.' if not(company and title) else ''}
+            'review_reason':(f'Employer confirmed: {company}. The email does not identify the exact role; it cannot safely be linked to a particular application.' if company and not title else f'Role confirmed: {title}. The employer could not be established from this email.' if title and not company else 'The employer and exact role could not be established from this email.' if not company and not title else '')}
 
 
 def rebuild_applications(events):
@@ -214,7 +229,7 @@ def _sync_applications(workspace):
     found=workspace.bridge.call('gmail.search_email_ids',{'query':APPLICATION_QUERY,'max_results':100})
     seen=set(workspace.get_meta('application_mail_seen',[]))
     old_events=workspace.get_meta('application_events',[])
-    repaired=set(workspace.get_meta('application_parser_v2_checked',[]))
+    repaired=set(workspace.get_meta(f'application_parser_v{PARSER_VERSION}_checked',[]))
     repairs=[e['message_id'] for e in old_events if e.get('parser_version',0)<PARSER_VERSION and e['message_id'] not in repaired][:10]
     pending=list(dict.fromkeys(repairs+[i for i in found.get('message_ids',[]) if i not in seen]))[:30]
     known=[a for a in workspace.get_meta('applications',[]) if identity_valid(a)]
@@ -253,7 +268,7 @@ def _sync_applications(workspace):
                 events.append({**old,'needs_review':True,'parser_version':PARSER_VERSION,'review_reason':'Re-read did not confirm the earlier status. Original evidence retained for review.','summary':'Earlier classification needs review.'})
     repaired.update(candidates)
     report=ingest_events(workspace,events)
-    workspace.set_meta('application_parser_v2_checked',sorted(repaired))
+    workspace.set_meta(f'application_parser_v{PARSER_VERSION}_checked',sorted(repaired))
     workspace.set_meta('application_mail_seen',sorted(seen))
     report.update(at=utcnow(),lookback_days=365,headers_checked=len(pending),bodies_read=len(candidates),
                   more_available=bool(found.get('next_page_token')) or any(i not in seen for i in found.get('message_ids',[])))

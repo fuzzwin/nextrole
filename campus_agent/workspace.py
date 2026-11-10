@@ -22,6 +22,7 @@ from .connectors import ConnectorBridge, ConnectorError
 from .documents import generate_documents
 from .mail import build_email, save_preview
 from .models import Experience, Job, Profile, StrictModel, utcnow
+from .source_policy import source_exclusion, require_allowed_source
 from .store import Store
 from .tailor import prepare_text, terms
 from .role_types import DEFAULT_ROLE_TYPES, matched_types, search_role_matches, title_terms, validate_types, example_types
@@ -30,6 +31,7 @@ from .role_types import DEFAULT_ROLE_TYPES, matched_types, search_role_matches, 
 def public_listing_url(url):
     """Canonical LinkedIn job URLs contain only a numeric ID; never forward tracking."""
     from urllib.parse import urlsplit
+    require_allowed_source(url)
     parsed=urlsplit(url)
     if parsed.username or parsed.password: raise ValueError('Credentials are not permitted in source URLs.')
     if parsed.scheme != 'https' or not parsed.hostname: raise ValueError('A public HTTPS source URL is required.')
@@ -204,6 +206,7 @@ def search_results(payload: dict) -> list[dict]:
     unique = {}
     for item in results:
         url = item["url"]
+        if source_exclusion(url): continue
         if re.fullmatch(r'Job Title\s*:', item["title"], re.I) or 'job_description_files.php' in url:
             continue
         if re.search(r'^(?:what\b.*\bjobs\b|find a job\b|search jobs\b)', item["title"], re.I):
@@ -532,15 +535,17 @@ class Workspace:
         style_preferences = self.document_style().model_dump()
         with self.store.connect() as db:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
-            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%' OR key LIKE 'metadata_details:%'")}
+            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'semantic:%' OR key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%' OR key LIKE 'metadata_details:%'")}
         applications = {a['id']:a for a in self.get_meta('applications', [])}
         profile, preferences = self.profile, self.preferences
         context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
-        if preferences.role_search_mode == 'custom':
-            context += '|' + datetime.now(ZoneInfo('Australia/Melbourne')).date().isoformat()
+        # Present-tense employment durations advance in both search modes.
+        from .fit import VERSION
+        context += '|' + VERSION + '|' + datetime.now(ZoneInfo('Australia/Melbourne')).date().isoformat()
         context_hash = hashlib.sha256(context.encode()).hexdigest()
         for row in rows:
             row.update(details.get(row["id"], {}))
+            row['source_policy'] = source_exclusion(row['job']['url'])
             row.update(self.match(row["job"]))
             job = Job.model_validate(row["job"])
             search_matches = search_role_matches(job, preferences)
@@ -583,10 +588,29 @@ class Workspace:
                 row['fit'] = fit_assessment(assessed_job, profile, preferences,
                     row['reading_view'],row['location_info'],full=bool(row.get('full_description')),closed=row['listing']['closed'])
                 self._assessment_cache[row['id']] = (cache_key, copy.deepcopy({key:row[key] for key in ['source_domain', 'summary', 'location_info', 'reading_view', 'skill_overlap', 'fit']}))
+            from .semantic import fingerprint as semantic_fingerprint, render as render_semantic
+            semantic = metadata.get('semantic:'+row['id'])
+            from .qwen_harness import qualification_current
+            row['semantic_stale'] = bool(semantic and (not qualification_current(self.get_meta('semantic_qualification')) or not profile or semantic.get('fingerprint') != semantic_fingerprint(job,profile)))
+            if semantic and profile and not row['semantic_stale']:
+                row['fit'] = render_semantic(semantic,row['fit'])
+            else:
+                row['fit']['method'] = 'Rule-based checks are unvalidated and cannot supply a rating.'
+                row['fit']['auto_eligible'] = False
+                if row['fit'].get('percent') is not None and row['fit']['status'] != 'Closed' and not row['listing']['closed']:
+                    # Preserve the diagnostic report, but never rank or recommend
+                    # a vacancy from a method that failed real evidence checks.
+                    row['legacy_fit'] = copy.deepcopy(row['fit'])
+                    notice = 'Rating awaiting validation. The old rule-based estimate is withheld because it can miss relevant experience. Your saved advert and profile are preserved.'
+                    row['fit'].update(percent=None, status='Needs review', assessment_state='rating_pending',
+                        source_state='rating_pending', assessment_notice=notice, cap=None,
+                        requirements=[], strengths=[], breakdown=[], coverage={},
+                        reviews=[{'label':notice,'requirement':''}])
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
             row['missing_metadata'] = missing_fields(row)
             research = metadata.get('listing_research:'+row['id'])
+            if research: research={**research,'candidates':[c for c in research.get('candidates',[]) if not source_exclusion(c['url'])]}
             row['listing_research'] = research if research and research.get('source_hash') == hashlib.sha256(job.model_dump_json().encode()).hexdigest() else None
             row['assessment_source'] = metadata.get('assessment_source:'+row['id'])
             source=row['assessment_source'] or {}
@@ -609,7 +633,7 @@ class Workspace:
                 and row['fit']['status']=='Good match' and not row['fit']['reviews']
                 and row['fit']['percent'] is not None and row['fit']['percent']>=max(70,self.preferences.auto_top_threshold))
             row['top_reason'] = ('Meets '+str(max(70,self.preferences.auto_top_threshold))+'% threshold; full listing, supported requirements, employer and preferred location checked.' if row['top_match'] else 'Saved by you; independent of the fit assessment.' if row['top_saved'] else '')
-            row['top_listing'] = row['top_saved'] or row['top_match']
+            row['top_listing'] = not row['source_policy'] and (row['top_saved'] or row['top_match'])
             quality_path = Path(row["packet_dir"]) / "quality-report.json" if row.get("packet_dir") else None
             row["quality"] = json.loads(quality_path.read_text()) if quality_path and quality_path.is_relative_to(self.artifacts) and quality_path.is_file() else None
             tailoring_path=Path(row['packet_dir'])/'tailoring.json' if row.get('packet_dir') else None
@@ -639,6 +663,7 @@ class Workspace:
         return sorted(rows, key=lambda row: (-row["score"], row["seen_at"]))
 
     def add_job(self, job, full=False):
+        require_allowed_source(str(job.url))
         previous = self.store.get(job.identity)
         if not previous or full:
             self.save_listing_dates(job)
@@ -829,19 +854,20 @@ class Workspace:
         if not self.batch_lock.acquire(blocking=False):
             raise BatchInProgress('A read and assess batch is already running.')
         try:
-            from .fit import VERSION
+            from .fit import SOURCE_VERSION as VERSION
             rows = {row['id']:row for row in self.jobs()}
             eligible = [i for i in dict.fromkeys(job_ids) if i in rows and rows[i].get('stage') not in {'archived','applied'} and not rows[i].get('listing',{}).get('closed') and rows[i].get('fit',{}).get('assessment_state') == 'incomplete' and (not rows[i].get('assessment_source') or rows[i]['assessment_source'].get('revision') != rows[i]['revision'] or rows[i]['assessment_source'].get('version') != VERSION)]
             with self.read_guard:
                 busy = set(self.reading_jobs)
             available = [i for i in eligible if i not in busy]
-            counts = {'assessed':0, 'closed':0, 'needs_source':0, 'blocked':0, 'remaining':max(0,len(available)-12)+len(eligible)-len(available), 'processed':0, 'total':min(12,len(available))}
+            counts = {'assessed':0, 'rating_pending':0, 'closed':0, 'needs_source':0, 'blocked':0, 'remaining':max(0,len(available)-12)+len(eligible)-len(available), 'processed':0, 'total':min(12,len(available))}
             self.set_meta('assessment_progress', counts)
             for job_id in available[:12]:
                 try:
                     self.hydrate(job_id)
                     row = next(r for r in self.jobs() if r['id']==job_id)
-                    status = 'closed' if row['fit']['assessment_state']=='closed' else 'assessed' if row['fit']['assessment_state']=='assessed' else 'needs_source'
+                    assessment_state = row['fit']['assessment_state']
+                    status = assessment_state if assessment_state in {'closed', 'assessed', 'rating_pending'} else 'needs_source'
                     note = row['fit'].get('assessment_notice','')
                 except SourceChanged as exc:
                     status, note = 'needs_source', str(exc)
@@ -883,7 +909,7 @@ class Workspace:
             cached = self.get_meta('listing_research:'+job_id)
             if cached and cached.get('source_hash') == source_hash:
                 elapsed = (datetime.fromisoformat(utcnow()) - datetime.fromisoformat(cached['checked_at'])).total_seconds()
-                if elapsed < 3600:
+                if elapsed < 3600 and not any(source_exclusion(c['url']) for c in cached.get('candidates',[])):
                     return {'candidates':len(cached['candidates']), 'cached':True}
             if not employer_known(job.employer):
                 raise ValueError('Confirm the employer in Edit details before searching for other copies.')
@@ -904,7 +930,7 @@ class Workspace:
                 if job.employer.casefold() not in (title+' '+excerpt).casefold():
                     continue
                 candidates.append({'url':url, 'title':title, 'excerpt':excerpt,
-                                   'same_url':candidate_url==public_listing_url(str(job.url))})
+                                   'same_url':not source_exclusion(str(job.url)) and candidate_url==public_listing_url(str(job.url))})
                 if len(candidates) >= 6:
                     break
             report = {'source_hash':source_hash, 'checked_at':utcnow(),
@@ -920,7 +946,7 @@ class Workspace:
                 self.reading_jobs.discard(job_id)
 
     def hydrate(self, job_id):
-        from .fit import VERSION
+        from .fit import SOURCE_VERSION as VERSION
         with self.read_guard:
             if job_id in self.reading_jobs:
                 raise ReadInProgress('This role is already being read.')
@@ -946,6 +972,7 @@ class Workspace:
     def _hydrate(self, job_id, snapshot=None):
         from .listing_view import confirmed_listing_employer, normalize_listing, source_problem
         row, job = snapshot if snapshot is not None else self.job(job_id)
+        require_allowed_source(str(job.url))
         result = self.bridge.call("search_service.web_run", {"open": [{"ref_id": public_listing_url(str(job.url))}], "response_length": "long"})
         text = source_text(result)
         if re.search(r'(?im)^\s*#{1,6}\s*\d[\d,]*[^\n]{0,150}\bjobs?\s+in\b',text):
@@ -985,6 +1012,7 @@ class Workspace:
             if not self.profile or self.profile.is_example:
                 raise ValueError("Choose your real résumé in Profile first")
             row, job = self.job(job_id)
+            require_allowed_source(str(job.url))
             with self.store.connect() as db:
                 full = db.execute("SELECT full_description FROM job_details WHERE job_id=?", (job_id,)).fetchone()
             if not full or not full[0]:
@@ -1045,6 +1073,7 @@ class Workspace:
             raise ValueError("Choose a confirmed résumé profile first")
         from .applications import application_for_job
         _, stored_job = self.job(job_id)
+        require_allowed_source(str(stored_job.url))
         applied = application_for_job(self, stored_job)
         if applied:
             return {'held':True,'assessment':{'selected':False,'reasons':['Already applied; Gmail status: '+applied['status']],'source_url':applied['source_url']}}
@@ -1054,7 +1083,7 @@ class Workspace:
                 self.hydrate(job_id)
                 assessed = next(row for row in self.jobs() if row['id'] == job_id)
             fit = assessed['fit']
-            selected = fit['assessment_state'] == 'assessed' and not assessed['listing']['closed']
+            selected = fit['assessment_state'] in {'assessed', 'rating_pending'} and not assessed['listing']['closed']
             assessment = {'selected': selected, 'reasons': [] if selected else [
                 fit.get('assessment_notice') or 'Check the full advert and whether it is open before preparing.'
             ]}
@@ -1070,6 +1099,7 @@ class Workspace:
     def action(self, job_id, kind, operation):
         with self.write_lock:
             row, job = self.job(job_id)
+            require_allowed_source(str(job.url))
             if not row["packet_dir"] or row["status"] != "prepared":
                 raise ValueError("Prepare and review this packet first")
             from .packet_checks import require_delivery
@@ -1253,6 +1283,7 @@ class Workspace:
                 if not nested:
                     break
                 url = unquote(nested)
+            if source_exclusion(url): continue
             title = node.get_text(" ", strip=True)
             if not re.search(r'/job/[^/?#]+|/jobs/view/|viewjob\?', url) or len(title) < 5 or url in seen:
                 continue

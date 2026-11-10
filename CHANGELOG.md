@@ -1,3 +1,37 @@
+## 0.9.27
+
+- Add an evidence comparison on the same quoted requirements using rules alone or local Qwen. Both use one coverage formula, with a labelled control harness to check decisions.
+- Keep comparison previews separate from saved ratings and automatic recommendations.
+- Put Search setup and job updates in the main view. Move document preparation to Next steps inside each vacancy.
+- Separate a complete advert awaiting a rating from a missing advert so you can still prepare documents.
+
+## 0.9.24 — 11 November 2026
+
+- Exclude JobLeads and beBee as subscription intermediaries with documented consumer concerns; retain source evidence and distinguish a precautionary exclusion from a finding of fraud.
+- Apply domain and wrapped-link checks to discovery, alert imports, manual additions, source reads, career research and packet delivery. Excluded saved records keep their original stages and application history.
+- Hide excluded sources from ordinary opportunity views and automatic queues; retain an Excluded sources view with reasons and research links.
+- This finite source list is not a scam detector or certification of other websites. Prefer the employer's original vacancy.
+
+## 0.9.26
+
+- Add on-demand local Qwen evidence review with source-selected quotations, constrained evidence references and an independent verification pass.
+- Calculate documented evidence coverage in code; retain missing information as unknown, exclude optional criteria and conditions, and prohibit automatic strong-match actions from model reviews.
+- Invalidate saved AI reviews when the advert, profile or assessment date changes; keep all model requests on loopback with no cloud fallback.
+
+## 0.9.25
+
+- Recognise explicit employer/role pairs in application receipts and update subjects.
+- Explain which identity is missing; do not mistake interview guidance for an invitation.
+- Revisit earlier parser results once per parser version.
+
+## 0.9.23 — 11 November 2026
+
+- Recognise conservatively dated general IT-support tenure, with source roles, date bounds, overlap deduplication and a daily cache key. Specialist tenure and added scope remain subject to explicit evidence.
+- Prefer stronger criterion-specific examples, keep evidence qualifiers, and prevent unrelated bullets from jointly manufacturing a supported work claim.
+- Exclude source links from scoring and separate clearly independent requirements while preserving their original wording and essential weighting.
+- Label the percentage as evidence coverage and show source dates, tenure calculations and the distinction between missing evidence and inability.
+- Keep the scoring weights unchanged. Broad semantic equivalence, qualification alternatives and ambiguous compound clauses still require review. Scores are not hiring predictions.
+
 ## 0.9.22 — 10 November 2026
 
 - Compact applications list and clearer email identity/status interpretation with bounded rechecking of saved receipts.

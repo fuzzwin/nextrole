@@ -4,7 +4,9 @@ from __future__ import annotations
 import re
 from .models import Job
 
-VERSION = 'criterion-evidence-v6'
+VERSION = 'criterion-evidence-v7'
+# Scoring-only changes do not justify retrying blocked external advert reads.
+SOURCE_VERSION = 'criterion-evidence-v6'
 # These are deliberate product weights, not a probability of being hired.
 WEIGHTS = {'skills':30, 'experience':40, 'requirements':30}
 TOOLS = {
@@ -44,7 +46,8 @@ DOMAINS = [
 ]
 REQUIRED = r'your background|what you will bring|required skills and qualifications|to be successful(?: in this role)?|your skills and experience|essential skills and experience|qualifications and experience|key capabilities|selection requirements|what you[’\x27]ll need to succeed|key requirements|skills required|what you need|(?:job )?requirements|essential(?: requirements| criteria)?|must have|(?:minimum|required)?\s*qualifications|(?:key )?selection criteria|key criteria|what (?:we[’\x27]re|we are) looking for|what you[’\x27]ll bring|what you[’\x27]ll need to succeed|skills (?:and|&) experience|about you|technical skills|(?:required )?experience|key skills|your profile|specialist/technical expertise/qualifications|required skills(?: and experience)?|required experience & skills'
 OPTIONAL = r'you will ideally have|^why\b|our benefits|highly regarded|is an advantage|bonus points|helpful|not required|desirable|nice to have|preferred|benefits|what we offer|why join|compensation|where this goes|to apply|how to apply|our process'
-QUALIFIED = r'\b(?:prototyp\w*|concept|propos\w*|paused|before rollout|ahead of rollout|not (?:yet )?(?:deployed|live)|proof.of.concept|planned|planning|intended|learning|studying|tutorial|training exercise|not implemented|not yet rolled out)\b'
+QUALIFIED = r'\b(?:prototyp\w*|concept|propos\w*|paused|before rollout|ahead of rollout|not (?:yet )?(?:deployed|live)|proof.of.concept|planned|planning|intended|learning|studying|tutorial|training exercise|not implemented|not yet rolled out|personal project|example only|test environment|test deployment|demo environment|non.production)\b'
+NON_PRODUCTION = r'\b(?:sandbox|staging environment|UAT)\b'
 PRODUCTION = r'\b(?:production|deployed|live|real (?:people|users)|used monthly)\b'
 
 
@@ -63,7 +66,7 @@ def evidence_value(text):
     action=(r'(?:built|developed|delivered|created|administer(?:ed)?|support(?:ed)?|manage(?:d)?|'
             r'implement(?:ed)?|maintain(?:ed)?|design(?:ed)?|deploy(?:ed)?|automat(?:ed)?|'
             r'configure(?:d)?|map(?:ped)?|recreated|coordinat(?:ed)?|led|lead|wrote|write|'
-            r'tested|integrated|provided|resolve(?:d)?|troubleshoot(?:ed)?|handled|owned|'
+            r'run|ran|investigate(?:d)?|document(?:ed)?|tested|integrated|provided|resolve(?:d)?|troubleshoot(?:ed)?|handled|owned|'
             r'established|operat(?:ed)?|facilitated|trained|completed|simplified)')
     affirmed=re.match(r'^\s*(?:(?:I|We)\s+)?(?:have\s+)?(?:(?:successfully|independently|personally|currently)\s+)?'+action+r'\b',text,re.I)
     return 1 if affirmed else 0.5
@@ -82,6 +85,11 @@ ACTION_WORDS = {
     'tested': 'test', 'testing': 'test',
     'resolved': 'resolve', 'resolving': 'resolve', 'resolution': 'resolve',
     'translated': 'translate', 'translating': 'translate',
+    'troubleshoot': 'resolve', 'troubleshooting': 'resolve', 'troubleshooted': 'resolve',
+    'issues':'incident', 'issue':'incident', 'incidents':'incident',
+    'escalated':'escalate', 'escalating':'escalate', 'escalation':'escalate',
+    'communication': 'communicate', 'communicating': 'communicate',
+    'independently': 'independent', 'confidently': 'confident',
 }
 
 
@@ -121,7 +129,7 @@ def select_tool_examples(text, facts, skills):
 
 def requirement_words(text):
     # Conservative literal audit of obligations left after known tools/domains.
-    stop=set(('a an the in on of to for with as is are be have has must required essential '
+    stop=set(('a an the in on of to for with as is are be have has must required essential it '
         'experience professional hands strong proven demonstrated ability skills knowledge working '
         'design designing build building create creating develop developing development deliver delivering delivery '
         'implement implementing expert expertise advanced using use core tool role title and plus '
@@ -205,11 +213,26 @@ def recorded_duration(criterion, facts):
     return None
 
 
+def ranked_evidence(criterion, facts):
+    """Prefer demonstrated coverage; evidence order must not change credit."""
+    words = requirement_words(criterion)
+    def rank(fact):
+        overlap = len(words & requirement_words(fact['text']))
+        complete = evidence_value(fact['text']) == 1 and not unsupported_clauses(criterion,[fact])
+        return (complete, overlap, evidence_value(fact['text']))
+    return sorted(facts, key=rank, reverse=True)
+
+
 def criterion_facts(criterion, facts):
     """Keep tool and delivery obligations in the same evidence clause."""
     tools=mentions(criterion)
     result=[]
     for fact in facts:
+        # A later disclaimer can qualify an earlier clause. Keep that source intact.
+        if not tools or evidence_value(fact['text'])<1:
+            if not tools or all(re.search(TOOLS[t],fact['text'],re.I) for t in tools):
+                result.append({**fact,'original_text':fact['text']})
+            continue
         for clause in re.split(r';\s*|,\s+(?:and|but)\s+|\s+(?:and|but)\s+(?=(?:built|developed|delivered|created|managed|administered|worked|supported|led|implemented)\b)',fact['text'],flags=re.I):
             if clause.strip() and (not tools or all(re.search(TOOLS[t],clause,re.I) for t in tools)):
                 result.append({**fact,'text':clause.strip(),'original_text':fact['text']})
@@ -423,6 +446,10 @@ def recorded_academic_requirement(criterion, profile):
 
 
 def custom_requirement(criterion, profile, facts, location):
+    from .tenure import general_support_duration
+    duration=general_support_duration(criterion,facts)
+    if duration:
+        return 1, [duration], [], True
     credential = credential_evidence(criterion, profile, location)
     if credential is not None:
         evidence, remaining = credential
@@ -455,6 +482,8 @@ def criterion_kind(text):
     value=text.strip(' ·•-:').strip()
     value=re.sub(r"(?i)^what you(?:['’]ll| will) bring(?: will include)?[: ]*",'',value).strip()
     if not value: return 'heading'
+    if re.fullmatch(r'(?i)(?:(?:employer |original |advert |listing )?(?:source|source link|url|link)\s*:\s*)?(?:https?://\S+|\[[^\]]+\]\(https?://[^)]+\))[.!]?',value):
+        return 'administrative'
     if re.fullmatch(r'(?i)(?:proofs? of concept|demonstrations?|prototypes?)(?:\s+and\s+(?:proofs? of concept|demonstrations?|prototypes?))*\s+do not count[.!]?',value): return 'administrative'
     if re.fullmatch(r"(?i)(?:what you(?:['’]ll| will) bring(?: will include)?|beyond that|requirements|about you|key skills)[: ]*",value): return 'heading'
     if re.search(r'(?i)^(?:to (?:learn|find out) more|visit (?:our|the)|apply (?:now|before|here)|published |posted |click |all applicants are required to complete.{0,40}screening)',value): return 'administrative'
@@ -465,9 +494,23 @@ def criterion_kind(text):
 
 
 def criterion_parts(text):
-    # Only split explicit independent clauses; preserve AND/OR tool and credential obligations.
-    parts=re.split(r';\s*(?=(?:must|demonstrated|strong|proven|experience|ability|working knowledge)\b)',text,flags=re.I)
-    return [p.strip() for p in parts if criterion_kind(p)=='competency']
+    # Semicolons mark independent obligations unless an explicit alternative or
+    # shared qualifier joins them. AND/OR noun lists and credentials stay intact.
+    if re.search(r';\s*(?:or|and/or)\b', text, re.I):
+        return [text.strip()] if criterion_kind(text)=='competency' else []
+    parts=re.split(r';\s*',text)
+    if any(re.match(r'(?i)^(?:(?:must|should|needs? to) be\b|(?:in|for|with|using|under|within|during|including|only|all|each|both|not|excluding)\b)',p) for p in parts[1:]):
+        parts=[text]
+    independent = r'(?i)^(?:(?:must|at least|minimum|demonstrated|strong|proven|experience|ability|working knowledge|knowledge|understanding|professional fluency|hands.on|an? active|current|degree|diploma|qualifications?|communication|competing priorities)\b|(?:remote|technical|customer|IT|systems?) support\b|(?:independently )?(?:resolve|communicate|share|troubleshoot|manage|administer|coordinate|deliver|build|develop|maintain|design|implement|test|document)\w*\b|(?:Python|SQL|Java|Microsoft 365|Power Automate)\b)'
+    if any(criterion_kind(p)=='competency' and not re.match(independent,p.strip()) for p in parts[1:]):
+        parts=[text]
+    if len(parts)>1 and any(re.search(r'\b(?:all|each|both)\s+(?:of (?:these|the above)|in|with|using|for)\b', p, re.I) for p in parts):
+        parts=[text]
+    result=[]
+    for part in parts:
+        # Split repeated requirement introductions, not "Python and SQL".
+        result.extend(re.split(r'\s+and\s+(?=(?:must have|must demonstrate|demonstrated ability|proven experience|experience (?:in|with)|ability to|working knowledge of)\b)',part,flags=re.I))
+    return [p.strip() for p in result if criterion_kind(p)=='competency']
 
 
 def fit_assessment(job, profile, preferences, view, location, *, full=False, closed=False):
@@ -475,6 +518,13 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             'reviews':[],'requirements':[],'breakdown':[],'cap':None,
             'assessment_state':'needs_profile','assessment_notice':'Save your confirmed profile to assess this role.','auto_eligible':False,'coverage':{'criteria_count':0,'work_examples':0},
             'method':'Criterion-linked evidence: skills 30%, specific work examples 40%, stated requirements 30%. Unconfirmed requirements earn no full credit; review gates are separate. Not a hiring probability.'}
+    from .source_policy import source_exclusion
+    exclusion=source_exclusion(str(job.url))
+    if exclusion:
+        result.update(status='Excluded source',assessment_state='excluded',source_state='excluded_source',
+                      assessment_notice=exclusion['reason'],source_policy=exclusion,
+                      reviews=[{'label':exclusion['reason'],'requirement':''}])
+        return result
     if not profile or profile.is_example:
         result['reviews']=[{'label':'Save your confirmed résumé profile to assess this role.','requirement':''}]
         return result
@@ -488,7 +538,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     from .role_types import search_role_matches
     custom = preferences.role_search_mode == 'custom'
     if custom:
-        result['version'] = 'criterion-evidence-custom-v2'
+        result['version'] = 'criterion-evidence-custom-v3'
     work_value = custom_work_value if custom else evidence_value
     skill_patterns = CUSTOM_SKILLS if custom else TOOLS
     rows=list(sentences(view))
@@ -498,8 +548,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
            for e in profile.experience for b in e.bullets if work_value(b)>0]
     # Referees' titles and example cover letters cannot become candidate experience.
     profile_text='\n'.join([s for s in profile.skills if positive_evidence(s)]+[f['text'] for f in facts])
-    scoring_text=view.get('title',job.title)+'\n'+'\n'.join(text for heading,text in rows
-        if not re.search(OPTIONAL,heading,re.I) and not company_section(heading))
+    scoring_text=view.get('title',job.title)+'\n'+'\n'.join(text for heading,block in rows for sentence in re.split(r'(?<=[.!?])\s+(?=[A-Z])',block) for text in criterion_parts(sentence)
+        if not re.search(OPTIONAL,heading,re.I) and not company_section(heading) and criterion_kind(text)=='competency')
     if not custom:
         scoring_text = select_tool_examples(scoring_text, facts, profile.skills)
     tools = [name for name, pattern in skill_patterns.items() if re.search(pattern, scoring_text, re.I)]
@@ -532,6 +582,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
 
     criteria=[]
     importance={}
+    criterion_sources={}
     separate_checks=[]
     for heading,block_text in rows:
       for text in re.split(r'(?<=[.!?])\s+(?=[A-Z])', block_text):
@@ -543,7 +594,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                 if kind=='competency':
                     for part in criterion_parts(text):
                         criteria.append(part)
-                        importance[part]=2 if re.search(r'\b(?:essential|mandatory|must have|must demonstrate|required)\b',heading+' '+part,re.I) else 1
+                        importance[part]=max(importance.get(part,1),2 if re.search(r'\b(?:essential|mandatory|must have|must demonstrate|required)\b',heading+' '+text,re.I) else 1)
+                        criterion_sources.setdefault(part,[]).append(text)
                 elif kind=='logistics': separate_checks.append({'text':text,'status':'Check separately','kind':'location_or_schedule'})
     criteria=list(dict.fromkeys(criteria))
     explicit_criteria=len(criteria)
@@ -567,7 +619,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             continue
         original_criterion = criterion
         criterion = select_tool_examples(criterion, facts, profile.skills)
-        linked_facts=criterion_facts(criterion,facts)
+        linked_facts=ranked_evidence(criterion,criterion_facts(criterion,facts))
         required_tools=mentions(criterion)
         found=[t for t in required_tools if t in supported_tools]
         missing=[t for t in required_tools if t not in supported_tools]
@@ -576,7 +628,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         value=0
         special=False
         qualification=recorded_qualification(criterion,profile)
-        duration=recorded_duration(criterion,linked_facts)
+        from .tenure import general_support_duration
+        duration=recorded_duration(criterion,linked_facts) or general_support_duration(criterion,linked_facts)
         if re.search(r'\bworkshops?\b',criterion,re.I) and not any(re.search(r'\bworkshops?\b',f['text'],re.I) for f in facts):
             reasons.append('Workshop facilitation is not explicitly confirmed; process mapping, guides and demonstrations are transferable evidence.')
             special=True
@@ -584,7 +637,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             re.search(r'\bsoftware engineer',e.role,re.I) and e.dates for e in profile.experience):
             reasons.append('Commercial software-engineering employment is not confirmed; IT support and app prototypes do not establish this requirement.')
             special=True
-        if re.search(r'\b(?:nv1|nv2|baseline clearance|security clearance|australian citizen(?:ship)?|right to work|working rights|formal tertiary|degree in|qualifications? in|certified|(?:degree|tertiary|qualification|certification|licen[cs]e).{0,55}(?:required|essential)|(?:must|require).{0,55}(?:degree|certification|licen[cs]e))\b',criterion,re.I):
+        if re.search(r'\b(?:nv1|nv2|baseline clearance|security clearance|australian citizen(?:ship)?|right to work|working rights|formal tertiary|degree|diploma|qualifications? in|certified|(?:degree|tertiary|qualification|certification|licen[cs]e).{0,55}(?:required|essential)|(?:must|require).{0,55}(?:degree|certification|licen[cs]e))\b',criterion,re.I):
             # Credentials/eligibility need explicit, contextual confirmation, never keyword credit.
             if not qualification:
                 reasons.append('Eligibility or credential requirement needs confirmation against your records.')
@@ -600,6 +653,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                         and (required_tools or re.search(r'\bagents?\b|software',criterion,re.I)))
         if production:
             candidates=[f for f in linked_facts if re.search(PRODUCTION,f['text'],re.I) and evidence_value(f['text'])==1
+                        and not re.search(NON_PRODUCTION,f.get('original_text',f['text']),re.I)
                         and (all(re.search(TOOLS[t],f['text'],re.I) for t in required_tools)
                              if required_tools else re.search(r'\bagents?\b|software',f['text'],re.I))]
             if candidates:
@@ -611,13 +665,14 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         if missing:
             reasons.append('Not confirmed in your profile: '+', '.join(missing)+'.')
             special=True
-        extra=unsupported_clauses(criterion,linked_facts)
+        # Do not stitch an action from one example to an unrelated object in another.
+        extra=min((unsupported_clauses(criterion,[f]) for f in linked_facts),key=len,default=unsupported_clauses(criterion,[]))
         if qualification and qualification_only(criterion) and not required_tools and not duration:
             extra=[]
             value=1
             evidence=[{'text':qualification,'role':'Saved qualification','organisation':'Confirmed profile','dates':''}]
         if duration and not qualification:
-            extra=[w for w in extra if w not in {'10','5','4','3','2','year'}]
+            extra=[] if duration.get('tenure') else [w for w in extra if w not in {'10','5','4','3','2','year'}]
             if not extra:
                 value=1
                 evidence=[duration]
@@ -650,13 +705,10 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                 direct=[f for f in linked_facts if len(requirement_words(criterion)&requirement_words(f['text']))>=1]
                 if direct:
                     criterion_words = requirement_words(criterion)
-                    direct.sort(key=lambda fact: (
-                        len(criterion_words & requirement_words(fact['text'])),
-                        evidence_value(fact['text'])
-                    ), reverse=True)
+                    direct=ranked_evidence(criterion,direct)
                     evidence=direct[:2]
-                    overlap=max(len(criterion_words & requirement_words(f['text'])) for f in evidence)
-                    value=(0.25 if overlap==1 else 0.5) if extra else min(evidence_value(f['text']) for f in evidence)
+                    overlap=max(len(criterion_words & requirement_words(f['text'])) for f in direct)
+                    value=(0.25 if overlap==1 else 0.5) if extra else max(evidence_value(f['text']) for f in evidence)
                     if value==0.25: reasons.append('Weak lexical overlap only; this does not establish the specific task or context.')
                 if value<1:
                     reasons.append('Transferable evidence only; confirm the specific requirement.' if value else 'No specific supporting evidence found in your saved experience.')
@@ -671,6 +723,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             reviews.append({'label':reasons[0] if reasons else 'Requirement needs review.','requirement':original_criterion})
 
     for requirement in result['requirements']:
+        requirement['source_texts']=list(dict.fromkeys(criterion_sources.get(requirement['text'],[requirement['text']])))
+        requirement['evidence_state']='supported' if requirement['value']==1 else 'partial' if requirement['value'] else 'not_documented'
         requirement['importance_weight']=importance.get(requirement['text'],1)
         requirement['importance']='Essential' if requirement['importance_weight']==2 else 'Standard'
         if re.search(r'(?i)clearance|citizen|right to work|working rights|licen[cs]e|registration|degree|qualification|certification',requirement['text']):
