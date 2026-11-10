@@ -528,7 +528,7 @@ class Workspace:
         style_preferences = self.document_style().model_dump()
         with self.store.connect() as db:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
-            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%'")}
+            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%'")}
         applications = {a['id']:a for a in self.get_meta('applications', [])}
         profile, preferences = self.profile, self.preferences
         context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
@@ -577,6 +577,8 @@ class Workspace:
                 self._assessment_cache[row['id']] = (cache_key, copy.deepcopy({key:row[key] for key in ['source_domain', 'summary', 'location_info', 'reading_view', 'skill_overlap', 'fit']}))
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
+            research = metadata.get('listing_research:'+row['id'])
+            row['listing_research'] = research if research and research.get('source_hash') == hashlib.sha256(job.model_dump_json().encode()).hexdigest() else None
             row['assessment_source'] = metadata.get('assessment_source:'+row['id'])
             source=row['assessment_source'] or {}
             if (row['fit']['assessment_state']=='assessed' and source.get('revision')==row['revision']
@@ -847,6 +849,55 @@ class Workspace:
             return counts
         finally:
             self.batch_lock.release()
+
+    def research_listing(self, job_id):
+        """Find possible copies without treating snippets as confirmed vacancy facts."""
+        from .listing_view import employer_known, same_role
+        with self.read_guard:
+            if job_id in self.reading_jobs:
+                raise ReadInProgress('This role is already being read or researched.')
+            self.reading_jobs.add(job_id)
+        try:
+            row, job = self.job(job_id)
+            source_hash = hashlib.sha256(row['payload'].encode()).hexdigest()
+            cached = self.get_meta('listing_research:'+job_id)
+            if cached and cached.get('source_hash') == source_hash:
+                elapsed = (datetime.fromisoformat(utcnow()) - datetime.fromisoformat(cached['checked_at'])).total_seconds()
+                if elapsed < 3600:
+                    return {'candidates':len(cached['candidates']), 'cached':True}
+            if not employer_known(job.employer):
+                raise ValueError('Confirm the employer in Edit details before searching for other copies.')
+            query = '"' + job.title.replace('"',' ')[:200] + '" "' + job.employer.replace('"',' ')[:100] + '" job'
+            result = self.bridge.call('search_service.web_run', {
+                'system2_search_query':[{'q':query}], 'response_length':'long'})
+            candidates = []
+            for item in search_results(result):
+                url = str(item['url'])
+                try:
+                    candidate_url = public_listing_url(url)
+                except ValueError:
+                    continue
+                title = str(item['title'])[:300]
+                excerpt = clean_excerpt(str(item['description']))[:1500]
+                if not same_role(job.title, title, job.employer):
+                    continue
+                if job.employer.casefold() not in (title+' '+excerpt).casefold():
+                    continue
+                candidates.append({'url':url, 'title':title, 'excerpt':excerpt,
+                                   'same_url':candidate_url==public_listing_url(str(job.url))})
+                if len(candidates) >= 6:
+                    break
+            report = {'source_hash':source_hash, 'checked_at':utcnow(),
+                      'candidates':candidates}
+            with self.write_lock:
+                current, _ = self.job(job_id)
+                if current['payload'] != row['payload']:
+                    raise SourceChanged('The saved advert changed during research. Search again using the current details.')
+                self.set_meta('listing_research:'+job_id, report)
+            return {'candidates':len(candidates)}
+        finally:
+            with self.read_guard:
+                self.reading_jobs.discard(job_id)
 
     def hydrate(self, job_id):
         from .fit import VERSION

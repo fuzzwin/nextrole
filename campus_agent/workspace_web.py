@@ -215,6 +215,7 @@ def create_workspace_app(workspace: Workspace):
         operations = {
             "check-prepare": ("Check role and prepare packet", lambda: workspace.check_prepare(job_id)),
             "read": ("Read full job listing", lambda: workspace.hydrate(job_id)),
+            "research": ("Search other copies of this role", lambda: workspace.research_listing(job_id)),
             "prepare": ("Prepare application PDFs", lambda: workspace.prepare(job_id)),
             "drive-resume": ("Save résumé to Drive", lambda: workspace.upload(job_id, "resume")),
             "drive-cover": ("Save cover letter to Drive", lambda: workspace.upload(job_id, "cover")),
