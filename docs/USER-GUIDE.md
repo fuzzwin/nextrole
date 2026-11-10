@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.13.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.14.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.13** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.14** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -557,3 +557,10 @@ Open **Search setup**, select **My job titles**, and enter the Australian job ti
 Under **Profile & sources → Licences & registrations**, save credential names, jurisdictions, statuses and expiry dates where known. Use **Australia** for a national credential. Enter a class or registration scope when the advert asks for it. Leave out licence and registration numbers. The app compares your recorded details with the advert and flags missing evidence for review.
 
 Custom searches use manual packet review and manual Top stars. Use **Check & prepare** on a complete advert to generate a résumé and cover letter for review.
+
+
+## Saved-job assessment progress
+
+The bar above **Saved opportunities** counts active jobs across the workspace before filters. Closed, applied and archived jobs are excluded. **Left for the app to check** includes ready, running and delayed source checks. **Need your input** means the app needs a profile, employer or advert details before it can score the job. **View all unrated** opens the unrated list across saved jobs.
+
+A directory is a link to several listings. Use an individual vacancy's exact title and employer and paste its complete advert. A search excerpt, blocked advert or unidentified employer can also leave a job unrated. Open **Why unrated** on the card to see the reason.

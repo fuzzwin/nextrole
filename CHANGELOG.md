@@ -1,3 +1,8 @@
+## 0.9.14 — 10 November 2026
+
+- Show assessment coverage above saved jobs, separating remaining automatic checks from items that need your input.
+- Explain why a job is unrated and offer a relevant source or profile action. Closed adverts show a closed state rather than a fit score.
+
 ## 0.9.13 — 8 November 2026
 
 - Search Australian roles using your own job titles, with IT presets available as a separate mode.
