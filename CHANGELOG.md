@@ -1,3 +1,10 @@
+## 0.9.19 — 10 November 2026
+
+- Add Refresh missing details for up to ten filtered saved jobs, including already scored roles.
+- Check missing employer, pay, location, work arrangement, employment type and dates using original adverts and verified same-vacancy copies.
+- Preserve known values and original descriptions; retain source evidence, prior employer/location records, conflicts and unresolved checks.
+- Show progress and per-job metadata reports, with duplicate-run protection and a 24-hour retry interval.
+
 ## 0.9.18 — 10 November 2026
 
 - Allow automatic Top listings from 70% with a user-selected threshold of 70–100%; default to 70% for new settings.

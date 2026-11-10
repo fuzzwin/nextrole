@@ -243,6 +243,7 @@ class Workspace:
         self.scan_lock = threading.Lock()
         self.discovery_request_lock = threading.Lock()
         self.discovery_task_id = None
+        self.metadata_task_id = None
         self.batch_lock = threading.Lock()
         self.read_guard = threading.Lock()
         self.reading_jobs = set()
@@ -523,12 +524,13 @@ class Workspace:
         from .locations import location_info
         from .listing_view import listing_view, confirmed_listing_employer
         from .fit import fit_assessment
+        from .metadata_refresh import current_report, apply_dates, apply_details, missing_fields
         from .applications import application_key
         rows = self.store.jobs()
         style_preferences = self.document_style().model_dump()
         with self.store.connect() as db:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
-            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%'")}
+            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%' OR key LIKE 'metadata_details:%'")}
         applications = {a['id']:a for a in self.get_meta('applications', [])}
         profile, preferences = self.profile, self.preferences
         context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
@@ -548,9 +550,11 @@ class Workspace:
                 row['stage'] = 'applied'
             row["shortlist"] = metadata.get("shortlist:" + row["id"])
             row['listing'] = metadata.get('listing:'+row['id'], extract_dates(row['job']['description']))
+            row['metadata_refresh'] = current_report(row,metadata.get('metadata_details:'+row['id']))
+            apply_dates(row,row['metadata_refresh'])
             row['listing'] = {**row['listing'], **date_state(row['listing'],self.preferences.timezone)}
             cache_key = (context_hash, json.dumps(row['job'],sort_keys=True), bool(row.get('full_description')),
-                         row['listing']['closed'], json.dumps(metadata.get('location_override:'+row['id']),sort_keys=True))
+                         row['listing']['closed'], json.dumps(metadata.get('location_override:'+row['id']),sort_keys=True), json.dumps(row['metadata_refresh'],sort_keys=True))
             cached = self._assessment_cache.get(row['id'])
             if cached is not None and cached[0] == cache_key:
                 row.update(copy.deepcopy(cached[1]))
@@ -562,6 +566,8 @@ class Workspace:
                 if row.get('full_description'):
                     assessed_job = assessed_job.model_copy(update={'employer':confirmed_listing_employer(assessed_job,assessed_job.description)})
                 row['reading_view'] = listing_view(row['job']['description'], row['job']['title'], assessed_job.employer)
+                apply_details(row,row['metadata_refresh'])
+                assessed_job = assessed_job.model_copy(update={'employer':row['reading_view']['employer']})
                 # A literal coverage percentage, separate from the existing search rank.
                 # Use the primary description, excluding known recommendation sections.
                 skill_phrases = [s for s in profile.skills if terms(s)] if profile else []
@@ -577,6 +583,7 @@ class Workspace:
                 self._assessment_cache[row['id']] = (cache_key, copy.deepcopy({key:row[key] for key in ['source_domain', 'summary', 'location_info', 'reading_view', 'skill_overlap', 'fit']}))
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
+            row['missing_metadata'] = missing_fields(row)
             research = metadata.get('listing_research:'+row['id'])
             row['listing_research'] = research if research and research.get('source_hash') == hashlib.sha256(job.model_dump_json().encode()).hexdigest() else None
             row['assessment_source'] = metadata.get('assessment_source:'+row['id'])
@@ -595,7 +602,7 @@ class Workspace:
             row['preferred_location'] = preferred_location(row['location_info'],self.preferences.location)
             row['top_match'] = bool(self.preferences.auto_top_enabled and row.get('full_description')
                 and row.get('stage') not in {'applied','archived'} and not row['listing']['closed']
-                and row['fit']['auto_eligible'] and row['preferred_location']
+                and row['fit']['auto_eligible'] and row['preferred_location'] and not row['location_info'].get('metadata_location_review')
                 and row['reading_view']['salary']['status']!='conflicting'
                 and row['fit']['status']=='Good match' and not row['fit']['reviews']
                 and row['fit']['percent'] is not None and row['fit']['percent']>=max(70,self.preferences.auto_top_threshold))
@@ -849,6 +856,17 @@ class Workspace:
             return counts
         finally:
             self.batch_lock.release()
+
+    def start_metadata_refresh(self, job_ids):
+        from .metadata_refresh import refresh_batch
+        with self.write_lock:
+            if self.metadata_task_id:
+                with self.store.connect() as db:
+                    running=db.execute('SELECT status FROM tasks WHERE id=?',(self.metadata_task_id,)).fetchone()
+                if running and running[0]=='running':return {'task_id':self.metadata_task_id,'reused':True}
+            result=self.task('Refresh missing listing details',lambda:refresh_batch(self,job_ids))
+            self.metadata_task_id=result['task_id']
+            return result
 
     def research_listing(self, job_id):
         """Find possible copies without treating snippets as confirmed vacancy facts."""

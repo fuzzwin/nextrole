@@ -53,7 +53,7 @@ def create_workspace_app(workspace: Workspace):
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
-            "assessment_progress": workspace.get_meta("assessment_progress"), "detail_refresh": workspace.detail_refresh.summary(), "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
+            "metadata_refresh_progress": workspace.get_meta("metadata_refresh_progress"), "assessment_progress": workspace.get_meta("assessment_progress"), "detail_refresh": workspace.detail_refresh.summary(), "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
             "assessment_overview": workspace.detail_refresh.assessment_overview(jobs),
             "applications": workspace.get_meta('applications', []), "application_sync": workspace.get_meta('application_sync'),
             "morning_schedule": workspace.get_meta("morning_schedule"), "alert_search": workspace.get_meta("job_alert_search")}
@@ -200,6 +200,14 @@ def create_workspace_app(workspace: Workspace):
     async def top_listing(job_id: str, request: Request):
         data = await request.json()
         return workspace.set_top_listing(job_id, data.get('top'))
+
+    @app.post('/api/refresh-missing-metadata')
+    async def refresh_missing_metadata(request: Request):
+        data=await request.json()
+        ids=data.get('job_ids',[])
+        if not isinstance(ids,list) or len(ids)>10000 or not all(isinstance(i,str) for i in ids):
+            raise ValueError('Choose valid saved jobs to check.')
+        return workspace.start_metadata_refresh(ids)
 
     @app.post('/api/assess-filtered')
     async def assess_filtered(request: Request):
