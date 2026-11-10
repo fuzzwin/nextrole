@@ -732,6 +732,21 @@ function renderFit(row){
   if(fit.assessment_notice||!assessed){
     panel.append(el('p','help',fit.assessment_notice||fit.method||'Save a confirmed profile to calculate a match.'));
   }
+  if(fit.confidence){
+    const names={limited:'Limited evidence',needs_review:'Evidence needs review',supported:'Evidence supported'}, note=el('p','help');
+    note.append(el('strong','',names[fit.confidence.level]||'Evidence needs review'),document.createTextNode(' · '+(fit.confidence.criteria_count||0)+' assessed requirements. '+(fit.confidence.meaning||'')));
+    panel.append(note);
+  }
+  if(fit.separate_checks?.length){
+    const checks=el('details','fit-evidence');
+    checks.append(el('summary','','Eligibility, location and availability · '+fit.separate_checks.length+' separate checks'),el('p','help','Eligibility requirements still contribute to the evidence score and are also shown here. Location and schedule checks do not affect the score. An unconfirmed condition is not a confirmed match.'));
+    for(const check of fit.separate_checks){
+      const item=el('div','fit-evidence-item');
+      item.append(el('b','',check.status||'Check separately'),el('p','',check.text));
+      checks.append(item);
+    }
+    panel.append(checks);
+  }
   if(fit.cap) panel.append(el('p','fit-cap','Maximum '+fit.cap.limit+'% until reviewed. '+fit.cap.reason));
   if(requirements.length){
     const section=el('details','fit-evidence');
@@ -739,7 +754,7 @@ function renderFit(row){
     section.append(el('summary','','Requirements and your evidence'));
     for(const requirement of requirements){
       const item=el('div','fit-evidence-item');
-      item.append(el('span','fit-criterion-status',requirement.status),el('p','',requirement.text));
+      item.append(el('span','fit-criterion-status',requirement.status+(requirement.importance?' · '+requirement.importance:'')),el('p','',requirement.text));
       for(const evidence of requirement.evidence||[]) item.append(el('blockquote','',evidence.text));
       for(const reason of requirement.reasons||[]) item.append(el('small','',reason));
       section.append(item);
@@ -757,7 +772,7 @@ function renderFit(row){
       if(component.state!=='assessed') track.classList.add('pending');
       item.title=component.state==='pending'?'Full source and identified employer needed before scoring.':
         component.state==='not_stated'?'No criteria for this component were stated.':
-        component.points+' of '+component.weight+' weighted points; partial evidence counts as half';
+        component.points+' of '+component.weight+' weighted points; evidence strength and requirement importance affect this component';
       track.append(fill);
       item.append(track);
       bars.append(item);
