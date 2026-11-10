@@ -1,3 +1,8 @@
+## 0.9.15 — 10 November 2026
+
+- Show the score, location, pay and dates together. Read the advert alongside requirement evidence on wider screens.
+- Keep the original listing and document actions within reach and move detailed delivery holds into the document checks.
+
 ## 0.9.14 — 10 November 2026
 
 - Show assessment coverage above saved jobs, separating remaining automatic checks from items that need your input.
