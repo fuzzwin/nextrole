@@ -1,3 +1,9 @@
+## 0.9.16 — 10 November 2026
+
+- Redistribute the tool component across work evidence and requirements when an advert names no recognised tools.
+- Credit supported alternatives in explicit tool example lists and recognise common action inflections.
+- Rank supporting work examples by requirement overlap while retaining original evidence and review checks.
+
 ## 0.9.15 — 10 November 2026
 
 - Show the score, location, pay and dates together. Read the advert alongside requirement evidence on wider screens.
