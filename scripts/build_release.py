@@ -20,7 +20,7 @@ FILES = (
     'README.md', 'setup/START HERE.txt', 'setup/START HERE.html', 'setup/CODEX SETUP PROMPT.txt', 'setup/Start Job Seeker.command',
     'Start NextRole.command', 'CHANGELOG.md', 'PRIVACY.md', 'launcher.py', 'pyproject.toml', 'requirements-lock.txt', '.gitignore', '.env.example',
     'config.example.json', 'profile.example.json', 'examples/jobs.json', 'setup/Start-Demo.command',
-    'docs/USER-GUIDE.md', 'docs/ROLE-TAILORING.md', 'docs/LEGACY-CLI.md', 'scripts/build_release.py', 'scripts/build_guide.py',
+    'docs/CAREER-HARNESS.md', 'docs/USER-GUIDE.md', 'docs/ROLE-TAILORING.md', 'docs/LEGACY-CLI.md', 'scripts/build_release.py', 'scripts/build_guide.py',
 )
 MODULES = (
     '__init__.py', '__main__.py', 'application_review.py', 'applications.py', 'cli.py', 'connectors.py',
@@ -28,6 +28,7 @@ MODULES = (
     'locations.py', 'mail.py', 'mcp_server.py', 'models.py', 'morning.py', 'packet_checks.py',
     'pipeline.py', 'role_types.py', 'sources.py', 'store.py', 'tailor.py', 'web.py',
     'workspace.html', 'workspace.py', 'workspace_web.py',
+    'career.py', 'career_contract.py', 'career_render.py', 'career_exports.py',
 )
 RELEASE_FILES = FILES + tuple('campus_agent/' + name for name in MODULES)
 BLOCKED_PARTS = {'workspace', 'data', 'artifacts', 'output', 'tmp', 'evidence', '.venv',

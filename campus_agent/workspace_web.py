@@ -201,6 +201,66 @@ def create_workspace_app(workspace: Workspace):
         data = await request.json()
         return workspace.set_top_listing(job_id, data.get('top'))
 
+    def career_owner(request):
+        import hmac
+        supplied=request.headers.get('x-workspace-token') or request.query_params.get('token','')
+        if not hmac.compare_digest(supplied,token):
+            raise HTTPException(403,'Open this local workspace to access career research.')
+
+    @app.get('/api/jobs/{job_id}/career-runs')
+    def career_runs(job_id: str, request: Request):
+        career_owner(request)
+        return {'runs':workspace.career.list(job_id)}
+
+    @app.post('/api/jobs/{job_id}/career-runs')
+    async def career_start(job_id: str, request: Request):
+        career_owner(request)
+        data=await request.json()
+        return workspace.career.start(job_id,data.get('feature'),data.get('options',{}),refresh=data.get('refresh',False))
+
+    @app.get('/api/career-runs/{run_id}')
+    def career_run(run_id: str, request: Request):
+        career_owner(request)
+        return workspace.career.get(run_id)
+
+    @app.post('/api/career-runs/{run_id}/cancel')
+    def career_cancel(run_id: str, request: Request):
+        career_owner(request)
+        return workspace.career.cancel(run_id)
+
+    @app.post('/api/career-runs/{run_id}/review')
+    async def career_review(run_id: str, request: Request):
+        career_owner(request)
+        data=await request.json()
+        return workspace.career.review(run_id,data.get('disposition'),output_hash=data.get('output_hash'))
+
+    @app.post('/api/career-runs/{run_id}/practice')
+    def career_practice(run_id: str, request: Request):
+        career_owner(request)
+        return workspace.career.create_practice(run_id)
+
+    @app.get('/api/career-practice/{session_id}')
+    def career_practice_get(session_id: str, request: Request):
+        career_owner(request)
+        return workspace.career.get_practice(session_id)
+
+    @app.post('/api/career-practice/{session_id}/answer')
+    async def career_answer(session_id: str, request: Request):
+        career_owner(request)
+        data=await request.json()
+        return workspace.career.practice_answer(session_id,data.get('answer',''),retry=data.get('retry',False))
+
+    @app.post('/api/career-practice/{session_id}/next')
+    def career_next(session_id: str, request: Request):
+        career_owner(request)
+        return workspace.career.practice_next(session_id)
+
+    @app.get('/api/career-runs/{run_id}/artifacts/{kind}')
+    def career_artifact(run_id: str, kind: str, request: Request):
+        career_owner(request)
+        path=workspace.career.artifact(run_id,kind)
+        return FileResponse(path,filename=path.name)
+
     @app.post('/api/refresh-missing-metadata')
     async def refresh_missing_metadata(request: Request):
         data=await request.json()
