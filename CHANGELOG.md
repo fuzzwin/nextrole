@@ -1,3 +1,7 @@
+## 0.9.22 — 10 November 2026
+
+- Compact applications list and clearer email identity/status interpretation with bounded rechecking of saved receipts.
+
 ## 0.9.21 — 10 November 2026
 
 - Refined requirement extraction and evidence scoring; separates evidence confidence and eligibility checks.
