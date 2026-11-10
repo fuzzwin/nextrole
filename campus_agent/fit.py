@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from .models import Job
 
-VERSION = 'criterion-evidence-v4'
+VERSION = 'criterion-evidence-v5'
 # These are deliberate product weights, not a probability of being hired.
 WEIGHTS = {'skills':30, 'experience':40, 'requirements':30}
 TOOLS = {
@@ -13,6 +13,8 @@ TOOLS = {
     'SharePoint': r'\bsharepoint\b', 'Microsoft 365 Copilot': r'\b(?:microsoft 365|m365) copilot\b',
     'Microsoft 365': r'\b(?:microsoft 365|m365|office 365)\b',
     'Entra ID': r'\b(?:entra(?: id)?|azure ad)\b', 'Intune': r'\bintune\b',
+    'Jamf': r'\bjamf\b', 'Kandji': r'\bkandji\b',
+    'Google endpoint management': r'\bgoogle endpoint management\b',
     'Exchange': r'\bexchange(?: online)?\b', 'SCCM': r'\bsccm\b',
     'ServiceNow': r'\bservicenow\b', 'NetSuite': r'\bnetsuite\b',
     'Python': r'\bpython\b', 'JavaScript / TypeScript': r'\b(?:javascript|typescript)\b',
@@ -61,10 +63,60 @@ def evidence_value(text):
     action=(r'(?:built|developed|delivered|created|administer(?:ed)?|support(?:ed)?|manage(?:d)?|'
             r'implement(?:ed)?|maintain(?:ed)?|design(?:ed)?|deploy(?:ed)?|automat(?:ed)?|'
             r'configure(?:d)?|map(?:ped)?|recreated|coordinat(?:ed)?|led|lead|wrote|write|'
-            r'tested|integrated|provided|resolved|troubleshoot(?:ed)?|handled|owned|'
+            r'tested|integrated|provided|resolve(?:d)?|troubleshoot(?:ed)?|handled|owned|'
             r'established|operat(?:ed)?|facilitated|trained|completed|simplified)')
     affirmed=re.match(r'^\s*(?:(?:I|We)\s+)?(?:have\s+)?(?:(?:successfully|independently|personally|currently)\s+)?'+action+r'\b',text,re.I)
     return 1 if affirmed else 0.5
+
+
+# Explicit inflections keep action and object obligations comparable.
+ACTION_WORDS = {
+    'administered': 'administer', 'administering': 'administer', 'administration': 'administer',
+    'supported': 'support', 'supporting': 'support',
+    'deployed': 'deploy', 'deploying': 'deploy', 'deployment': 'deploy',
+    'configured': 'configure', 'configuring': 'configure', 'configuration': 'configure',
+    'managed': 'manage', 'managing': 'manage', 'management': 'manage',
+    'coordinated': 'coordinate', 'coordinating': 'coordinate', 'coordination': 'coordinate',
+    'documented': 'document', 'documenting': 'document', 'documentation': 'document',
+    'mapped': 'map', 'mapping': 'map',
+    'tested': 'test', 'testing': 'test',
+    'resolved': 'resolve', 'resolving': 'resolve', 'resolution': 'resolve',
+    'translated': 'translate', 'translating': 'translate',
+}
+
+
+def select_tool_examples(text, facts, skills):
+    """Resolve explicit parenthesised OR examples; retain other obligations verbatim."""
+    def select(match):
+        options = re.split(r',\s*|\s+or\s+', match['options'], flags=re.I)
+        names = []
+        for option in options:
+            name = next((name for name, pattern in TOOLS.items()
+                         if re.fullmatch(pattern, option.strip(), re.I)), None)
+            if name is None:
+                return match[0]
+            names.append(name)
+        values = {
+            name: max([evidence_value(f['text']) for f in facts
+                       if re.search(TOOLS[name], f['text'], re.I)] +
+                      [0.5 for skill in skills if positive_evidence(skill)
+                       and re.search(TOOLS[name], skill, re.I)] + [0])
+            for name in names
+        }
+        selected = max(names, key=values.get)
+        if not values[selected]:
+            return match[0]
+        category = match['category'] or ''
+        if re.search(r'\bMDM\b|mobile device management', category, re.I):
+            if selected not in {'Intune', 'Jamf', 'Kandji', 'Google endpoint management'}:
+                return match[0]
+            category = ''
+        return category + selected
+
+    return re.sub(
+        r'(?P<category>(?:(?:an? )?(?:MDM|mobile device management) platform\s+)?)'
+        r'\((?:such as|e\.g\.)\s+(?P<options>[^()\n]+\bor\b[^()\n]+)\)',
+        select, text, flags=re.I)
 
 
 def requirement_words(text):
@@ -75,7 +127,7 @@ def requirement_words(text):
         'implement implementing expert expertise advanced using use core tool role title and plus '
         'or that which who your our their this relevant including related good excellent solid '
         'effective effectively practical modern complex appropriate clear confident strong highly collaborative scalable successfully excellent material materials user users years year months month least at').split())
-    words=set(re.findall(r'[a-z][a-z0-9]+',text.lower()))-stop
+    words={ACTION_WORDS.get(word, word) for word in re.findall(r'[a-z][a-z0-9]+',text.lower())}-stop
     return {w[:-1] if len(w)>4 and w.endswith('s') else w for w in words}
 
 
@@ -428,6 +480,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     profile_text='\n'.join([s for s in profile.skills if positive_evidence(s)]+[f['text'] for f in facts])
     scoring_text=view.get('title',job.title)+'\n'+'\n'.join(text for heading,text in rows
         if not re.search(OPTIONAL,heading,re.I) and not company_section(heading))
+    if not custom:
+        scoring_text = select_tool_examples(scoring_text, facts, profile.skills)
     tools = [name for name, pattern in skill_patterns.items() if re.search(pattern, scoring_text, re.I)]
     supported_tools = [name for name in tools if re.search(skill_patterns[name], profile_text, re.I)]
     tool_values = {
@@ -483,6 +537,8 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             if value < 1:
                 reviews.append({'label':reasons[0], 'requirement':criterion})
             continue
+        original_criterion = criterion
+        criterion = select_tool_examples(criterion, facts, profile.skills)
         linked_facts=criterion_facts(criterion,facts)
         required_tools=mentions(criterion)
         found=[t for t in required_tools if t in supported_tools]
@@ -565,6 +621,11 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
                 matches=[e for e in experience if re.search(next(d for label,d,_ in DOMAINS if label==e['label']),criterion,re.I)]
                 direct=[f for f in linked_facts if len(requirement_words(criterion)&requirement_words(f['text']))>=1]
                 if direct:
+                    criterion_words = requirement_words(criterion)
+                    direct.sort(key=lambda fact: (
+                        len(criterion_words & requirement_words(fact['text'])),
+                        evidence_value(fact['text'])
+                    ), reverse=True)
                     evidence=direct[:2]
                     value=0.5 if extra else min(evidence_value(f['text']) for f in evidence)
                 if value<1:
@@ -575,9 +636,9 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
             hard=True
             value=0
         status='Supported' if value==1 else 'Transferable' if value else 'Needs confirmation'
-        result['requirements'].append({'text':criterion,'status':status,'value':value,'evidence':evidence,'reasons':reasons})
+        result['requirements'].append({'text':original_criterion,'status':status,'value':value,'evidence':evidence,'reasons':reasons})
         if value<1:
-            reviews.append({'label':reasons[0] if reasons else 'Requirement needs review.','requirement':criterion})
+            reviews.append({'label':reasons[0] if reasons else 'Requirement needs review.','requirement':original_criterion})
 
     skills_ratio=sum(tool_values.values())/len(tools) if tools else 0
     if custom:
@@ -592,7 +653,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
         {'id':'experience','label':'Work experience','weight':40,'points':round(40*experience_ratio),'covered':sum(work_values),'total':len(work_values)},
         {'id':'requirements','label':'Stated requirements','weight':30,'points':round(30*requirements_ratio),'covered':sum(r['value'] for r in result['requirements']),'total':len(result['requirements'])},
     ]
-    if custom and not tools:
+    if not tools:
         result['method'] = 'Work examples 57%, stated requirements 43%. The advert has no separately scored tools. Each requirement links to recorded evidence.'
         for component, weight, ratio in zip(result['breakdown'], (0,57,43), (0,experience_ratio,requirements_ratio)):
             component.update(weight=weight, points=round(weight * ratio))
@@ -617,8 +678,6 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     if explicit_criteria<3 or len(work_examples)<2:
         reviews.append({'label':'Limited evidence: at least three distinct requirements and two work examples are needed for an automatic strong match.','requirement':''})
         caps.append((79,'Listing or evidence is too sparse for a strong-match judgement.'))
-    if not tools and not custom:
-        reviews.append({'label':'Not enough explicit technical skill detail to assess the skills component.','requirement':''})
     if not full:
         reviews.insert(0,{'label':'Read the full listing before assessing this role.','requirement':''})
     if not explicit_criteria:
