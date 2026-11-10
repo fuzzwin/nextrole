@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.21.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.22.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.21** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.22** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -594,3 +594,8 @@ Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Cho
 ## Evidence scoring
 
 The score measures recorded evidence, not your chance of being hired. Explicit essential requirements count twice standard requirements; desirable extras do not currently contribute. Weak single-word overlap receives less credit than broader transferable evidence. Known credential requirements still contribute to the score and are also shown as eligibility checks; location and schedule are checked separately. Evidence confidence identifies sparse or unresolved assessments. Adverts containing only logistics remain unrated. Some repeated scores are legitimate.
+
+
+## Reading your application tracker
+
+Applications uses compact rows with employer, role, latest status, dates and a source email link. Expand the email details to inspect the evidence. The tracker reads message contents; it does not assume every email from a company proves a new application. Prior-thread identity can help resolve a reply, while ambiguous company-only messages remain for review. Position cancellation is distinct from rejection. Older receipts are rechecked in bounded batches as the parser changes. Checking Gmail never sends, archives or labels mail.
