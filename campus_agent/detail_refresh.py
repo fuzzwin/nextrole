@@ -122,6 +122,52 @@ class DetailRefreshQueue:
                     'needs_source': sum(i['status'] in {'needs_source','held'} for i in items),
                     'waiting': len(waiting), 'next_attempt': next_at, 'error': state.get('error','')}
 
+    def assessment_overview(self, rows):
+        """Describe current saved-job coverage without changing the refresh queue."""
+        with self.state_lock:
+            snapshot = self._state()
+            self._reconcile(snapshot, rows)
+        now = self.clock()
+        counts = dict.fromkeys(
+            ('scored', 'reading', 'ready', 'waiting', 'manual', 'profile', 'closed', 'inactive'), 0
+        )
+        by_job = {}
+        reasons = {}
+        delayed = []
+        current = (snapshot.get('current') or {}).get('id')
+        for row in rows:
+            fit = row['fit']
+            job_id = row['id']
+            if row.get('stage') in {'archived', 'applied'}:
+                status = 'inactive'
+            elif row['listing']['closed'] or fit['assessment_state'] == 'closed':
+                status = 'closed'
+            elif fit['assessment_state'] == 'assessed' and fit.get('percent') is not None:
+                status = 'scored'
+            elif fit['assessment_state'] == 'needs_profile':
+                status = 'profile'
+            elif job_id == current:
+                status = 'reading'
+            else:
+                item = snapshot['items'].get(job_id)
+                if (item and item['status'] in {'queued', 'needs_source'}
+                        and item['attempts'] < MAX_ATTEMPTS):
+                    check_at = max(item['next_attempt'], snapshot['hosts'].get(item['host'], 0))
+                    status = 'waiting' if check_at > now else 'ready'
+                    if status == 'waiting':
+                        delayed.append(check_at)
+                else:
+                    status = 'manual'
+            counts[status] += 1
+            by_job[job_id] = status
+            if status not in {'scored', 'closed', 'inactive'}:
+                reason = fit.get('source_state') or fit['assessment_state']
+                reasons[reason] = reasons.get(reason, 0) + 1
+        active = len(rows) - counts['closed'] - counts['inactive']
+        return {**counts, 'active': active, 'unrated': active - counts['scored'],
+                'remaining': counts['ready'] + counts['waiting'] + counts['reading'],
+                'next_check_at': min(delayed, default=None), 'reasons': reasons, 'by_job': by_job}
+
     def run_batch(self, limit=3):
         if not self.worker_lock.acquire(blocking=False):
             return self.summary()

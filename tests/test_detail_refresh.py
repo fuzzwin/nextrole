@@ -110,8 +110,39 @@ def test_excluded_and_directory_records_never_fetched(workspace):
     directory=jobs[2].model_copy(update={'description':'# 200 jobs in Melbourne\nRequirements\nPython automation experience.'})
     workspace.add_job(directory,full=True)
     workspace.bridge.call=lambda *_:pytest.fail('Excluded source was fetched')
+    before=workspace.get_meta(KEY)
+    overview=queue.assessment_overview(workspace.jobs())
+    assert overview['active']==1 and overview['manual']==1 and overview['remaining']==0
+    assert overview['reasons']=={'search_results':1}
+    assert workspace.get_meta(KEY)==before
     queue.start();result=queue.run_batch()
     assert result['total']==1 and result['needs_source']==1 and result['waiting']==0
+
+
+def test_coverage_separates_saved_scores_retry_work_and_manual_review(workspace):
+    queue, jobs, clock = setup_queue(workspace, 8)
+    scored, reading, ready, waiting, manual, profile_job, closed, inactive = [job.identity for job in jobs]
+    queue.start()
+    snapshot = workspace.get_meta(KEY)
+    snapshot['current'] = {'id': reading, 'title': 'Currently reading'}
+    snapshot['items'][reading].update(attempts=2)
+    snapshot['items'][waiting].update(status='needs_source', attempts=1, next_attempt=clock[0]+300)
+    snapshot['items'][manual].update(status='needs_source', attempts=2, next_attempt=clock[0]+300)
+    workspace.set_meta(KEY, snapshot)
+    rows = {row['id']:row for row in workspace.jobs()}
+    rows[scored]['fit'].update(assessment_state='assessed', percent=0)
+    rows[profile_job]['fit'].update(assessment_state='needs_profile', source_state=None)
+    rows[closed]['fit'].update(assessment_state='closed', percent=0)
+    rows[inactive]['stage'] = 'applied'
+    result = queue.assessment_overview(list(rows.values()))
+    assert result['by_job'] == dict(zip(
+        (scored, reading, ready, waiting, manual, profile_job, closed, inactive),
+        ('scored', 'reading', 'ready', 'waiting', 'manual', 'profile', 'closed', 'inactive'),
+    ))
+    assert (result['active'], result['scored'], result['unrated'], result['remaining']) == (6, 1, 5, 3)
+    assert result['next_check_at']==clock[0]+300
+    assert sum(result['reasons'].values())==result['unrated']
+    assert workspace.get_meta(KEY)==snapshot
 
 
 def test_connector_failure_pauses_queue_without_exhausting_sources(workspace):

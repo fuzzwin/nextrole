@@ -47,12 +47,14 @@ def create_workspace_app(workspace: Workspace):
 
     @app.get("/api/state")
     def state():
+        jobs = workspace.jobs()
         return {"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES,
-            "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": workspace.jobs(),
+            "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": jobs,
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
             "assessment_progress": workspace.get_meta("assessment_progress"), "detail_refresh": workspace.detail_refresh.summary(), "last_search": workspace.get_meta("last_search"), "last_morning": workspace.get_meta("last_morning"),
+            "assessment_overview": workspace.detail_refresh.assessment_overview(jobs),
             "applications": workspace.get_meta('applications', []), "application_sync": workspace.get_meta('application_sync'),
             "morning_schedule": workspace.get_meta("morning_schedule"), "alert_search": workspace.get_meta("job_alert_search")}
 
