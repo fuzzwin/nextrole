@@ -35,7 +35,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.19.zip**, the download you received.
+2. Find **NextRole-Mac-0.9.20.zip**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -273,7 +273,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.19** folder into **Documents**.
+2. Drag the whole **NextRole-Mac-0.9.20** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -584,3 +584,8 @@ The check targets only missing employer, pay, location, work arrangement, employ
 Known values and the original description are preserved. Confirmed employer/location corrections retain their prior record. Other verified fields retain a source link, evidence and check time. A source conflict stays for review. In the popup, open **Metadata check · sources and missing details** to inspect results or possible copies that need confirmation. Finding metadata does not invent requirements or guarantee a higher score.
 
 The status line shows jobs checked, fields filled and unresolved jobs. An unsuccessful check means the checked sources did not confirm the field; it does not mean the employer never advertised it. Each job is eligible again after 24 hours, or after its saved advert changes. The next click continues with other eligible filtered jobs. The app must remain running; it records interrupted runs and preserves completed results.
+
+
+## Per-role research and interview preparation
+
+Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Choose the scope, stage and frameworks before starting. Review the evidence and any missing details, then download the editable guide and quick sheet or practise one question at a time. Research uses bounded connected searches; rehearsal drafts use your saved evidence. These are reviewable evidence workbooks, not independently verified company conclusions or a generative interview-writing service. See [Career Harness guide](CAREER-HARNESS.md) for limits and usage.

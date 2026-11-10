@@ -267,6 +267,8 @@ class Workspace:
         self.sources = json.loads((self.data / "source-documents.json").read_text()) if (self.data / "source-documents.json").exists() else []
         from .detail_refresh import DetailRefreshQueue
         self.detail_refresh = DetailRefreshQueue(self)
+        from .career import CareerService
+        self.career = CareerService(self, recover=recover)
         threading.Thread(target=self._scheduler, daemon=True).start()
 
     def get_meta(self, key, default=None):
@@ -1277,5 +1279,6 @@ class Workspace:
 
     def close(self):
         self.stop_event.set()
+        self.career.close()
         self.bridge.close()
         self.pool.shutdown(wait=False, cancel_futures=True)

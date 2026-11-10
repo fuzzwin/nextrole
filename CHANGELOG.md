@@ -1,3 +1,10 @@
+## 0.9.20 — 10 November 2026
+
+- Added per-role research and interview preparation with private saved runs, explicit scope and bounded search.
+- Added evidence-led rehearsal drafts, configurable frameworks, one-question practice and editable/printable exports.
+- Added cancellation, duplicate protection, revision-specific caching and review, and explicit usage/validation limits.
+- Saved jobs, profile, matching scores and application records remain separate from career preparation.
+
 ## 0.9.19 — 10 November 2026
 
 - Add Refresh missing details for up to ten filtered saved jobs, including already scored roles.
