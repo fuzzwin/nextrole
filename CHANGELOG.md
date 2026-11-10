@@ -1,3 +1,9 @@
+## 0.9.28
+
+- Save completed evidence comparisons against the advert and profile, and display their percentages as labelled previews on job cards.
+- Add Calculate coverage directly to complete, open jobs. Invalidate previews when their inputs change and retain the last successful comparison if the model fails.
+- Explain the difference between coverage awaiting calculation and an incomplete source.
+
 ## 0.9.27
 
 - Add an evidence comparison on the same quoted requirements using rules alone or local Qwen. Both use one coverage formula, with a labelled control harness to check decisions.

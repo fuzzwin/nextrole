@@ -622,6 +622,6 @@ Open a complete, active job and expand **Compare evidence coverage** under **Req
 
 The methods share the same explicit requirements from the saved advert. Essential requirements count twice. Full evidence earns one point, partial evidence earns half a point, and missing evidence earns zero. The rules-only arm awards full credit for direct work evidence or dated general support and leaves other cases for review. The comparison covers the extracted requirements and may miss requirements that the advert parser did not identify.
 
-Comparison previews leave saved ratings and automatic recommendations alone. From the source folder, run `python -m campus_agent.scoring_comparison` for the labelled controls. Add `--with-qwen` to run both arms against the same controls using the local model service.
+Completed comparison previews appear on job cards. Calculate coverage runs local Qwen for one complete, open job. The label identifies a Qwen preview or a rules-only preview. A preview becomes unavailable when the profile or advert changes. Automatic recommendations still require a validated rating. From the source folder, run `python -m campus_agent.scoring_comparison` for the labelled controls. Add `--with-qwen` to run both arms against the same controls using the local model service.
 
 Use **Update saved jobs** for missing facts and adverts. In a job, **Next steps** contains the research document, interview preparation document, and résumé and cover letter. Research can use public search service credits. The research setup explains its scope before you start.

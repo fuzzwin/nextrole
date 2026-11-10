@@ -312,6 +312,16 @@ def create_workspace_app(workspace: Workspace):
             current_profile = workspace.profile
             if current_profile is None or fingerprint(workspace.job(job_id)[1], current_profile) != key:
                 raise ValueError('The advert or profile changed during the review. Run the comparison again.')
+            with workspace.write_lock:
+                current_profile = workspace.profile
+                if current_profile is None or fingerprint(workspace.job(job_id)[1], current_profile) != key:
+                    raise ValueError('The advert or profile changed during the review. Run the comparison again.')
+                previous = workspace.get_meta('comparison:' + job_id)
+                # A failed model call keeps the previous complete comparison.
+                if not result.get('qwen_error'):
+                    if not data['with_qwen'] and previous and previous.get('fingerprint') == key:
+                        result['qwen'] = previous['result'].get('qwen')
+                    workspace.set_meta('comparison:' + job_id, {'fingerprint': key, 'result': result})
             return result
 
         return await run_in_threadpool(review)

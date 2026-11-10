@@ -1,5 +1,5 @@
 {
-  "version": "0.9.27",
+  "version": "0.9.28",
   "platform": "macOS",
   "files": [
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 61731,
-      "sha256": "60ba8f3e2ea2784a89e6cab94666727755c86bb3d016ae18865024bffe26221e",
+      "bytes": 61955,
+      "sha256": "da2b0d9f85ae230859a09bea69ae8351aac22dff2065c17c3a90660a74fcf633",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 15664,
-      "sha256": "0b5f7cc95ebdebd73227a140c19923c29896809ad3574f57e8583a76a3f65d03",
+      "bytes": 16065,
+      "sha256": "6a611ed00768eabbf832d905bd9f77def40cfff92b7511e9783eb893679d0b00",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 950,
-      "sha256": "489a694ccda15d0da3d7bef945e08371010aec4b52abb2c665405d88a0d94491",
+      "sha256": "d2b2b777886d5a9b70fb0f7d4d71c87754cbde5ec19c9da38bbf9de979ebf688",
       "mode": "0o644"
     },
     {
@@ -136,8 +136,8 @@
     },
     {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 50379,
-      "sha256": "2f4c371a613de47ee14e6066250aa6df59504fe63799c6e8095b4a74be5d12b3",
+      "bytes": 50603,
+      "sha256": "26d8ba1a5e1f1f3fc848ff6656441d340f49eef54ce92e8cc963cc2c841c6016",
       "mode": "0o644"
     },
     {
@@ -352,20 +352,20 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 218196,
-      "sha256": "9df6766fd5d63fa07f34d335da0c563cd8b2f1ffd2ecb9c5178cebb51bd6478e",
+      "bytes": 219950,
+      "sha256": "e20e5c90003733a2914deeef5acaba86b1d1c88dbb9cc0139773146e4395b9f7",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace.py",
-      "bytes": 82123,
-      "sha256": "f0a747bd5408b35b6cb00780102256795d0a54a09fe6a7d97fb27dfcea1eeebc",
+      "bytes": 83079,
+      "sha256": "0a8d4f09f2fc6b9946f9142bb4581306db9e80f1c39c4f063bdba265d2f1b2b7",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace_web.py",
-      "bytes": 19950,
-      "sha256": "cf57757454d5b439ab457e1e8d2a20ea5cf1c4ffcd31a9473f81b01988bb0b5e",
+      "bytes": 20735,
+      "sha256": "52ded2fb9ccb38b9fb371f4b67709a39790f4ee1d3a851ca536ee7deb39fee81",
       "mode": "0o644"
     },
     {

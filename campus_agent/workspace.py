@@ -535,7 +535,7 @@ class Workspace:
         style_preferences = self.document_style().model_dump()
         with self.store.connect() as db:
             details = {r[0]: {"full_description": bool(r[1]), "stage": r[2], "notes": r[3]} for r in db.execute("SELECT * FROM job_details")}
-            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'semantic:%' OR key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%' OR key LIKE 'metadata_details:%'")}
+            metadata = {r[0]:json.loads(r[1]) for r in db.execute("SELECT key,value FROM workspace_meta WHERE key LIKE 'comparison:%' OR key LIKE 'semantic:%' OR key LIKE 'listing:%' OR key LIKE 'top:%' OR key LIKE 'shortlist:%' OR key LIKE 'location_override:%' OR key LIKE 'assessment_source:%' OR key LIKE 'packet_source_stale:%' OR key LIKE 'listing_research:%' OR key LIKE 'metadata_details:%'")}
         applications = {a['id']:a for a in self.get_meta('applications', [])}
         profile, preferences = self.profile, self.preferences
         context = (profile.model_dump_json() if profile else '')+'|'+preferences.model_dump_json()
@@ -606,6 +606,20 @@ class Workspace:
                         source_state='rating_pending', assessment_notice=notice, cap=None,
                         requirements=[], strengths=[], breakdown=[], coverage={},
                         reviews=[{'label':notice,'requirement':''}])
+            row['evidence_preview'] = None
+            row['evidence_comparison'] = None
+            comparison = metadata.get('comparison:' + row['id'])
+            if (comparison and profile and not row['listing']['closed']
+                    and row['fit']['assessment_state'] == 'rating_pending'
+                    and comparison.get('fingerprint') == semantic_fingerprint(job, profile)):
+                result = comparison['result']
+                row['evidence_comparison'] = result
+                arm = result.get('qwen') or result['rules']
+                row['evidence_preview'] = {
+                    'percent': arm['percent'], 'coverage': arm['coverage'],
+                    'label': 'Qwen preview' if result.get('qwen') else 'Rules preview',
+                    'meaning': 'Documented evidence coverage from the saved comparison. Review the quoted requirements and evidence in job details.',
+                }
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
             row['missing_metadata'] = missing_fields(row)
