@@ -134,6 +134,18 @@ def create_workspace_app(workspace: Workspace):
         workspace.save_preferences(preferences)
         return {"saved": True}
 
+    @app.post('/api/top-settings')
+    async def top_settings(request: Request):
+        data = await request.json()
+        threshold = data.get('threshold')
+        enabled = data.get('enabled')
+        if type(threshold) is not int or not 70 <= threshold <= 100 or type(enabled) is not bool:
+            raise ValueError('Choose a whole percentage from 70 to 100 and whether auto top is enabled.')
+        with workspace.write_lock:
+            workspace.save_preferences(workspace.preferences.model_copy(update={
+                'auto_top_threshold':threshold, 'auto_top_enabled':enabled}))
+        return {'saved':True}
+
     @app.post("/api/profile")
     async def profile(request: Request):
         workspace.save_profile(Profile.model_validate(await request.json()))

@@ -702,7 +702,7 @@ def fit_assessment(job, profile, preferences, view, location, *, full=False, clo
     if score<70 and not reviews:
         reviews.append({'label':'The available evidence does not yet establish a strong fit across skills, experience and requirements.','requirement':''})
     result['auto_eligible']=bool(preferences.role_search_mode=='presets' and search_role_matches(clean_job,preferences)
-        and full and not closed and not reviews and explicit_criteria>=3 and len(work_examples)>=2 and score>=75)
+        and full and not closed and not reviews and explicit_criteria>=3 and len(work_examples)>=2 and score>=70)
     result.update(percent=score,status='Closed' if closed else 'Good match' if score>=70 and not reviews else 'Needs review',reviews=reviews)
     notice=('Read the full listing before assessing this role.' if not full else
             'The saved listing has no assessable requirements. Paste the complete employer advert.' if not explicit_criteria else
