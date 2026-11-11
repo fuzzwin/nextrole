@@ -127,7 +127,14 @@ class ApplicationWorkflow:
         return result
 
     def _career(self, job_id, feature, directory):
-        run_id = self.workspace.career.start(job_id, feature)['run_id']
+        options = {}
+        if feature == 'deep_research':
+            previous = next((run for run in self.workspace.career.list(job_id)
+                             if run['feature']==feature and run['status']=='ready_for_review'), None)
+            if previous:
+                options = {key:previous['options'][key] for key in
+                           ('company_links','alternate_vacancy_url','technology_links') if key in previous['options']}
+        run_id = self.workspace.career.start(job_id, feature, options)['run_id']
         deadline = time.monotonic() + 210
         while not self.workspace.stop_event.is_set() and time.monotonic() < deadline:
             run = self.workspace.career.get(run_id)

@@ -6,6 +6,10 @@ Open a saved job and choose **Prepare full package** in **Next steps**. Before s
 
 The run rereads the advert, checks evidence, opens employer sources and checks the evidence, prepares interview material, and tailors the résumé and cover letter. You can ask local Qwen for a fit suggestion. A current review is kept when the refreshed advert has the same scored criteria. Research with thin source coverage stays in preview until it can support the guide. The results show what to check next.
 
+### Check more sources for one job
+
+Open **Job research document**. Add official company pages if you have them. For a long page, add a short phrase copied from the public page after a vertical bar. If the saved advert is unreadable, paste another copy of the same job. A readable copy gives you role evidence while the employer’s current application status still needs confirmation.
+
 ## Current scoring: transferable fit (0.9.31)
 
 The provisional fit percentage uses direct work (100%), strong transferable work (75%), partial transfer (50%), relevant foundation (25%) and explicit confirmed gaps (0%). Unknown evidence stays outside the fit average. Essential criteria count twice standard criteria. Optional criteria and eligibility/logistics checks remain separate.

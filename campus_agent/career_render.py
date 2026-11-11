@@ -50,9 +50,10 @@ def render(observed, report):
     role = report.get('role_research')
     if role:
         states = {
-            'readable': 'The original advert was readable in this check. Confirm that it is still accepting applications.',
+            'readable': 'The saved advert source was readable in this check. Confirm that the employer is still accepting applications.',
+            'readable_copy': 'The saved advert source could not be verified. A matching copy was readable [alternate_vacancy]. Confirm availability with the employer.',
             'closed': 'The original posting reports this vacancy closed.',
-            'unconfirmed': 'The original posting could not be verified. The role evidence below comes from the saved advert.',
+            'unconfirmed': 'The saved advert source could not be verified. The role evidence below comes from the saved advert.',
         }
         lines += ["", "## Vacancy check", states[role['source_check']]]
         if report.get('saved_location_difference'):
@@ -67,6 +68,11 @@ def render(observed, report):
     for entry in claims:
         refs = ", ".join(entry["sources"])
         lines += ["", f"## {entry['area']}", f"{entry['text']} [{refs}]"]
+    checks = report.get('company_checks') or []
+    if checks:
+        readable = sum(x['readable'] for x in checks)
+        lines += ["", "## Company research checks",
+                  f"Read and matched {readable} of {len(checks)} employer source checks. Unresolved topics are listed below."]
     gaps = set(report.get('research_gaps', []))
     if gaps:
         lines += ["", "## Confirm with the employer"]
@@ -117,6 +123,9 @@ def check_references(observed, report, brief):
         eligible = CLAIM_KINDS[kind]
         if eligible and not any(sources[ref]["kind"] in eligible for ref in refs):
             findings.append(f"{key} needs a source appropriate to {kind}.")
+        if 'company_checks' in report and kind=='confirmed' and entry['area']!=RESEARCH_AREAS[-1]:
+            if not any(entry['text'] in sources[ref].get('excerpt','') for ref in refs):
+                findings.append(f"{key} needs the checked employer passage.")
         if kind == "inference" and not refs:
             findings.append(f"{key} needs its basis for the inference.")
         if kind == "unknown" and not entry.get("question"):
