@@ -264,3 +264,49 @@ def test_undated_company_revenue_story_is_not_a_financial_finding(tmp_path):
         assert 'Finances and trajectory' in run['result']['quality']['gaps']
         assert '70% revenue hit' not in run['result']['markdown']
     finally:s.close()
+
+
+def test_technology_sources_keep_their_scope_in_full_and_quick_reports(tmp_path):
+    s,w=service(tmp_path)
+    row,job=w.job('job')
+    job.data['description']+='\n- Provide Microsoft 365 support for the operations team.'
+    w.profile.data['experience'][0]['bullets'].append('Administered Microsoft 365 accounts for the support team.')
+    related='https://example.com/jobs/technical-engineer'
+    company='https://example.com/case-study'
+    foreign='https://other.example/jobs/engineering'
+    pages={
+        related:('Engineer', ['# Engineer','Employer: Example, Australia','## Responsibilities','- Build Python integrations on AWS for existing business applications.']),
+        company:('Example case study', ['# Example case study','Example uses Salesforce in one Australian customer project.']),
+        foreign:('Other company', ['# Engineer','Employer: Another Employer, Australia','## Responsibilities','- Develop production Snowflake models across the customer estate.']),
+    }
+    original=w.bridge.call
+    def sources(name,args):
+        url=args['open'][0]['ref_id']
+        if url not in pages:
+            return original(name,args)
+        title,body=pages[url]
+        return {'text': f'{title} ({url})\nSource: open(test)\n'+'\n'.join(f'L{i}: {line}' for i,line in enumerate(body))}
+    w.bridge.call=sources
+    try:
+        options={'scope':['role'],'technology_links':[related,company,foreign]}
+        run=wait(s,s.start('job','deep_research',options)['run_id'])
+        result=run['result']
+        assert result['quality']['export_ready']
+        tech=result['assessment']['technology']
+        assert [entry['scope'] for entry in tech]==['vacancy','related','company','candidate']
+        assert '**Related posting** Build Python integrations on AWS' in result['markdown']
+        assert '**Company context** Example uses Salesforce' in result['markdown']
+        assert '**Your experience** Administered Microsoft 365' in result['markdown']
+        assert '**Named in this vacancy** Provide Microsoft 365' in result['quick_markdown']
+        assert related in result['quick_markdown'] and company in result['markdown']
+        assert 'Snowflake' not in result['markdown']
+        assert '**Ask to confirm**' in result['markdown']
+        calls=len(w.bridge.calls)
+        prep=wait(s,s.start('job','interview_prep')['run_id'])
+        assert prep['result']['quality']['export_ready']
+        assert prep['snapshot']['research']['technology_run_id']==run['id']
+        assert related in prep['result']['markdown']
+        assert len(w.bridge.calls)==calls
+        with pytest.raises(ValueError,match='public HTTPS'):
+            s.start('job','deep_research',{'technology_links':['https://127.0.0.1/secret']})
+    finally:s.close()

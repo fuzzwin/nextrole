@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import sys
 from .career_contract import base
+from .career_technology import check_technology, technology_lines
 
 
 HERE = Path(__file__).resolve().parent
@@ -61,6 +62,7 @@ def render(observed, report):
         if role['conditions'] or role['scope_questions']:
             lines += ["", "## Conditions and scope to confirm",
                       *[f"- {condition} [advert]" for condition in role['conditions'] + role['scope_questions']]]
+    lines.extend(technology_lines(report, observed['sources']))
     claims = [claim for claim in report['claims'] if claim['kind'] != 'unknown']
     for entry in claims:
         refs = ", ".join(entry["sources"])
@@ -96,7 +98,7 @@ def render(observed, report):
 def check_references(observed, report, brief):
     base(observed, report)
     sources = observed["sources"]
-    findings = []
+    findings = check_technology(report, sources)
     claims = report["claims"]
     ids = [entry["id"] for entry in claims]
     if len(set(ids)) != len(ids):

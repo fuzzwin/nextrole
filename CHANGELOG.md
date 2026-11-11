@@ -1,3 +1,7 @@
+## 0.9.35
+
+- Label technology in research and interview reports by evidence scope. Open optional related posting and company links within the research budget, and link evidence in reports and PDFs.
+
 ## 0.9.34
 
 - Deep Research reopens the exact posting and maps material duties and requirements to the current saved evidence review. It shows advertised work location, employment type, pay and unresolved conditions together.

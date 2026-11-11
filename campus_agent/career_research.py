@@ -5,6 +5,7 @@ from concurrent.futures import TimeoutError
 from urllib.parse import urlsplit
 
 from .career_render import RESEARCH_AREAS
+from .career_technology import technology_rows
 from .evidence_matrix import matrix_requirements
 from .listing_view import listing_view, same_role, source_problem
 from .locations import CITIES, STATES
@@ -128,7 +129,7 @@ def vacancy_check(url, vacancy, response):
     return 'readable'
 
 
-def research(observed, report, scope, limit, web, discover, progress):
+def research(observed, report, scope, limit, web, discover, progress, technology_links=()):
     """Discovery supplies URLs. The separate open pass supplies all public answers."""
     vacancy = observed['vacancy']
     employer = vacancy['employer']
@@ -183,6 +184,33 @@ def research(observed, report, scope, limit, web, discover, progress):
                 'text': f"The saved advert contains {len(duties)} stated duties and {len(material)} material criteria. See the role and fit sections below.",
                 'source': 'advert',
             }
+
+    for index, url in enumerate(technology_links, 1):
+        if attempts >= limit - (3 if 'employer' in scope else 0):
+            report.setdefault('technology_notes', []).append('Some technology links remain unread within this run’s search budget.')
+            break
+        label, body = _opened(call({'open': [{'ref_id': url}], 'response_length': 'long'},
+                                   'Checking a technology evidence link'), url)
+        text = re.sub(r'(?m)^L\d+:\s*', '', body)
+        role_page = bool(re.search(r'/(?:jobs?|careers?)(?:/|$)', urlsplit(url).path, re.I))
+        named = employer_key in re.sub(r'[^a-z0-9]', '', (label+' '+text[:2500]).casefold())
+        in_market = _in_market(url, label+' '+body, australian)
+        ref = f'technology_{index}'
+        evidence = []
+        if named and in_market and body:
+            if role_page and not source_problem(text, label):
+                sibling = {'title': label, 'employer': employer}
+                passages = [row['quote'] for row in role_matrix(text, sibling) if row['kind']=='competency']
+                evidence = technology_rows(passages, 'related', ref, limit=1)
+            elif not role_page and _employer_domain(url, employer):
+                evidence = technology_rows(_sentences(body), 'company', ref, limit=1)
+        if evidence:
+            report['technology'].extend(evidence)
+            sources[ref] = {'kind': 'related_posting' if role_page else 'company_example', 'url': url,
+                            'label': label or 'Public evidence link', 'excerpt': evidence[0]['quote'],
+                            'locator': f"Public technology source opened {observed['checked_on']}."}
+        else:
+            report.setdefault('technology_notes', []).append(f"Link {index} did not provide a readable, attributable technology passage.")
 
     def rank(area, sentence):
         lower = sentence.casefold()

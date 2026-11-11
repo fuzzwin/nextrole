@@ -1,6 +1,6 @@
 # NextRole for Mac
 
-## Prepare a full package (0.9.34)
+## Prepare a full package (0.9.35)
 
 Open a saved job and choose **Prepare full package** in **Next steps**. Before starting, select a ZIP with PDF and Word files, one combined PDF, or separate downloads. Choose **Email me after I review** to send the finished files to your connected Gmail account once you have reviewed them. You can download the output in either mode.
 

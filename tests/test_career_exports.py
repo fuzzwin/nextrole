@@ -12,7 +12,10 @@ def sample():
 def test_exports_preserve_evidence_and_uncertainty(tmp_path):
     paths = export_run(tmp_path, sample())
     assert set(paths) == {'guide_docx', 'guide_pdf', 'quick_docx', 'quick_pdf'}
-    text = '\n'.join(p.extract_text() for p in PdfReader(paths['guide_pdf']).pages)
+    pdf = PdfReader(paths['guide_pdf'])
+    text = '\n'.join(p.extract_text() for p in pdf.pages)
+    links = [a.get_object()['/A']['/URI'] for page in pdf.pages for a in page.get('/Annots', [])]
+    assert links == ['https://example.org/role']
     for phrase in ['not stated', '10 November 2026', 'https://example.org/role', 'Proposed approach, not past experience', 'Unconfirmed: interview time', '<b>markup</b> & evidence']:
         assert phrase in text
     with ZipFile(paths['guide_docx']) as z:

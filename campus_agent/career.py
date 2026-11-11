@@ -19,9 +19,10 @@ from urllib.parse import urlsplit
 from .career_contract import FRAMEWORKS, interview
 from .career_research import GAP_QUESTIONS, research, role_matrix
 from .career_render import RESEARCH_AREAS, render, check_references, check_decision
+from .career_technology import add_candidate_technology, technology_lines, technology_rows
 
 TERMINAL = {'ready_for_review', 'failed', 'cancelled', 'budget_exhausted'}
-VERSION = 'career-1.2.0'
+VERSION = 'career-1.3.0'
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
@@ -39,6 +40,18 @@ def public_url(value):
         from .workspace import public_listing_url
         return public_listing_url(str(value))
     except ValueError: return ''
+
+def readable_public_url(value):
+    url = public_url(value)
+    if not url:
+        return ''
+    original = urlsplit(value)
+    if (original.hostname or '').endswith('.linkedin.com'):
+        regional = original._replace(query='', fragment='').geturl()
+        if public_url(regional) == url:
+            return regional
+    return url
+
 
 def research_sources(response):
     """Extract source-owned fields/blocks; never attribute neighbouring text."""
@@ -142,13 +155,22 @@ class CareerService:
         if self.closed.is_set(): raise ValueError('Career service is stopping')
         if feature not in {'deep_research','interview_prep'}: raise ValueError('Unknown career feature')
         o=dict(options or {})
-        if set(o)-{'stage','frameworks','max_web_calls','max_seconds','scope','preparation_minutes','communication_preferences'}: raise ValueError('Unsupported career options')
+        if set(o)-{'stage','frameworks','max_web_calls','max_seconds','scope','preparation_minutes','communication_preferences','technology_links'}: raise ValueError('Unsupported career options')
         scope=o.get('scope',['employer','role','pay'])
         if not isinstance(scope,list) or not scope or any(x not in {'employer','role','pay'} for x in scope): raise ValueError('Invalid research scope')
         minutes=o.get('preparation_minutes',30)
         if type(minutes) is not int or not 5<=minutes<=240: raise ValueError('Preparation time must be 5–240 minutes')
         preferences=o.get('communication_preferences','')
         if not isinstance(preferences,str) or len(preferences)>500: raise ValueError('Communication preferences must be under 500 characters')
+        links=o.get('technology_links', [])
+        if not isinstance(links,list) or len(links)>3 or any(not isinstance(link,str) or len(link)>1500 for link in links):
+            raise ValueError('Enter up to three public technology evidence links.')
+        if links and (feature!='deep_research' or 'role' not in scope):
+            raise ValueError('Select Role & fit in Deep Research to check technology links.')
+        public_links=[readable_public_url(link.strip()) for link in links]
+        if any(not url for url in public_links):
+            raise ValueError('Technology evidence links need an allowed public HTTPS address.')
+        o['technology_links']=list(dict.fromkeys(public_links))
         o.update(scope=scope,preparation_minutes=minutes,communication_preferences=preferences)
         stage=o.get('stage','unknown')
         if stage not in {'unknown','recruiter','hiring_manager','panel','technical','practical'}: raise ValueError('Unknown interview stage')
@@ -174,8 +196,26 @@ class CareerService:
         reviewed=(enriched.get('evidence_comparison') or {}).get('reviewed') or {}
         snapshot['details']['reviewed_requirements']=reviewed.get('requirements', [])
         if feature=='interview_prep':
-            prior=next((x for x in self.list(job_id) if x['feature']=='deep_research' and x['status']=='ready_for_review' and x['result'].get('quality',{}).get('export_ready') and 'employer' in x['options']['scope'] and x['snapshot']['job']==snapshot['job'] and x['snapshot']['profile']==profile and time.time()-datetime.fromisoformat(x['created_at']).timestamp()<86400),None)
-            if prior: snapshot['research']={'run_id':prior['id'],'output_hash':prior['output_hash'],'review':prior['review'],'sources':prior['result']['sources'],'claims':prior['result']['assessment']['claims'],'gaps':prior['result']['quality']['gaps']}
+            recent=[x for x in self.list(job_id)
+                    if x['feature']=='deep_research' and x['status']=='ready_for_review'
+                    and x['snapshot']['job']==snapshot['job'] and x['snapshot']['profile']==profile
+                    and time.time()-datetime.fromisoformat(x['created_at']).timestamp()<86400]
+            prior=next((x for x in recent if x['result'].get('quality',{}).get('export_ready')
+                        and 'employer' in x['options']['scope']),None)
+            checked_stack=next((x for x in recent if x['result'].get('validation',{}).get('passed')
+                                and any(row['scope'] in {'related','company'}
+                                        for row in x['result']['assessment'].get('technology',[]))),None)
+            if prior:
+                snapshot['research']={'run_id':prior['id'],'output_hash':prior['output_hash'],'review':prior['review'],
+                                      'sources':prior['result']['sources'],'claims':prior['result']['assessment']['claims'],
+                                      'gaps':prior['result']['quality']['gaps']}
+            if checked_stack:
+                research_snapshot=snapshot.setdefault('research',{'sources':{}})
+                research_snapshot['technology_run_id']=checked_stack['id']
+                research_snapshot['technology']=checked_stack['result']['assessment']['technology']
+                research_snapshot['sources'].update(
+                    {ref:src for ref,src in checked_stack['result']['sources'].items() if ref.startswith('technology_')}
+                )
         key=digest({'owner':self.owner,'job_id':job_id,'job':snapshot['job'],'details':snapshot['details'],'research':snapshot.get('research'),'profile':profile,'feature':feature,'options':o,'version':VERSION})
         with self._db() as db:
             db.execute('BEGIN IMMEDIATE')
@@ -229,7 +269,9 @@ class CareerService:
                     observed, report, r['options']['scope'], r['options']['max_web_calls'],
                     lambda args: self._web(rid,args,deadline), research_sources,
                     lambda message,done,total: self._update(rid,progress={'message':message,'completed':done,'total':total}),
+                    technology_links=r['options'].get('technology_links', []),
                 )
+            add_candidate_technology(report,observed['sources'])
             brief=render(observed,report)
             errors=check_references(observed,report,brief)+check_decision(observed,report)
             if r['feature']=='interview_prep':
@@ -256,15 +298,11 @@ class CareerService:
         j=r['snapshot']['job']; p=r['snapshot']['profile']; sources={}
         details=r['snapshot'].get('details',{}); view=details.get('reading_view') or {}; location=details.get('location_info') or {}
         sources['advert']={'kind':'employer','label':'Saved vacancy text (employer claims, not independently verified)','locator':f"Frozen saved role {r['job_id']}",'url':public_url(j.get('url','')),'excerpt':str(j.get('description',''))[:20000]}
-        parsed=urlsplit(str(j.get('url','')))
-        if sources['advert']['url'] and (parsed.hostname or '').endswith('.linkedin.com'):
-            regional=parsed._replace(query='',fragment='').geturl()
-            if public_url(regional)==sources['advert']['url']:
-                sources['advert']['read_url']=regional
+        sources['advert']['read_url']=readable_public_url(str(j.get('url','')))
         sources['application']={'kind':'application_record','label':'Application status not verified in this run','locator':'No submission check performed. Check your application records before applying.'}
         sources['profile']={'kind':'candidate','label':'Your saved profile summary','locator':'Frozen local profile summary','excerpt':str(p.get('summary') or '')}
         for key,value in r['snapshot'].get('research',{}).get('sources',{}).items():
-            if key.startswith('employer_'): sources[key]=value
+            if key.startswith(('employer_','technology_')): sources[key]=value
         for ix,credential in enumerate(p.get('credentials') or []):
             sources[f'credential_{ix}']={'kind':'candidate','label':'Candidate-reported credential — not registry verified','locator':'Frozen saved credential record','excerpt':encoded(credential)}
         if p.get('availability'): sources['availability']={'kind':'candidate','label':'Candidate-reported availability','locator':'Frozen profile availability','excerpt':p['availability']}
@@ -309,12 +347,19 @@ class CareerService:
             questions.append({'id':f'experience_{n}','question':q,'evidence':fact})
         questions.append({'id':'proposal','question':'How would you approach your first month in this role?','evidence':'Future proposal only; do not describe it as past delivery.'})
         report={'vacancy':vacancy,'submission':observed['submission'],'employer_pay':observed['employer_pay'],'estimated_pay':None,'pay_note':'No pay benchmark was verified.','claims':[{'id':f'area_{i}','area':a,'kind':'unknown','text':f'{a} has not been verified for this employer.','sources':[],'question':GAP_QUESTIONS[a]} for i,a in enumerate(RESEARCH_AREAS)],'fit':[{'requirement':'Confirm material requirements against the original advert','level':'Gap','detail':'This extractive run does not independently assess competency or alter the saved fit score. Compare each requirement with the sourced work examples below.','sources':['advert']}],'stories':[{'label':sources[ref]['label'],'answer':fact,'cues':['Context','Action','Outcome to confirm'],'sources':[ref]} for ref,fact in facts[:4]],'action':'hold','decision':'Review the evidence and confirm vacancy and application status.','next_step':'Open the original advert and confirm requirements, closing date and whether you have already applied.','application_files':[],'pilot':'Proposed approach, not past experience: clarify the employer’s priority, agree a small safe trial, measure the agreed outcome, then decide whether to expand.','questions':['What are the most important outcomes in the first three months?','What constraints and support will shape the role?','What are the pay range, work arrangement and next hiring steps?']}
+        report['technology']=[]
+        if r['feature']=='interview_prep' or 'role' in r['options']['scope']:
+            matrix=role_matrix(sources['advert']['excerpt'],vacancy)
+            report['technology']=technology_rows(
+                (item['quote'] for item in matrix if item['kind']=='competency'), 'vacancy', 'advert',
+            )
         prior=r['snapshot'].get('research')
         if prior:
-            report['claims']=prior['claims']
-            report['research_gaps']=prior['gaps']
+            if 'claims' in prior:
+                report['claims']=prior['claims']
+                report['research_gaps']=prior['gaps']
+            report['technology'] += [row for row in prior.get('technology',[]) if row['scope'] in {'related','company'}]
         if r['feature']=='deep_research' and 'role' in r['options']['scope']:
-            matrix=role_matrix(sources['advert']['excerpt'],vacancy)
             if extracted.get('evidence') not in {'Saved by you','Saved listing location'} and extracted.get('stated') and _criterion_text(str(j.get('location') or '')) not in {'',_criterion_text(place)}:
                 report['saved_location_difference']=str(j['location'])
             reviewed={_criterion_text(item['quote']):item for item in details.get('reviewed_requirements',[]) if item.get('quote')}
@@ -357,7 +402,7 @@ class CareerService:
                 steps.append([label,content])
             methods.append({'name':name,'kind':kind,'question':(cards[0]['question'] if cards else 'Describe a real work example you can support.') if name in {'CAR','STAR'} else ('How would you approach your first month in this role?' if name=='Approach' else ('Tell me about yourself and your relevant experience.' if name in {'ICAN+','Present–Past–Future'} else 'What is your view on this role’s main priority, and why?')),'cues':'Context → my actions → supported outcome','steps':steps,'sources':['advert'] if kind=='proposal' else [factref]})
         guide={'framework_sources':{},'opening':str(p.get('summary') or 'Add your own evidence-based introduction.'),'opening_sources':['profile'],'why':f"Explain your interest in {vacancy['title']} using the actual responsibilities in the saved advert. Your motivation is not inferred.",'why_sources':['advert'],'recruiter':'Confirm availability, location, work arrangement, pay expectations and the next step.','manager':'Choose a sourced example; distinguish your contribution from team outcomes.','recovery':'Pause, ask for clarification, and say when you do not know. Offer a future approach without presenting it as experience.','cards':cards,'pilot':{'kind':'proposal','sources':['advert'],'text':report['pilot']},'strategy':{'methods':methods,'defaults':r['options']['frameworks'][:3],'selection':f"Stage: {r['options']['stage']}. Use CAR/STAR for real past examples, Approach for hypothetical tasks, and PREP for a concise view.",'rehearsal':'Practise one question at a time. Speak naturally; confirm missing context and outcomes before rehearsing. Feedback is a simple local heuristic, not a hiring prediction.'}}
-        if prior:
+        if prior and 'claims' in prior:
             remit=next((claim for claim in prior['claims'] if claim['area']==RESEARCH_AREAS[-1] and claim['kind']=='confirmed'),None)
             business=next((claim for claim in prior['claims'] if claim['area']==RESEARCH_AREAS[0] and claim['kind']=='confirmed'),None)
             if remit:
@@ -397,12 +442,14 @@ class CareerService:
                     continue
                 source=observed['sources'][claim['sources'][0]]
                 lines += ['## '+claim['area'],claim['text'],f"[{source['label']}]({source['url']})"]
+            lines += technology_lines(report,observed['sources'],compact=True)
             lines += ['## Ask next',*['- '+question for question in report['questions'][:3]]]
             return '\n\n'.join(lines)
         lines=['# Quick rehearsal sheet',title,guide['opening'],'## Examples to rehearse']
         for card in guide['cards'][:3]: lines += [card['answer'],'Cues: '+' → '.join(card['cues'])]
         if claims:
             lines += ['## Company and role',guide['why']]
+        lines += technology_lines(report,observed['sources'],compact=True)
         lines += ['## Ask next',*['- '+question for question in report['questions']],'## First-month approach',guide['pilot']['text']]
         return '\n\n'.join(lines)
     def review(self,rid,disposition,output_hash=None):
