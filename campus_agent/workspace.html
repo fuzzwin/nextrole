@@ -213,6 +213,8 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
 #compare-results blockquote{margin:5px 0;padding-left:8px;border-inline-start:2px solid var(--line)}
 @media(max-width:780px){#job-dialog .detail-columns{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:650px){.search-steps,.maintenance-actions{grid-template-columns:minmax(0,1fr)}}
+.gauge-label small{display:block;font-size:10px;color:var(--muted);margin-top:3px;max-width:150px}
+.criterion-review{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:6px}.criterion-review select,.criterion-review textarea{width:100%;margin-top:4px}.criterion-review .check{align-items:flex-start}
 </style></head><body>
 <div class="layout"><aside><div class="brand"><div class="mark">↗</div><div>NextRole<small>YOUR NEXT CHAPTER</small></div></div><nav class="nav" aria-label="Workspace navigation"><button data-view="opportunities" class="active" title="Opportunities"><span aria-hidden="true">▦</span>Opportunities</button><button data-view="applications" title="Applications"><span aria-hidden="true">✓</span>Applications</button><button data-view="profile" title="Profile and sources"><span aria-hidden="true">▤</span>Profile & sources</button><button data-view="document-style" title="Preview, adjust and approve"><span aria-hidden="true">▥</span>Document style</button><button data-view="connections" title="Gmail and Drive"><span aria-hidden="true">⇄</span>Gmail & Drive</button><button data-view="examples" title="Role examples"><span aria-hidden="true">▧</span>Role examples</button><button data-view="activity" title="Activity"><span aria-hidden="true">◷</span>Activity</button><button data-view="settings" title="Search settings"><span aria-hidden="true">⚙</span>Search settings</button></nav><div class="account"><b id="account-name">Your workspace</b><small id="account-email">Connect Gmail and Drive</small></div></aside>
 <main><div class="topbar"><div class="eyebrow">WORKSPACE / AUSTRALIAN JOB SEARCH</div><div class="topbar-actions"><span id="connection-badge" class="pill">Connections not checked</span><button id="open-appearance" class="appearance-trigger" aria-haspopup="dialog"><span aria-hidden="true">◐</span>Appearance</button></div></div><div id="message" class="notice hide" role="status"></div><div id="running" class="notice running" aria-live="polite"></div><div id="approvals"></div>
@@ -383,11 +385,11 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
         <div id="detail-highlights"></div>
         <div id="detail-profile-checks"></div>
         <details id="compare-evidence" class="fit-evidence">
-          <summary>Compare evidence coverage</summary>
-          <p class="help">Two methods review the same duties and requirements from the saved advert. The percentages measure documented coverage. Rules provide a conservative lower bound and may miss equivalent experience. Completed previews appear on the job card. Review the quoted evidence before relying on them.</p>
+          <summary>Review transferable fit</summary>
+          <p class="help">Fit uses direct and transferable experience. The fit percentage averages assessed criteria. Criteria assessed shows the share of extracted criteria with a supported assessment. This can include partial skills and foundation; it does not mean every criterion is fully met. Unknown evidence reduces coverage. Completed results are provisional and appear on the job card.</p>
           <div class="actions">
-            <button id="compare-rules" class="small">Run rules only</button>
-            <button id="compare-qwen" class="small">Compare with local AI</button>
+            <button id="compare-rules" class="small">Check fit with rules only</button>
+            <button id="compare-qwen" class="small">Assess transferable fit with local AI</button>
           </div>
           <p id="compare-status" class="help" role="status"></p>
           <div id="compare-results"></div>
@@ -582,17 +584,21 @@ function skillGauge(row) {
     gauge.setAttribute('aria-valuemin', '0');
     gauge.setAttribute('aria-valuemax', '100');
     gauge.setAttribute('aria-valuenow', String(percent));
-    gauge.setAttribute('aria-valuetext', percent + ' percent, ' + label);
+    gauge.setAttribute('aria-valuetext', percent + ' percent, ' + label + (row.evidence_preview?.evidence_coverage_percent!=null ? ', criteria assessed ' + row.evidence_preview.evidence_coverage_percent + ' percent' : ''));
   }
-  gauge.append(circle, el('span', 'gauge-label', label));
+  const text = el('span','gauge-label',label);
+  if (row.evidence_preview?.evidence_coverage_percent != null) {
+    text.append(el('small','', 'Assessed ' + row.evidence_preview.evidence_coverage_percent + '% · provisional'));
+  }
+  gauge.append(circle, text);
   return gauge;
 }
-function matchSummary(row){let fit=row.fit||{},line=el('div','card-match-reason'),good=fit.status==='Good match';line.append(el('span','fit-status'+(good?' good':''),row.source_policy?'Excluded source':fit.assessment_state==='rating_pending'?'Coverage pending':fit.percent==null?'Unrated':fit.status||'Needs review'));let why=row.source_policy?row.source_policy.reason:fit.assessment_state==='incomplete'?(fit.assessment_notice||row.assessment_source?.message||'Read the full listing to assess this role.'):good?(fit.strengths||[]).filter(s=>s.kind==='Experience').slice(0,2).map(s=>s.label).join(' · '):fit.reviews?.[0]?.label||'Review the saved evidence and role requirements.';let text=el('span','fit-one-line',why);text.title=why;line.append(text);return line}
+function matchSummary(row){let fit=row.fit||{},line=el('div','card-match-reason'),good=fit.status==='Good match';if(row.evidence_preview?.percent!=null){line.append(el('span','fit-one-line','Open job details to review the criteria and quoted evidence.'));return line;}line.append(el('span','fit-status'+(good?' good':''),row.source_policy?'Excluded source':fit.assessment_state==='rating_pending'?'Coverage pending':fit.percent==null?'Unrated':fit.status||'Needs review'));let why=row.source_policy?row.source_policy.reason:fit.assessment_state==='incomplete'?(fit.assessment_notice||row.assessment_source?.message||'Read the full listing to assess this role.'):good?(fit.strengths||[]).filter(s=>s.kind==='Experience').slice(0,2).map(s=>s.label).join(' · '):fit.reviews?.[0]?.label||'Review the saved evidence and role requirements.';let text=el('span','fit-one-line',why);text.title=why;line.append(text);return line}
 
 function cardFacts(row){let d=row.listing||{},l=row.location_info||{},facts=el('dl','card-facts'),salary=(row.reading_view?.facts||[]).find(f=>f.label==='Salary')?.value||'Not stated',types=(row.role_types||[]).map(t=>t.label),posted=d.posted_on?dateOnly(d.posted_on):d.posted_hint||'Not stated',closes=d.closes_on?dateOnly(d.closes_on):d.closing_hint||'Not stated';if(row.reading_view?.salary?.period_inferred)salary+=' · annual basis inferred';if(d.days_to_close===0)closes+=' · Today';else if(d.days_to_close>0&&d.days_to_close<=7)closes+=' · '+d.days_to_close+' days left';let found=new Date(row.seen_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric',timeZone:state.preferences.timezone}),place=(l.stated?l.display:'Not stated')+locationSuffix(l);for(let [label,value] of [['Location',place],['Salary',salary],['Posted',posted],['Closes',closes]]){let item=el('div'),term=el('dt','',label),detail=el('dd','',value);detail.title=value;if(label==='Closes'&&typeof d.days_to_close==='number'&&d.days_to_close>=0&&d.days_to_close<=7)item.classList.add('closing-fact');item.append(term,detail);facts.append(item)}return facts}
 function vacancyIdentity(row){try{let u=new URL(row.job.url);if(u.hostname==='linkedin.com'||u.hostname.endsWith('.linkedin.com')){let m=u.pathname.match(/\/(?:comm\/)?jobs\/view\/(?:[^/]*-)?(\d+)\/?$/);if(m)return 'linkedin:'+m[1]}}catch(_){}return 'saved:'+row.id}
 function groupVacancyRows(rows){let groups=new Map();for(let row of rows){let key=vacancyIdentity(row);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}return [...groups.values()].map(copies=>{if(copies.length===1)return copies[0];let rank=r=>(r.stage==='applied'?8:0)+(r.fit?.model?4:0)+(r.full_description?2:0)+(r.status==='prepared'?1:0),ordered=[...copies].sort((a,b)=>rank(b)-rank(a)||(b.updated_at||'').localeCompare(a.updated_at||'')||b.job.description.length-a.job.description.length||a.id.localeCompare(b.id));return {...ordered[0],duplicate_copies:ordered.map(r=>({id:r.id,title:r.reading_view?.title||r.job.title,stage:r.stage,closed:!!r.listing?.closed,percent:r.fit?.percent,source:r.source_domain}))}})}
-function renderJobCard(row){let j=row.job,name=row.reading_view?.title||j.title,company=row.reading_view?.employer||(j.employer==='Employer on job listing'?'Employer not verified':j.employer),card=el('article','job compact-job'),head=el('div','jobhead'),info=el('div','jobtitle'),title=el('h3'),right=el('div','card-rank');card.dataset.jobId=row.id;card.tabIndex=0;card.setAttribute('aria-label','View details for '+name);card.onclick=e=>{if(e.target.closest('a,button,input,select,textarea,summary,label')||!getSelection().isCollapsed)return;openJob(row.id)};card.onkeydown=e=>{if(e.target!==card||!['Enter',' '].includes(e.key))return;e.preventDefault();openJob(row.id)};card.dataset.posted=row.listing?.posted_on||'';card.dataset.closes=row.listing?.closes_on||'';card.dataset.top=String(row.top_listing);let titleLink=anchor(name+' ↗',j.url);titleLink.className='job-title-link';title.append(titleLink);info.append(title,el('div','company',company));let badges=el('div','job-badges'),stage=row.source_policy?'Excluded source':row.stage==='applied'?'Applied':row.listing?.closed?'Closed':(row.profile_stale||row.listing_stale)?'Update packet':row.status==='prepared'?'Prepared':row.fit?.assessment_state==='incomplete'?(row.fit.source_state==='source_unavailable'?'Source unavailable':row.fit.source_state==='search_results'?'Wrong source':row.full_description?'Source incomplete':'Lead · verify listing'):row.full_description?'Listing read':'Lead · verify listing';badges.append(el('span','pill'+(row.listing?.closed?' closed-badge':(row.profile_stale||row.listing_stale)?' warn':row.status==='prepared'?' good':''),stage));if(row.top_listing){let top=el('span','pill top-badge',row.top_match?'★ Strong match':'★ Your saved pick');top.title=row.top_reason;badges.append(top)}let employment=(row.reading_view?.facts||[]).find(f=>f.label==='Work type')?.value;if(employment)badges.append(el('span','employment-type',employment));if(state.preferences.role_search_mode==='custom'&&row.search_match)badges.append(el('span','employment-type',row.role_types.map(role=>role.label).join(' · ')));info.append(badges);let star=button(row.top_saved?'★':'☆',async()=>{await api('/api/jobs/'+row.id+'/top',{top:!row.top_saved});await refresh()},'card-star');star.setAttribute('aria-label',(row.top_saved?'Unmark top listing: ':'Mark top listing: ')+j.title);star.setAttribute('aria-pressed',String(row.top_saved));star.title=row.top_saved?'Remove from your top listings':'Save as a top listing';right.append(skillGauge(row),star);head.append(info,right);card.append(head,cardFacts(row),matchSummary(row));let foot=el('div','compact-foot'),links=el('div','card-links'),actions=el('div','card-actions'),source=anchor(row.source_domain+' ↗',j.url);source.className='card-source';links.append(source);const closed=row.listing?.closed||row.fit?.assessment_state==='closed';const work=state.assessment_overview.by_job[row.id];if(!closed&&displayedCoverage(row)!=null){let explanation=button('Review evidence',()=>openJob(row.id),'card-review');explanation.title='See the experience evidence, requirements and scoring breakdown';links.append(explanation)}if(!closed&&!row.source_policy){const kind=row.fit?.source_state;if(work==='profile')actions.append(button('Complete profile',()=>view('profile'),'small'));else if(kind==='employer_missing')actions.append(button('Confirm employer',()=>{editJob(row.id);$('j-employer').focus()},'small'));else if(work==='manual'||['source_unavailable','search_results'].includes(kind))actions.append(button('Paste full advert',()=>{editJob(row.id);$(kind==='search_results'?'j-title':'j-description').focus()},'small'));else if(row.fit?.assessment_state==='incomplete'){let read=button(work==='reading'?'Reading advert…':'Read & assess',()=>handle(()=>run('/api/jobs/'+row.id+'/read')),'small');read.disabled=work==='reading';actions.append(read)}else actions.append(button(pendingCoverage.has(row.id)?'Calculating…':row.evidence_preview?'Recalculate coverage':'Calculate coverage',()=>calculateCardCoverage(row.id),'small'))}actions.append(button('View details',()=>openJob(row.id),'small'));foot.append(links,actions);card.append(foot);if(row.duplicate_copies){let copies=el('details','duplicate-copies');copies.append(el('summary','',row.duplicate_copies.length+' saved copies of this vacancy'),el('p','help','Grouped by the employer listing ID. Every saved record is preserved; the displayed assessment belongs to the selected copy.'));for(let c of row.duplicate_copies)copies.append(button(c.title+' · '+(c.closed?'Closed':c.stage)+' · '+(c.percent==null?'Unrated':c.percent+'%'),()=>openJob(c.id),'small'));card.append(copies)}return card}
+function renderJobCard(row){let j=row.job,name=row.reading_view?.title||j.title,company=row.reading_view?.employer||(j.employer==='Employer on job listing'?'Employer not verified':j.employer),card=el('article','job compact-job'),head=el('div','jobhead'),info=el('div','jobtitle'),title=el('h3'),right=el('div','card-rank');card.dataset.jobId=row.id;card.tabIndex=0;card.setAttribute('aria-label','View details for '+name);card.onclick=e=>{if(e.target.closest('a,button,input,select,textarea,summary,label')||!getSelection().isCollapsed)return;openJob(row.id)};card.onkeydown=e=>{if(e.target!==card||!['Enter',' '].includes(e.key))return;e.preventDefault();openJob(row.id)};card.dataset.posted=row.listing?.posted_on||'';card.dataset.closes=row.listing?.closes_on||'';card.dataset.top=String(row.top_listing);let titleLink=anchor(name+' ↗',j.url);titleLink.className='job-title-link';title.append(titleLink);info.append(title,el('div','company',company));let badges=el('div','job-badges'),stage=row.source_policy?'Excluded source':row.stage==='applied'?'Applied':row.listing?.closed?'Closed':(row.profile_stale||row.listing_stale)?'Update packet':row.status==='prepared'?'Prepared':row.fit?.assessment_state==='incomplete'?(row.fit.source_state==='source_unavailable'?'Source unavailable':row.fit.source_state==='search_results'?'Wrong source':row.full_description?'Source incomplete':'Lead · verify listing'):row.full_description?'Listing read':'Lead · verify listing';badges.append(el('span','pill'+(row.listing?.closed?' closed-badge':(row.profile_stale||row.listing_stale)?' warn':row.status==='prepared'?' good':''),stage));if(row.top_listing){let top=el('span','pill top-badge',row.top_match?'★ Strong match':'★ Your saved pick');top.title=row.top_reason;badges.append(top)}let employment=(row.reading_view?.facts||[]).find(f=>f.label==='Work type')?.value;if(employment)badges.append(el('span','employment-type',employment));if(state.preferences.role_search_mode==='custom'&&row.search_match)badges.append(el('span','employment-type',row.role_types.map(role=>role.label).join(' · ')));info.append(badges);let star=button(row.top_saved?'★':'☆',async()=>{await api('/api/jobs/'+row.id+'/top',{top:!row.top_saved});await refresh()},'card-star');star.setAttribute('aria-label',(row.top_saved?'Unmark top listing: ':'Mark top listing: ')+j.title);star.setAttribute('aria-pressed',String(row.top_saved));star.title=row.top_saved?'Remove from your top listings':'Save as a top listing';right.append(skillGauge(row),star);head.append(info,right);card.append(head,cardFacts(row),matchSummary(row));let foot=el('div','compact-foot'),links=el('div','card-links'),actions=el('div','card-actions'),source=anchor(row.source_domain+' ↗',j.url);source.className='card-source';links.append(source);const closed=row.listing?.closed||row.fit?.assessment_state==='closed';const work=state.assessment_overview.by_job[row.id];if(!closed&&displayedCoverage(row)!=null){let explanation=button('Review evidence',()=>openJob(row.id),'card-review');explanation.title='See the experience evidence, requirements and scoring breakdown';links.append(explanation)}if(!closed&&!row.source_policy){const kind=row.fit?.source_state;if(work==='profile')actions.append(button('Complete profile',()=>view('profile'),'small'));else if(kind==='employer_missing')actions.append(button('Confirm employer',()=>{editJob(row.id);$('j-employer').focus()},'small'));else if(work==='manual'||['source_unavailable','search_results'].includes(kind))actions.append(button('Paste full advert',()=>{editJob(row.id);$(kind==='search_results'?'j-title':'j-description').focus()},'small'));else if(row.fit?.assessment_state==='incomplete'){let read=button(work==='reading'?'Reading advert…':'Read & assess',()=>handle(()=>run('/api/jobs/'+row.id+'/read')),'small');read.disabled=work==='reading';actions.append(read)}else actions.append(button(pendingCoverage.has(row.id)?'Calculating…':row.evidence_preview?'Recalculate fit':'Calculate fit',()=>calculateCardCoverage(row.id),'small'))}actions.append(button('View details',()=>openJob(row.id),'small'));foot.append(links,actions);card.append(foot);if(row.duplicate_copies){let copies=el('details','duplicate-copies');copies.append(el('summary','',row.duplicate_copies.length+' saved copies of this vacancy'),el('p','help','Grouped by the employer listing ID. Every saved record is preserved; the displayed assessment belongs to the selected copy.'));for(let c of row.duplicate_copies)copies.append(button(c.title+' · '+(c.closed?'Closed':c.stage)+' · '+(c.percent==null?'Unrated':c.percent+'%'),()=>openJob(c.id),'small'));card.append(copies)}return card}
 function browsingOptions(){return {view:filter,query:$('job-search').value.trim(),types:[...browseTypes],location:[...browseLocations],workModes:[...browseWorkModes],includeAustralianRemote:$('include-australian-remote').checked,minimum:$('job-min-match').value,posted:$('job-posted-filter').value,listing:$('job-listing-filter').value,availability:[...browseStatuses],sort:$('job-sort').value,size:Number($('job-page-size').value),page:jobPage}}
 function stageMatches(row,view){if(Array.isArray(view))return (view.length?view:['all']).some(v=>stageMatches(row,v));if(view==='excluded')return !!row.source_policy;if(row.source_policy&&view!=='applied')return false;if(view==='all')return row.stage!=='archived';if(view==='unrated')return !['archived','applied'].includes(row.stage)&&!row.listing?.closed&&row.fit?.assessment_state!=='closed'&&displayedCoverage(row)==null;if(view==='top')return row.top_listing&&row.stage!=='archived';if(view==='closing')return row.listing?.closes_on&&row.listing.days_to_close>=0&&row.listing.days_to_close<=7&&row.stage!=='archived';if(view==='matches')return row.fit?.status==='Good match'&&row.stage!=='archived';if(view==='review')return ['Needs review','Needs profile'].includes(row.fit?.status)&&row.stage!=='archived';if(view==='prepared')return row.status==='prepared'&&row.stage!=='archived';if(view==='saved')return row.status!=='prepared'&&row.stage==='saved';return row.stage===view}
 function vacancyMatches(row,status){if(Array.isArray(status))return !status.length||status.some(value=>vacancyMatches(row,value));let closed=!!(row.listing?.closed||row.fit?.assessment_state==='closed'),days=row.listing?.days_to_close;if(status==='closed')return closed;if(status==='not_closed')return !closed;if(status==='closing')return !closed&&Number.isInteger(days)&&days>=0&&days<=7;if(status==='unknown')return !closed&&!row.listing?.closes_on&&!row.listing?.closing_hint;return true}
@@ -853,7 +859,7 @@ function renderOverview(row){
   const fit=row.fit||{}, closed=row.listing?.closed||fit.assessment_state==='closed';
   const status=closed?'Closed':row.evidence_preview&&fit.percent==null?row.evidence_preview.label:fit.assessment_state==='rating_pending'?'Coverage pending':fit.percent==null?'Unrated':row.top_match?'Strong match':fit.status||'Needs review';
   const label=el('div');
-  label.append(el('strong','',status));
+  if (row.evidence_preview?.percent == null || closed) label.append(el('strong','',status));
   if(fit.percent!=null&&!closed) label.append(el('div','help',fit.model?'Evidence coverage':'Unvalidated rule-based estimate — not a suitability rating'));
   $('detail-overview').replaceChildren(skillGauge(row),label);
 }
@@ -861,10 +867,10 @@ const pendingCoverage = new Set();
 async function calculateCardCoverage(jobId) {
   if (pendingCoverage.has(jobId)) return;
   pendingCoverage.add(jobId);
-  message('Calculating coverage with local Qwen. This can take several minutes.');
+  message('Calculating transferable fit with local Qwen. This can take several minutes.');
   try {
     const result = await api('/api/jobs/' + jobId + '/compare-evidence', {with_qwen:true});
-    message(result.qwen_error || 'Coverage calculated. Open the job to review the evidence.');
+    message(result.qwen_error || 'Fit calculated. Open the job to review the evidence and transfer explanations.');
     await refresh();
   } catch (error) { message(error.message); }
   finally { pendingCoverage.delete(jobId); renderJobs(); }
@@ -904,7 +910,7 @@ function renderComparison(result) {
       host.append(el('p', 'help', matrix.scored + ' scored criteria, including ' + matrix.duties +
         ' duties · ' + matrix.optional + ' optional · ' + matrix.conditions +
         ' conditions · ' + matrix.administrative + ' application/source statements excluded.'));
-      host.append(el('p', 'help', 'Full evidence earns 1 point, partial evidence 0.5, and undocumented evidence 0. Essential criteria count twice. AND groups require all parts for full credit; OR groups require one qualifying option.'));
+      host.append(el('p', 'help', 'Direct work earns 100% credit, strong transfer 75%, partial transfer 50%, relevant foundations 25%, and confirmed gaps 0%. Unknown criteria are excluded from fit and reduce evidence coverage. Essential criteria count twice. Shared scope and AND/OR qualifiers remain visible.'));
     }
     if (result.qwen?.coverage_range) {
       const range = result.qwen.coverage_range;
@@ -920,20 +926,60 @@ function renderComparison(result) {
       host.append(separate);
     }
 
-    host.append(el('p','comparison-totals','Rules lower bound: '+result.rules.percent+'%'+
-      (result.qwen ? ' · Local Qwen: '+result.qwen.percent+'%' : '')));
+    const fitLabel = arm => arm.percent == null ? 'Insufficient evidence' : arm.percent + '% fit';
+    host.append(el('p','comparison-totals','Rules only · ' + fitLabel(result.rules) +
+      ' · assessed ' + result.rules.evidence_coverage_percent + '%'));
+    if (result.qwen) host.append(el('p','comparison-totals','Qwen suggestion · ' + fitLabel(result.qwen) +
+      ' · assessed ' + result.qwen.evidence_coverage_percent + '% · needs review'));
+    if (result.reviewed) host.append(el('p','comparison-totals',
+      (result.reviewed.reviewed_by === 'assistant' ? 'Assistant-reviewed' : 'Reviewed') + ' · ' + fitLabel(result.reviewed) +
+      ' · assessed ' + result.reviewed.evidence_coverage_percent + '% · provisional'));
     for (const [index, criterion] of result.rules.requirements.entries()) {
       const item = el('details','fit-evidence');
       item.append(el('summary','',criterion.quote));
-      for (const [label, row] of [['Rules only',criterion],['Local Qwen',result.qwen?.requirements.find(row => row.id === criterion.id)]]) {
+      for (const [label, row] of [['Rules only',criterion],['Qwen suggestion',result.qwen?.requirements.find(row => row.id === criterion.id)],['Reviewed fit',result.reviewed?.requirements.find(row => row.id === criterion.id)]]) {
         if (!row) continue;
         item.append(el('p','help',label+' · '+row.status));
         for (const fact of row.evidence) item.append(el('blockquote','',fact.text));
         if (row.unconfirmed_scope?.length) item.append(el('p','help',
           'Group scope needs review. The literal cross-check could not confirm: ' + row.unconfirmed_scope.join(', ') + '. Equivalent wording may need your confirmation.'));
       }
+      const selected = result.reviewed?.requirements.find(row => row.id === criterion.id) || result.qwen?.requirements.find(row => row.id === criterion.id) || criterion;
+      const review = el('div','criterion-review');
+      review.dataset.criterionId = criterion.id;
+      const label = el('label','','Your assessment');
+      const grade = el('select');
+      grade.className = 'review-grade';
+      for (const [value, text] of [['direct','Direct work · 100%'],['strong_transfer','Strong transfer · 75%'],['partial_transfer','Partial transfer · 50%'],['foundation','Foundation · 25%'],['confirmed_gap','Confirmed gap · 0%'],['unknown','Not documented']]) {
+        const option = el('option','',text); option.value=value; grade.append(option);
+      }
+      grade.value=selected.evidence_state;
+      label.append(grade); review.append(label);
+      const evidencePicker=el('details','fit-evidence');
+      evidencePicker.append(el('summary','','Choose confirmed evidence'));
+      const evidenceIds=new Set(selected.evidence.map(fact=>fact.id));
+      for (const fact of state.profile_evidence || []) {
+        const option=el('label','check');const input=el('input');input.type='checkbox';input.value=fact.id;input.checked=evidenceIds.has(fact.id);
+        option.append(input,el('span','',fact.text));evidencePicker.append(option);
+      }
+      review.append(evidencePicker);
+      const explanation=el('label','','Why this experience applies');const reason=el('textarea');reason.className='review-reason';reason.rows=3;
+      reason.value=selected.transfer_reason || ''; reason.placeholder='Explain what your confirmed work establishes and what still needs development.';
+      explanation.append(reason);review.append(explanation);item.append(review);
       host.append(item);
     }
+    const save=el('button','small','Save reviewed fit');save.onclick=()=>saveReviewedFit();host.append(save);
+}
+async function saveReviewedFit() {
+  const decisions=[...$('compare-results').querySelectorAll('.criterion-review')].map(row=>({
+    id:row.dataset.criterionId,status:row.querySelector('.review-grade').value,
+    evidence_ids:[...row.querySelectorAll('input:checked')].map(input=>input.value),
+    reason:row.querySelector('.review-reason').value
+  }));
+  try {
+    const result=await api('/api/jobs/'+selectedJob+'/compare-evidence',{with_qwen:false,reviewed_decisions:decisions,reviewed_by:'user'});
+    await refresh();renderComparison(result);$('compare-status').textContent='Reviewed fit saved.';
+  } catch(error) { $('compare-status').textContent=error.message; }
 }
 $('compare-rules').onclick=()=>compareEvidence(false);
 $('compare-qwen').onclick=()=>compareEvidence(true);
@@ -944,10 +990,17 @@ function renderFit(row){
     ['closed','excluded','incomplete','needs_profile'].includes(fit.assessment_state)||!!row.listing?.closed;
   if(key===lastFitKey)return;
   lastFitKey=key;
-  if (row.evidence_comparison) renderComparison(row.evidence_comparison);
   const panel=$('detail-match'), requirements=fit.requirements||[], coverage=fit.coverage||{};
   const assessed=fit.percent!=null&&fit.assessment_state!=='closed';
   panel.replaceChildren();
+  if (row.evidence_comparison) {
+    const count = row.evidence_comparison.rules.requirements.length;
+    $('match-details-summary').textContent = 'Transferable fit · ' + count + (count === 1 ? ' criterion' : ' criteria');
+    renderComparison(row.evidence_comparison);
+    $('compare-evidence').open = true;
+    return;
+  }
+  $('compare-results').replaceChildren();
   if (state.local_model?.qualified && row.full_description && !row.listing?.closed &&
       !['closed','excluded','incomplete','needs_profile'].includes(fit.assessment_state)) {
     const localAssessment = el('button','small',fit.model?'Refresh saved evidence rating':'Create saved evidence rating');

@@ -49,10 +49,11 @@ def create_workspace_app(workspace: Workspace):
     @app.get("/api/state")
     def state():
         jobs = workspace.jobs()
+        from .semantic import facts_from_profile
         from .qwen_harness import qualification_current
         qualification=workspace.get_meta('semantic_qualification')
         return {"local_model":{"model":"Qwen3.5-9B","qualified":qualification_current(qualification),"status":qualification.get("status") if qualification else "not_checked","checks":qualification.get("checks",[]) if qualification else []},"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES,
-            "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": jobs,
+            "profile_evidence": facts_from_profile(workspace.profile) if workspace.profile else [], "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": jobs,
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
@@ -308,7 +309,13 @@ def create_workspace_app(workspace: Workspace):
                 raise ValueError('This comparison requires an open, complete advert and a confirmed profile.')
             job = Job.model_validate(row['job'])
             key = fingerprint(job, profile)
-            result = compare(job, profile, quoted_requirements(row), with_qwen=data['with_qwen'])
+            requirements = quoted_requirements(row)
+            result = compare(job, profile, requirements, with_qwen=data['with_qwen'])
+            if 'reviewed_decisions' in data:
+                if data['with_qwen']:
+                    raise ValueError('Save the reviewed grades separately from a new model calculation.')
+                from .transfer_fit import reviewed_fit
+                result['reviewed'] = reviewed_fit(requirements, profile, data['reviewed_decisions'], data.get('reviewed_by','user'))
             current_profile = workspace.profile
             if current_profile is None or fingerprint(workspace.job(job_id)[1], current_profile) != key:
                 raise ValueError('The advert or profile changed during the review. Run the comparison again.')
@@ -319,8 +326,11 @@ def create_workspace_app(workspace: Workspace):
                 previous = workspace.get_meta('comparison:' + job_id)
                 # A failed model call keeps the previous complete comparison.
                 if not result.get('qwen_error'):
-                    if not data['with_qwen'] and previous and previous.get('fingerprint') == key:
-                        result['qwen'] = previous['result'].get('qwen')
+                    if previous and previous.get('fingerprint') == key:
+                        if not data['with_qwen']:
+                            result['qwen'] = previous['result'].get('qwen')
+                        if 'reviewed' not in result and previous['result'].get('reviewed'):
+                            result['reviewed'] = previous['result']['reviewed']
                     workspace.set_meta('comparison:' + job_id, {'fingerprint': key, 'result': result})
             return result
 

@@ -614,11 +614,13 @@ class Workspace:
                     and comparison.get('fingerprint') == semantic_fingerprint(job, profile)):
                 result = comparison['result']
                 row['evidence_comparison'] = result
-                arm = result.get('qwen') or result['rules']
+                arm = result.get('reviewed') or result.get('qwen') or result['rules']
                 row['evidence_preview'] = {
                     'percent': arm['percent'], 'coverage': arm['coverage'],
-                    'label': 'Qwen preview' if result.get('qwen') else 'Rules lower bound',
-                    'meaning': 'Documented evidence coverage from the saved comparison. Review the quoted requirements and evidence in job details.',
+                    'label': ('Assistant-reviewed fit' if arm.get('reviewed_by') == 'assistant' else 'Reviewed fit') if result.get('reviewed') else 'Qwen fit suggestion' if result.get('qwen') else 'Rules fit',
+                    'evidence_coverage_percent': arm.get('evidence_coverage_percent'),
+                    'provisional': True,
+                    'meaning': 'Transferable-fit estimate on assessed criteria. Criteria assessed shows how much of the extracted criteria has a supported assessment, including partial experience and foundation; it does not mean all criteria are met. Review the quotes and transfer explanations in job details.',
                 }
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True

@@ -50,7 +50,10 @@ def compare(job, profile, requirements, *, with_qwen=False, invoke=None):
         raise ValueError('The matrix contains no scored duties or requirements.')
     if len(assessed_requirements) > 80:
         raise ValueError('This advert has too many requirements for one local comparison.')
-    result = {'rules': _arm(rules_review(assessed_requirements, profile), 'Rules only'),
+    from .transfer_fit import score as score_transfer
+    rule_rows = [{**row, 'status': 'direct' if row['status'] == 'supported' else 'unknown'}
+                 for row in rules_review(assessed_requirements, profile)]
+    result = {'rules': score_transfer(rule_rows),
               'qwen': None, 'qwen_error': None, 'matrix': matrix,
               'separate_requirements': [row for row in requirements if row not in assessed_requirements]}
     if with_qwen:
@@ -58,9 +61,8 @@ def compare(job, profile, requirements, *, with_qwen=False, invoke=None):
             result['qwen_error'] = 'A local model check is already running. Try again after it finishes.'
             return result
         try:
-            report = semantic.assess(job, profile, {}, invoke or semantic.call_model,
-                                     fixed_requirements=assessed_requirements)
-            result['qwen'] = _arm(report['requirements'], report['model'])
+            from .transfer_fit import assess as assess_transfer
+            result['qwen'] = assess_transfer(assessed_requirements, profile, invoke or semantic.call_model)
         except semantic.AssessmentError as exc:
             result['qwen_error'] = str(exc)
         finally:
@@ -88,7 +90,10 @@ def run_controls(*, with_qwen=False, invoke=None):
     job = Job(source_id='controls', title='IT Support', employer='Example Employer',
               url='https://example.invalid/job', location='Melbourne',
               description='Requirements\n' + '\n'.join(claim for claim, _ in CONTROL_CASES))
-    result = compare(job, synthetic_profile(), rows, with_qwen=with_qwen, invoke=invoke)
+    result = {'rules': _arm(rules_review(rows, synthetic_profile()), 'Rules only'), 'qwen':None, 'qwen_error':None}
+    if with_qwen:
+        report = semantic.assess(job, synthetic_profile(), {}, invoke or semantic.call_model, fixed_requirements=rows)
+        result['qwen'] = _arm(report['requirements'], report['model'])
     for arm in ('rules', 'qwen'):
         if result[arm] is None:
             continue

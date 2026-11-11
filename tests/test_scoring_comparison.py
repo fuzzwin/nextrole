@@ -39,7 +39,7 @@ def test_comparison_route_returns_source_bound_preview_without_saving_a_rating(w
         row = workspace.jobs()[0]
         assert row['fit']['percent'] is None
         assert row['evidence_preview']['percent'] == preview['rules']['percent']
-        assert row['evidence_preview']['label'] == 'Rules lower bound'
+        assert row['evidence_preview']['label'] == 'Rules fit'
         assert row['evidence_comparison'] == preview
         assert not row['top_match'] and not row['fit']['auto_eligible']
         workspace.save_profile(workspace.profile.model_copy(update={'skills':['Changed evidence']}))

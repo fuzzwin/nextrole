@@ -1,3 +1,12 @@
+## 0.9.30
+
+- Add editable, attributed criterion reviews using confirmed fact references, with a reviewed score independent of Qwen. Keep Qwen suggestions visibly unreviewed: passing synthetic controls does not establish reliable real-job judgement.
+
+- Implement transferable-fit credits of 100%, 75%, 50%, 25% and 0% for direct work, strong transfer, partial transfer, foundation and confirmed gaps.
+- Keep unknown evidence outside the fit denominator and show assessed evidence coverage beside the provisional fit score.
+- Require quoted facts and an explicit transfer explanation with isolated verification; preserve prototype, specialist-tenure and confirmed-gap guards.
+- Include current structured credentials, invalidate old previews, and add a dedicated transferable-fit control harness.
+
 ## 0.9.29
 
 - Build a shared source matrix from advert duties and candidate requirements, independently of legacy scores.

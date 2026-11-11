@@ -1,5 +1,15 @@
 # NextRole for Mac
 
+## Current scoring: transferable fit (0.9.30)
+
+The provisional fit percentage uses direct work (100%), strong transferable work (75%), partial transfer (50%), relevant foundation (25%) and explicit confirmed gaps (0%). Unknown evidence stays outside the fit average. Essential criteria count twice standard criteria. Optional criteria and eligibility/logistics checks remain separate.
+
+The separate **Criteria assessed** percentage shows how much of the extracted advert has an assessment, including partial skills and foundation. It does not mean those criteria are fully met. For example, 100% fit with 10% assessed is too incomplete to use as a whole-job rating.
+
+Use **Calculate fit** in job details. Rules provide narrow direct-proof checks; local Qwen proposes grades and quoted evidence. Qwen can select poor evidence or misgrade transfer even when its control checks pass. Review each criterion, choose confirmed evidence, explain the bridge and gaps, then **Save reviewed fit**. Assistant reviews are attributed separately from user reviews. Saved reviews remain provisional, cannot trigger automatic recommendations, and expire when the advert, profile or scoring logic changes.
+
+Compounds retain their source qualifiers and AND/OR scope. Exact repeated criteria are removed; near-duplicate concepts and omitted requirements still need source review. Older scoring descriptions below describe historical versions, not this current calculation.
+
 ## Start here — give Codex the ZIP and your resume
 
 **Recommended setup: open a local Codex chat, attach the NextRole ZIP and
@@ -638,3 +648,14 @@ The fixed formula remains one point for supported evidence, half a point for par
 Changing the matrix invalidates older previews. Recalculate a job to see its current set of duties, optional items, conditions and evidence.
 
 A proposed full-credit AND/list match also passes a literal scope cross-check. Residual unconfirmed terms reduce it to partial and are shown for review. Equivalent wording can trigger this conservative check, so it is a review aid with false negatives.
+
+
+## Transferable-fit scoring (0.9.30)
+
+Job cards now distinguish transferable fit from evidence coverage. Direct demonstrated work earns 100% credit. Strongly comparable delivered work earns 75%, a meaningful demonstrated subset earns 50%, and relevant training, prototypes or conceptual foundations earn 25%. An explicitly confirmed capability gap earns zero. Missing evidence remains unknown.
+
+The fit percentage is the weighted mean of assessed criteria. Unknown criteria are excluded from that denominator and reduce the separate evidence-coverage percentage. Essential criteria count twice, ordinary criteria once. Preferred criteria and logistics/eligibility conditions stay separate. A high score based on little assessed evidence is provisional.
+
+The model must quote confirmed records and explain the transfer bridge and remaining scope. Its evidence verifier sees only the selected facts and the claim. A prototype or saved skill alone cannot receive delivery credit. Missing facts cannot become confirmed gaps. Relevant support tenure is calculated from dates, while specialist tool tenure stays unknown unless documented. Current structured credentials are included in the evidence pool.
+
+The rules-only arm uses the same fit calculation but can recognise fewer equivalents. It leaves unresolved matches unknown. Old documented-coverage scores are invalidated when this logic changes. Recalculate a job to obtain the new metric. These starting credit bands still need calibration against a larger manually reviewed sample.
