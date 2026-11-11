@@ -1,10 +1,10 @@
 # NextRole for Mac
 
-## Prepare a full package (0.9.32)
+## Prepare a full package (0.9.33)
 
 Open a saved job and choose **Prepare full package** in **Next steps**. Before starting, select a ZIP with PDF and Word files, one combined PDF, or separate downloads. Choose **Email me after I review** to send the finished files to your connected Gmail account once you have reviewed them. You can download the output in either mode.
 
-The run rereads the advert, checks evidence, gathers public research leads, prepares interview material, and tailors the résumé and cover letter. You can ask local Qwen for a fit suggestion. A current review is kept when the refreshed advert has the same scored criteria. The results show any blocked source or missing export.
+The run rereads the advert, checks evidence, opens employer sources and checks the evidence, prepares interview material, and tailors the résumé and cover letter. You can ask local Qwen for a fit suggestion. A current review is kept when the refreshed advert has the same scored criteria. Research with thin source coverage stays in preview until it can support the guide. The results show what to check next.
 
 ## Current scoring: transferable fit (0.9.31)
 

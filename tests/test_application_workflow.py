@@ -13,6 +13,7 @@ from campus_agent.application_workflow import carry_review
 from campus_agent.workspace_web import create_workspace_app
 from test_workspace import workspace, profile, role
 from test_source_completion import SOURCE_AD
+from test_career import employer_pages
 
 
 def test_revalidation_carries_a_review_only_for_unchanged_criteria():
@@ -48,13 +49,13 @@ def test_prepare_full_package_uses_real_document_exports(workspace, role, output
 
     def call(tool, data=None):
         if tool == 'search_service.web_run':
-            if 'open' in data:
+            if 'open' in data and data['open'][0]['ref_id'] == str(job.url):
                 sequence.append('advert')
                 started.set()
                 assert continue_read.wait(5)
                 return {'text': SOURCE_AD}
             sequence.append('research')
-            return {'results':[{'url':'https://example.com/about','title':'Employer','excerpt':'An example\x03 with public information.'}]}
+            return employer_pages(data, 'Example Employer')
         if tool == 'gmail.send_email':
             sequence.append('send')
             assert data['to'] == 'owner@example.com'
@@ -83,7 +84,7 @@ def test_prepare_full_package_uses_real_document_exports(workspace, role, output
         finally:
             continue_read.set()
         run = wait_for(client,url,headers,lambda r:r['status'] != 'running')
-        assert run['status'] == 'ready', run
+        assert run['status'] == 'ready', run.get('error')
         assert sequence[0] == 'advert' and 'research' in sequence and 'send' not in sequence
         paths = {}
         for file in run['files']:

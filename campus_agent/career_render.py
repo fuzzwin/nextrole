@@ -36,7 +36,7 @@ def render(observed, report):
     lines = [
         f"# {job['employer']} | {job['title']}",
         f"Checked {observed['checked_on']} · {job['id']}",
-        f"**{job['status'].title()} · {job['mode']} · {job['employment']} · {', '.join(job['locations'])}**",
+        f"**{('Availability unconfirmed' if job['status']=='unknown' else job['status'].title())} · {job['mode']} · {job['employment']} · {', '.join(job['locations'])}**",
         f"[Original posting]({observed['sources'][job['source']]['url']})",
         f"**Decision** {report['decision']}",
         report["next_step"],
@@ -46,16 +46,17 @@ def render(observed, report):
     ]
     if report.get("estimated_pay"):
         lines.append(f"**Discussion estimate** {money_range(report['estimated_pay'])}. {report['pay_note']}")
-    for area in RESEARCH_AREAS:
-        lines += ["", f"## {area}"]
-        for entry in report["claims"]:
-            if entry["area"] != area:
-                continue
-            refs = ", ".join(entry["sources"])
-            label = entry["kind"].replace("_", " ").title()
-            lines += [f"- **{label}** {entry['text']}" + (f" [{refs}]" if refs else "")]
-            if entry.get("question"):
-                lines.append(f"  Ask: {entry['question']}")
+    claims = [claim for claim in report['claims'] if claim['kind'] != 'unknown']
+    for entry in claims:
+        refs = ", ".join(entry["sources"])
+        lines += ["", f"## {entry['area']}", f"{entry['text']} [{refs}]"]
+    gaps = set(report.get('research_gaps', []))
+    if gaps:
+        lines += ["", "## Confirm with the employer"]
+        lines.extend(f"- {entry['question']}" for entry in report['claims']
+                     if entry['kind'] == 'unknown' and entry['area'] in gaps)
+        if 'Advertised pay' in gaps:
+            lines.append("- What pay range and inclusions apply to this vacancy?")
     lines += ["", "## Fit to the role"]
     for row in report["fit"]:
         lines.append(f"- **{row['requirement']} ({row['level']})** {row['detail']} [{', '.join(row['sources'])}]")

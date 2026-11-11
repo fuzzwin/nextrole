@@ -1,5 +1,5 @@
 {
-  "version": "0.9.32",
+  "version": "0.9.33",
   "platform": "macOS",
   "files": [
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 67276,
-      "sha256": "59c8a8bbaa50057c9916b7b305d1e5c935f21dc34ec7f12ed964c0083d9c4086",
+      "bytes": 67359,
+      "sha256": "f2a0685e517fe2c5215f57435dd3beaba1ca0101f7730cfe943c4fd3e23ea5bf",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 18399,
-      "sha256": "d1bf85976cae447598f1474b0b7a1177bbe36c0dde98d5d0599120acf948404b",
+      "bytes": 18749,
+      "sha256": "ed7d0c63222b4fda69c896f938b4182d0ca49d4a96638b1c2d7370602664f066",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 950,
-      "sha256": "79e147cc444a47067e04adedb4b275c18002a88f7046cdbfba69b38c83e73fd5",
+      "sha256": "08e8a6539c59da638b4c8d6a6afe0e0f74fd7b1d6dbb2e089b8369cce975061a",
       "mode": "0o644"
     },
     {
@@ -130,14 +130,14 @@
     },
     {
       "path": "docs/CAREER-HARNESS.md",
-      "bytes": 2381,
-      "sha256": "73cb064753244984790ce1ff2472403fe30e15e7e3625ad78ec3294973b0601e",
+      "bytes": 2480,
+      "sha256": "467070cf7658af9af40004f5074b384ee4ce5c4aa8f0f9ecc015eaf2018988ea",
       "mode": "0o644"
     },
     {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 55582,
-      "sha256": "e469ec16319a253c42b505296a9ce3084c78c11ca4bc603a888b81a7c39c1ec2",
+      "bytes": 55665,
+      "sha256": "3d57e85adb2447abb8bb5b1060de5037047d6f167c22d5e0f0e1a7bcf74bd2ab",
       "mode": "0o644"
     },
     {
@@ -154,8 +154,8 @@
     },
     {
       "path": "scripts/build_release.py",
-      "bytes": 6645,
-      "sha256": "1b6ccfe8db5ac0c77b9d0dbde0d284acfb811cce04455f8fb7e14b52bb8efe2d",
+      "bytes": 6667,
+      "sha256": "f744a00a9b9bc8c7974e7498b55c2e5cd8cf84042879523ce5db2780eb545cd8",
       "mode": "0o644"
     },
     {
@@ -184,8 +184,8 @@
     },
     {
       "path": "campus_agent/application_workflow.py",
-      "bytes": 17378,
-      "sha256": "f884916961cac36ec64989f3974ce79a0d6a75f61e822b4d07657113f0c8edb9",
+      "bytes": 17559,
+      "sha256": "d1c2375e76710263ad81fc9d3fd71a61aaf09198940c779e178ba8a65b3c2b92",
       "mode": "0o644"
     },
     {
@@ -370,8 +370,8 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 238973,
-      "sha256": "d74b101bb5513e24d325de4b863fa422f10d16668d123ad7ff7b1ac5b174a808",
+      "bytes": 239286,
+      "sha256": "4543489a02dc69c75b3fed7e02fec443def21264e0e39578aa9091f46496f181",
       "mode": "0o644"
     },
     {
@@ -388,8 +388,8 @@
     },
     {
       "path": "campus_agent/career.py",
-      "bytes": 34425,
-      "sha256": "f0ab4a763d55342833e6084ce27d8308934a55f0528927ae5691e9234d1dbf97",
+      "bytes": 35048,
+      "sha256": "f4e51bfddc351359a2fb6b20b68a5cf7e70dbcd2b2d3610a4ec1295140efcc99",
       "mode": "0o644"
     },
     {
@@ -400,14 +400,20 @@
     },
     {
       "path": "campus_agent/career_render.py",
-      "bytes": 7740,
-      "sha256": "c46cfac1f2dafd588879c3af8bc0820092d2808ee2ab2e20945d912a96374e18",
+      "bytes": 7950,
+      "sha256": "50d1bc295c037806084f73a0f7f5c66d759eee881172f6b7bbfe2a9f4286cfeb",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/career_exports.py",
       "bytes": 7835,
       "sha256": "d4023a204eb6d428620601525b8fd037e8f637aa14c671478de9cf330d0f42f7",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/career_research.py",
+      "bytes": 12259,
+      "sha256": "6fee743ee56d1288c3408cec5af2068679ca0137b4618f453f4ff9d6e6087c6d",
       "mode": "0o644"
     }
   ]

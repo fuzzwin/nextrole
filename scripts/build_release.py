@@ -28,7 +28,7 @@ MODULES = (
     'locations.py', 'mail.py', 'mcp_server.py', 'models.py', 'morning.py', 'packet_checks.py',
     'pipeline.py', 'role_types.py', 'sources.py', 'source_policy.py', 'semantic.py', 'qwen_harness.py', 'scoring_comparison.py', 'evidence_matrix.py', 'transfer_fit.py', 'store.py', 'tailor.py', 'web.py',
     'workspace.html', 'workspace.py', 'workspace_web.py',
-    'career.py', 'career_contract.py', 'career_render.py', 'career_exports.py',
+    'career.py', 'career_contract.py', 'career_render.py', 'career_exports.py', 'career_research.py',
 )
 RELEASE_FILES = FILES + tuple('campus_agent/' + name for name in MODULES)
 BLOCKED_PARTS = {'workspace', 'data', 'artifacts', 'output', 'tmp', 'evidence', '.venv',

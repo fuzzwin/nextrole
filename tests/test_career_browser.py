@@ -10,6 +10,7 @@ from test_workspace import FakeBridge, profile
 from campus_agent.models import Job
 from campus_agent.workspace import Workspace
 from campus_agent.workspace_web import create_workspace_app
+from test_career import employer_pages
 
 
 @pytest.mark.skipif(not os.getenv('PLAYWRIGHT_EXECUTABLE_PATH'), reason='Set Chromium path for browser integration')
@@ -24,14 +25,14 @@ def test_career_dialog_research_prep_practice_cache_and_cancel(tmp_path, profile
             if block[0]:
                 entered.set()
                 release.wait(15)
-            return {'text': 'Example Employer https://example.com/about Public company information.'}
+            return employer_pages(args, 'Example Employer')
         return original_call(name, args)
     bridge.call = call
     ws = Workspace(tmp_path / 'workspace', bridge)
     ws.save_profile(profile.model_copy(update={'is_example': False}))
     job = Job(source_id='browser-fixture', title='Service Coordinator', employer='Example Employer',
               url='https://example.com/jobs/coordinator', location='Melbourne',
-              description='Coordinate service support and documentation. Work with stakeholders and report progress.')
+              description='Coordinate service support and documentation across the customer operations team.')
     ws.add_job(job, full=True)
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))

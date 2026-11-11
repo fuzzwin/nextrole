@@ -11,7 +11,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from .career import TERMINAL
-from .career_exports import _pdf, export_run
+from .career_exports import _pdf
 from .models import Job
 from .scoring_comparison import compare, quoted_requirements
 from .semantic import comparison_fingerprint
@@ -134,7 +134,7 @@ class ApplicationWorkflow:
             if run['status'] in TERMINAL:
                 if run['status'] != 'ready_for_review':
                     raise ValueError(run.get('error') or 'The document run did not complete.')
-                paths = export_run(directory, run)
+                paths = self.workspace.career.export_files(run_id, directory)
                 return run, paths
             self.workspace.stop_event.wait(.75)
         raise ValueError('The document run has not finished. Check its progress in Next steps.')
@@ -181,17 +181,15 @@ class ApplicationWorkflow:
                 self._current(job_id, snapshot)
                 self._update(job_id, run_id, step='Creating ' + label.lower(), warnings=warnings)
                 try:
-                    run, paths = self._career(job_id, feature, target / feature)
-                    for kind, path in paths.items():
-                        part, suffix = kind.split('_')
-                        name = f'{label} {"guide" if part == "guide" else "quick sheet"}.{suffix}'
-                        destination = target / name
-                        shutil.copyfile(path, destination)
-                        files.append(destination)
-                    validation = run['result']['validation']
-                    warnings.extend(str(finding)[:240] for finding in validation.get('findings', []))
+                    _, paths = self._career(job_id, feature, target / feature)
                 except (OSError, ValueError) as error:
-                    warnings.append(label + ' could not be exported: ' + str(error)[:240])
+                    raise ValueError(label + ' needs attention before this package can be exported. ' + str(error)) from error
+                for kind, path in paths.items():
+                    part, suffix = kind.split('_')
+                    name = f'{label} {"guide" if part == "guide" else "quick sheet"}.{suffix}'
+                    destination = target / name
+                    shutil.copyfile(path, destination)
+                    files.append(destination)
             self._update(job_id, run_id, step='Creating résumé and cover letter', warnings=warnings)
             with self.workspace.write_lock:
                 self._current(job_id, snapshot)
@@ -210,7 +208,7 @@ class ApplicationWorkflow:
             self._current(job_id, snapshot)
             report = target / 'Preparation summary.pdf'
             details = ['## Advert and fit', source, fit_summary, '## What to review',
-                       'The research guide contains source leads. Interview prompts use your saved evidence. Review the résumé and cover letter before using them.']
+                       'The research guide passed source and coverage checks. Interview answers use your saved evidence. Review the résumé and cover letter before using them.']
             details += ['- ' + warning for warning in warnings]
             _pdf(report, row['reading_view']['title'] + ' — ' + row['reading_view']['employer'], '\n\n'.join(details), 'NextRole · Draft preparation package')
             files.insert(0, report)
@@ -218,7 +216,7 @@ class ApplicationWorkflow:
             selected = self._export(target, files, options['format'])
             self._current(job_id, snapshot)
             self._update(job_id, run_id, status='ready', step='Ready to review', warnings=warnings,
-                         fit_summary=fit_summary, files=[{'name': p.name, 'sha256': file_hash(p)} for p in selected])
+                         fit_summary=fit_summary, research_checked=True, files=[{'name': p.name, 'sha256': file_hash(p)} for p in selected])
             return {'job_id': job_id, 'file_count': len(selected)}
         except Exception as error:
             self._update(job_id, run_id, status='failed', step='Preparation stopped', error=str(error)[:450], warnings=warnings)
@@ -258,6 +256,8 @@ class ApplicationWorkflow:
         run = self.get(job_id)
         if not run or run['id'] != run_id or run['status'] != 'ready':
             raise ValueError('This package is not available.')
+        if not run.get('research_checked'):
+            raise ValueError('Prepare the package again to run the updated research checks.')
         entry = next((entry for entry in run['files'] if entry['name'] == name), None)
         path = (self.directory / run_id / name).resolve()
         if not entry or not path.is_relative_to(self.directory.resolve()) or not path.is_file() or file_hash(path) != entry['sha256']:
@@ -269,6 +269,8 @@ class ApplicationWorkflow:
             run = self.get(job_id)
             if not run or run['id'] != run_id or run['status'] != 'ready' or run['options']['delivery'] != 'email':
                 raise ValueError('Select Email me before preparing a package.')
+            if not run.get('research_checked'):
+                raise ValueError('Prepare the package again to run the updated research checks.')
             if run.get('mail'):
                 return run
             self._update(job_id, run_id, mail={'status': 'sending'})

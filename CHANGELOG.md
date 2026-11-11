@@ -1,3 +1,8 @@
+## 0.9.33
+
+- Reopen employer pages before using them in job research. Keep supported findings with their sources and group gaps into questions for the employer.
+- Require source coverage before exporting research or downloading or emailing a full package. Carry checked research into the interview guide alongside rehearsal answers from saved work.
+
 ## 0.9.32
 
 - Prepare a full application package from a saved role. Recheck its advert and fit, collect research leads, create interview prep and tailor the résumé and cover letter in one run.

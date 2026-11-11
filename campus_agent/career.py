@@ -17,10 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 from .career_contract import FRAMEWORKS, interview
+from .career_research import GAP_QUESTIONS, research
 from .career_render import RESEARCH_AREAS, render, check_references, check_decision
 
 TERMINAL = {'ready_for_review', 'failed', 'cancelled', 'budget_exhausted'}
-VERSION = 'career-1.0.0'
+VERSION = 'career-1.1.0'
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
@@ -35,7 +36,8 @@ def public_url(value):
         try:
             if not ip_address(host).is_global: return ''
         except ValueError: pass
-        return str(value)
+        from .workspace import public_listing_url
+        return public_listing_url(str(value))
     except ValueError: return ''
 
 def research_sources(response):
@@ -146,8 +148,8 @@ class CareerService:
         enriched = next((x for x in self.workspace.jobs() if x['id']==job_id), {}) if hasattr(self.workspace,'jobs') else {}
         snapshot={'details':{k:enriched.get(k) for k in ('reading_view','location_info','listing','fit')},'job':job.model_dump(mode='json'),'profile':profile,'job_revision':row.get('revision',''),'captured_at':now()}
         if feature=='interview_prep':
-            prior=next((x for x in self.list(job_id) if x['feature']=='deep_research' and x['status']=='ready_for_review' and x['snapshot']['job']==snapshot['job'] and x['snapshot']['profile']==profile and time.time()-datetime.fromisoformat(x['created_at']).timestamp()<86400),None)
-            if prior: snapshot['research']={'run_id':prior['id'],'output_hash':prior['output_hash'],'review':prior['review'],'sources':prior['result']['sources']}
+            prior=next((x for x in self.list(job_id) if x['feature']=='deep_research' and x['status']=='ready_for_review' and x['result'].get('quality',{}).get('export_ready') and 'employer' in x['options']['scope'] and x['snapshot']['job']==snapshot['job'] and x['snapshot']['profile']==profile and time.time()-datetime.fromisoformat(x['created_at']).timestamp()<86400),None)
+            if prior: snapshot['research']={'run_id':prior['id'],'output_hash':prior['output_hash'],'review':prior['review'],'sources':prior['result']['sources'],'claims':prior['result']['assessment']['claims'],'gaps':prior['result']['quality']['gaps']}
         key=digest({'owner':self.owner,'job_id':job_id,'job':snapshot['job'],'details':snapshot['details'],'research':snapshot.get('research'),'profile':profile,'feature':feature,'options':o,'version':VERSION})
         with self._db() as db:
             db.execute('BEGIN IMMEDIATE')
@@ -156,7 +158,7 @@ class CareerService:
                 previous=json.loads(data)
                 active=previous['status'] in {'queued','running'}
                 fresh=time.time()-datetime.fromisoformat(previous['created_at']).timestamp()<86400
-                if active or (not refresh and fresh): return {'run_id':previous['id'],'cached':not active,'reused':True}
+                if active or (not refresh and fresh and previous['result'].get('quality', {}).get('export_ready')): return {'run_id':previous['id'],'cached':not active,'reused':True}
             rid=uuid.uuid4().hex
             r={'id':rid,'run_id':rid,'job_id':job_id,'feature':feature,'status':'queued','created_at':now(),'updated_at':now(),'snapshot':snapshot,'options':o,'version':VERSION,'progress':{'message':'Queued','completed':0,'total':o['max_web_calls'] if feature=='deep_research' else 1},'usage':{'input_tokens':None,'cached_input_tokens':None,'output_tokens':None,'cost_aud':None,'credits':None,'web_calls':0,'web_calls_definition':'Reserved attempts; an attempt cancelled before dispatch may be included.','budget_mode':'call-and-time-limited','note':'No model generation. Connected search usage and billing are not exposed.'},'result':None,'review':None}
             db.execute('INSERT INTO runs VALUES (?,?,?,?,?,?,?)',(rid,self.owner,job_id,key,'queued',time.time(),encoded(r)))
@@ -195,43 +197,32 @@ class CareerService:
         try:
             self._active(rid,deadline)
             observed,report,guide,questions=self._draft(r)
-            findings=[]
+            quality={'export_ready':True,'verified_topics':[],'gaps':[],'blockers':[]}
             if r['feature']=='deep_research':
-                employer=observed['vacancy']['employer']
-                areas=[]
-                if 'role' in r['options']['scope']: areas.append('role responsibilities '+observed['vacancy']['title'])
-                if 'pay' in r['options']['scope']: areas.append('salary remuneration '+observed['vacancy']['title']+' '+observed['vacancy']['locations'][0])
-                if 'employer' in r['options']['scope']: areas.extend(RESEARCH_AREAS)
-                if len(areas)>r['options']['max_web_calls']: findings.append('Selected scope exceeds the call budget; remaining employer topics are explicitly unverified.')
-                for i,area in enumerate(areas):
-                    self._active(rid,deadline)
-                    if self.get(rid)['usage']['web_calls']>=r['options']['max_web_calls']: break
-                    query=f'"{employer[:150]}" {observed["vacancy"]["title"][:120]} {area}'
-                    try:
-                        response=self._web(rid,{'system2_search_query':[{'q':query}],'response_length':'long'},deadline)
-                        for n,source in enumerate(research_sources(response)):
-                            ref=f'web_{i}_{n}'
-                            observed['sources'][ref]={'kind':'secondary','label':f"{area}: {source['label']}",'locator':f'Connected search query: {query}; checked {now()}. Identity and claim require review.','url':source['url'],'excerpt':source['excerpt']}
-                        # Search snippets are leads, not company facts. Preserve for review.
-                    except TimeoutError: raise
-                    except Exception as exc:
-                        findings.append(f'{area}: source access failed ({type(exc).__name__}); unknown retained.')
-                    self._update(rid,progress={'message':f'Checked {area}','completed':i+1,'total':len(areas)},partial_sources=observed['sources'])
+                quality=research(
+                    observed, report, r['options']['scope'], r['options']['max_web_calls'],
+                    lambda args: self._web(rid,args,deadline), research_sources,
+                    lambda message,done,total: self._update(rid,progress={'message':message,'completed':done,'total':total}),
+                )
             brief=render(observed,report)
             errors=check_references(observed,report,brief)+check_decision(observed,report)
-            if r['feature']=='deep_research':
-                brief += '\n## Retrieved research leads — verify before relying on them\n'
-                for ref,source in observed['sources'].items():
-                    if ref.startswith('web_'):
-                        brief += f"\n### {source['label']}\n{source['url']}\n\n{source['excerpt']}\n"
             if r['feature']=='interview_prep':
                 try: interview(observed,report,guide)
                 except (ValueError,KeyError,TypeError) as exc: errors.append(str(exc))
-                brief=self._guide_markdown(observed,guide)+ '\n\n'+brief
-            result={'mode':'extractive','limited_draft':bool(errors),'title':observed['vacancy']['title'],'markdown':brief,'quick_markdown':self._quick(observed,guide),'observations':observed,'assessment':report,'guide':guide,'questions':questions,'sources':observed['sources'],'validation':{'passed':not errors,'findings':errors+findings,'scope':'Structural harness checks only. Search leads and candidate assertions need human review; no semantic model verification.'},'limitations':['Extractive draft from saved evidence; no generative model has been called.','Search leads do not verify employer identity or claims.','No application or email was submitted.']}
+                brief=self._guide_markdown(observed,guide,report)+'\n\n'+brief
+                quality['verified_topics']=[entry['area'] for entry in report['claims'] if entry['kind']=='confirmed']
+                quality['gaps']=report.get('research_gaps',[])
+            quality['blockers']+=errors
+            quality['export_ready']=not quality['blockers']
+            result={'mode':'extractive','limited_draft':not quality['export_ready'],'title':observed['vacancy']['title'],
+                    'markdown':brief,'quick_markdown':self._quick(observed,guide,report,r['feature']),
+                    'observations':observed,'assessment':report,'guide':guide,'questions':questions,'sources':observed['sources'],
+                    'quality':quality,'validation':{'passed':not errors,'findings':errors,'scope':'Document structure and evidence references.'},
+                    'limitations':['Public statements are attributed to their publisher. Personal examples come from your saved profile.']}
             result['output_hash']=digest(result)
             self._active(rid,deadline)
-            self._update(rid,status='ready_for_review',result=result,output_hash=result['output_hash'],progress={'message':'Limited draft: more evidence needed' if errors else 'Draft ready for your review','completed':1,'total':1})
+            message='Ready for your review' if quality['export_ready'] else 'Preview only · more evidence needed before export'
+            self._update(rid,status='ready_for_review',result=result,output_hash=result['output_hash'],progress={'message':message,'completed':1,'total':1})
         except InterruptedError: pass
         except TimeoutError as exc: self._update(rid,status='budget_exhausted',error=str(exc))
         except Exception as exc: self._update(rid,status='failed',error=f'{type(exc).__name__}: {str(exc)[:300]}')
@@ -242,7 +233,7 @@ class CareerService:
         sources['application']={'kind':'application_record','label':'Application status not verified in this run','locator':'No submission check performed. Check your application records before applying.'}
         sources['profile']={'kind':'candidate','label':'Your saved profile summary','locator':'Frozen local profile summary','excerpt':str(p.get('summary') or '')}
         for key,value in r['snapshot'].get('research',{}).get('sources',{}).items():
-            if key.startswith('web_'): sources['research_'+key]=value
+            if key.startswith('employer_'): sources[key]=value
         for ix,credential in enumerate(p.get('credentials') or []):
             sources[f'credential_{ix}']={'kind':'candidate','label':'Candidate-reported credential — not registry verified','locator':'Frozen saved credential record','excerpt':encoded(credential)}
         if p.get('availability'): sources['availability']={'kind':'candidate','label':'Candidate-reported availability','locator':'Frozen profile availability','excerpt':p['availability']}
@@ -268,11 +259,17 @@ class CareerService:
         words=set(re.findall(r'\b[a-z]{4,}\b',str(j.get('description','')).lower()))
         facts.sort(key=lambda item:len(words & set(re.findall(r'\b[a-z]{4,}\b',item[1].lower()))),reverse=True)
         for n,(ref,fact) in enumerate(facts[:4]):
-            q=f"Talk me through this example from your profile: {fact}"
-            cards.append({'kind':'past_experience','question':q,'answer':f'Your saved evidence says: “{fact}”\nExplain the context, your own actions and the observed outcome. Details not recorded here must be confirmed by you.','follow_up':'What did you personally do, and what outcome can you support?','bullets':[fact,'Add only context and outcomes you can substantiate.'],'cues':['Context','My action','Evidence'],'sources':[ref]})
+            action=fact.split()[0].strip(',').lower()
+            spoken='I '+fact[0].lower()+fact[1:] if action.endswith(('ed','ied')) or action in {'built','led','ran','wrote','made','set','drove'} else fact
+            q='How have you handled a similar task?' if n==0 else ('What did you contribute in another relevant example?' if n==1 else 'Which other example shows how you work?')
+            cards.append({'kind':'past_experience','question':q,'answer':spoken,'follow_up':'What did you personally do, and what outcome can you support?','bullets':[fact,'Add only context and outcomes you can substantiate.'],'cues':['Context','My action','Evidence'],'sources':[ref]})
             questions.append({'id':f'experience_{n}','question':q,'evidence':fact})
         questions.append({'id':'proposal','question':'How would you approach your first month in this role?','evidence':'Future proposal only; do not describe it as past delivery.'})
-        report={'vacancy':vacancy,'submission':observed['submission'],'employer_pay':observed['employer_pay'],'estimated_pay':None,'pay_note':'No pay benchmark was verified.','claims':[{'id':f'area_{i}','area':a,'kind':'unknown','text':f'{a} has not been verified for this employer.','sources':[],'question':f'What reliable employer evidence confirms {a.lower()}?'} for i,a in enumerate(RESEARCH_AREAS)],'fit':[{'requirement':'Confirm material requirements against the original advert','level':'Gap','detail':'This extractive run does not independently assess competency or alter the saved fit score. Compare each requirement with the sourced work examples below.','sources':['advert']}],'stories':[{'label':sources[ref]['label'],'answer':fact,'cues':['Context','Action','Outcome to confirm'],'sources':[ref]} for ref,fact in facts[:4]],'action':'hold','decision':'Review the evidence and confirm vacancy and application status.','next_step':'Open the original advert and confirm requirements, closing date and whether you have already applied.','application_files':[],'pilot':'Proposed approach, not past experience: clarify the employer’s priority, agree a small safe trial, measure the agreed outcome, then decide whether to expand.','questions':['What are the most important outcomes in the first three months?','What constraints and support will shape the role?','What are the pay range, work arrangement and next hiring steps?']}
+        report={'vacancy':vacancy,'submission':observed['submission'],'employer_pay':observed['employer_pay'],'estimated_pay':None,'pay_note':'No pay benchmark was verified.','claims':[{'id':f'area_{i}','area':a,'kind':'unknown','text':f'{a} has not been verified for this employer.','sources':[],'question':GAP_QUESTIONS[a]} for i,a in enumerate(RESEARCH_AREAS)],'fit':[{'requirement':'Confirm material requirements against the original advert','level':'Gap','detail':'This extractive run does not independently assess competency or alter the saved fit score. Compare each requirement with the sourced work examples below.','sources':['advert']}],'stories':[{'label':sources[ref]['label'],'answer':fact,'cues':['Context','Action','Outcome to confirm'],'sources':[ref]} for ref,fact in facts[:4]],'action':'hold','decision':'Review the evidence and confirm vacancy and application status.','next_step':'Open the original advert and confirm requirements, closing date and whether you have already applied.','application_files':[],'pilot':'Proposed approach, not past experience: clarify the employer’s priority, agree a small safe trial, measure the agreed outcome, then decide whether to expand.','questions':['What are the most important outcomes in the first three months?','What constraints and support will shape the role?','What are the pay range, work arrangement and next hiring steps?']}
+        prior=r['snapshot'].get('research')
+        if prior:
+            report['claims']=prior['claims']
+            report['research_gaps']=prior['gaps']
         requirements=(details.get('fit') or {}).get('requirements',[])
         if requirements:
             report['fit']=[]
@@ -296,33 +293,51 @@ class CareerService:
                 steps.append([label,content])
             methods.append({'name':name,'kind':kind,'question':(cards[0]['question'] if cards else 'Describe a real work example you can support.') if name in {'CAR','STAR'} else ('How would you approach your first month in this role?' if name=='Approach' else ('Tell me about yourself and your relevant experience.' if name in {'ICAN+','Present–Past–Future'} else 'What is your view on this role’s main priority, and why?')),'cues':'Context → my actions → supported outcome','steps':steps,'sources':['advert'] if kind=='proposal' else [factref]})
         guide={'framework_sources':{},'opening':str(p.get('summary') or 'Add your own evidence-based introduction.'),'opening_sources':['profile'],'why':f"Explain your interest in {vacancy['title']} using the actual responsibilities in the saved advert. Your motivation is not inferred.",'why_sources':['advert'],'recruiter':'Confirm availability, location, work arrangement, pay expectations and the next step.','manager':'Choose a sourced example; distinguish your contribution from team outcomes.','recovery':'Pause, ask for clarification, and say when you do not know. Offer a future approach without presenting it as experience.','cards':cards,'pilot':{'kind':'proposal','sources':['advert'],'text':report['pilot']},'strategy':{'methods':methods,'defaults':r['options']['frameworks'][:3],'selection':f"Stage: {r['options']['stage']}. Use CAR/STAR for real past examples, Approach for hypothetical tasks, and PREP for a concise view.",'rehearsal':'Practise one question at a time. Speak naturally; confirm missing context and outcomes before rehearsing. Feedback is a simple local heuristic, not a hiring prediction.'}}
+        if prior:
+            remit=next((claim for claim in prior['claims'] if claim['area']==RESEARCH_AREAS[-1] and claim['kind']=='confirmed'),None)
+            business=next((claim for claim in prior['claims'] if claim['area']==RESEARCH_AREAS[0] and claim['kind']=='confirmed'),None)
+            if remit:
+                guide['why']=f"The advert describes this priority: “{remit['text']}” One example I can discuss is the work below."
+            if business:
+                guide['why']+=f" Company context from the employer: “{business['text']}”"
+                guide['why_sources']+=business['sources']
         guide['strategy']['rehearsal'] += f" Set aside {r['options']['preparation_minutes']} minutes: review evidence first, then rehearse and check uncertain details."
         if r['options']['communication_preferences']:
             guide['strategy']['rehearsal'] += ' Your speaking preferences (self-directed): '+r['options']['communication_preferences']
         return observed,report,guide,questions
-    def _guide_markdown(self,observed,guide):
-        lines=['# Interview preparation — evidence draft','This is an extractive rehearsal draft. Confirm placeholders before speaking.','## Introduction',guide['opening'],'## Why this role',guide['why'],'## Answer strategy',guide['strategy']['selection'],guide['strategy']['rehearsal']]
+    def _guide_markdown(self,observed,guide,report):
+        lines=['# Interview preparation — evidence draft','Rehearse these answers against your saved examples. Use the follow-ups to add details you can substantiate.','## Introduction',guide['opening'],'## Why this role',guide['why'],'## Answer strategy',guide['strategy']['selection'],guide['strategy']['rehearsal']]
+        for card in guide['cards']: lines+=['## '+card['question'],card['answer'],'Cues: '+' → '.join(card['cues']),card['follow_up']]
         for method in guide['strategy']['methods']:
             lines+=['## '+method['name']+' — '+method['kind'],method['question']]
             lines += [f'- **{label}** {value}' for label,value in method['steps']]
-        for card in guide['cards']: lines+=['## '+card['question'],card['answer'],'Cues: '+' → '.join(card['cues']),card['follow_up']]
-        lines+=['## Questions for the recruiter',guide['recruiter'],'## Hiring manager',guide['manager'],'## Recovery',guide['recovery']]
+        lines+=['## Questions for the employer', *['- '+question for question in report['questions']], '## When you need to clarify a question',guide['recovery']]
         for ref,source in observed['sources'].items():
             if ref.startswith(('credential_','project_')) or ref=='availability': lines += ['## '+source['label'],source['excerpt']+' ['+ref+']']
         return '\n\n'.join(lines)
-    def _quick(self,observed,guide):
+    def _quick(self,observed,guide,report,feature):
         vacancy=observed['vacancy']
-        lines=['# Quick rehearsal sheet',vacancy['employer']+' — '+vacancy['title'],guide['opening'],'## Three examples to rehearse']
+        title=vacancy['employer']+' — '+vacancy['title']
+        claims=[claim for claim in report['claims'] if claim['kind']=='confirmed']
+        if feature=='deep_research':
+            lines=['# Job research brief',title]
+            for claim in claims:
+                source=observed['sources'][claim['sources'][0]]
+                lines += ['## '+claim['area'],claim['text'],f"[{source['label']}]({source['url']})"]
+            lines += ['## Ask next',*['- '+GAP_QUESTIONS[area] for area in report['research_gaps'] if area in GAP_QUESTIONS][:3]]
+            return '\n\n'.join(lines)
+        lines=['# Quick rehearsal sheet',title,guide['opening'],'## Examples to rehearse']
         for card in guide['cards'][:3]: lines += [card['answer'],'Cues: '+' → '.join(card['cues'])]
-        if len(guide['cards'])<3: lines.append('Add more real examples: fewer than three were found in your saved experience.')
-        lines += ['## Three employer questions','1. What outcomes matter most in the first three months?','2. Which constraints and support shape this role?','3. What are the pay range, work arrangement and next hiring steps?','## Company and role','Company claims need verification. Role: '+vacancy['title'],'## When unsure',guide['recovery'],'## Proposal',guide['pilot']['text']]
+        if claims:
+            lines += ['## Company and role',guide['why']]
+        lines += ['## Ask next',*['- '+question for question in report['questions']],'## First-month approach',guide['pilot']['text']]
         return '\n\n'.join(lines)
     def review(self,rid,disposition,output_hash=None):
         if disposition not in {'approved','changes_requested'}: raise ValueError('Invalid review disposition')
         with self._db() as db:
             db.execute('BEGIN IMMEDIATE'); r=self._read(db,rid)
             if r['status']!='ready_for_review': raise ValueError('Only completed output can be reviewed')
-            if disposition=='approved' and not r['result']['validation']['passed']: raise ValueError('Add the missing evidence and regenerate before approving this limited draft')
+            if disposition=='approved' and not r['result'].get('quality',{}).get('export_ready'): raise ValueError('Add the missing evidence and regenerate before approving this limited draft')
             if output_hash is not None and output_hash!=r.get('output_hash'): raise ValueError('Output changed; review the current draft')
             r['review']={'disposition':disposition,'output_hash':r['output_hash'],'reviewed_at':now()}
             db.execute('UPDATE runs SET data=? WHERE id=? AND owner=?',(encoded(r),rid,self.owner))
@@ -335,8 +350,17 @@ class CareerService:
             directory=self.directory / rid; directory.mkdir(parents=True,exist_ok=True)
             if kind in {'markdown','quick_markdown'}:
                 path=directory/(kind+'.md'); path.write_text(r['result'][kind],encoding='utf-8'); return path
-            from .career_exports import export_run
-            return Path(export_run(directory,r)[kind])
+            return Path(self.export_files(rid,directory)[kind])
+    def export_files(self,rid,directory):
+        from .career_exports import export_run
+        r=self.get(rid)
+        if r['status']!='ready_for_review':
+            raise ValueError('Output is not ready')
+        quality=r['result'].get('quality') or {}
+        if not quality.get('export_ready') or not r['result']['validation']['passed']:
+            raise ValueError(' '.join(quality.get('blockers') or ['Run the updated source checks before exporting this draft.']))
+        with self.artifact_lock:
+            return export_run(directory,r)
     def create_practice(self,rid):
         r=self.get(rid)
         if r['status']!='ready_for_review' or r['feature']!='interview_prep': raise ValueError('Complete Interview Prep first')
