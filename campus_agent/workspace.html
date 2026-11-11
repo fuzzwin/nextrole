@@ -157,9 +157,7 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
 #job-dialog .dialogfoot .notice{margin:0 0 5px;padding:5px 8px;max-height:4.5em;overflow:auto;overflow-wrap:anywhere}
 #job-dialog .dialogfoot .help{margin:0;font-size:11px}
 #job-dialog #prepare-job{padding:6px 10px;min-height:32px}
-#jump-to-fit{display:none}
 @media(max-width:900px){
-  #jump-to-fit{display:inline-block}
   .detail-columns{grid-template-columns:minmax(0,1fr);gap:10px}
   .detail-evidence{border-inline-start:0;border-top:1px solid var(--line);padding:8px 0 0}
 }
@@ -943,10 +941,15 @@ $('save-top-settings').onclick=()=>handle(async()=>{if(!$('s-top-threshold').rep
 $('research-job').onclick=()=>handle(()=>run('/api/jobs/'+selectedJob+'/research'));
 function renderOverview(row){
   const fit=row.fit||{}, closed=row.listing?.closed||fit.assessment_state==='closed';
-  const status=closed?'Closed':row.evidence_preview&&fit.percent==null?row.evidence_preview.label:fit.assessment_state==='rating_pending'?'Coverage pending':fit.percent==null?'Unrated':row.top_match?'Strong match':fit.status||'Needs review';
+  const preview = !closed && row.evidence_preview?.percent != null ? row.evidence_preview : null;
+  const status=closed?'Closed':fit.assessment_state==='rating_pending'?'Fit review pending':fit.percent==null?'Unrated':row.top_match?'Strong match':fit.status||'Needs review';
   const label=el('div');
-  if (row.evidence_preview?.percent == null || closed) label.append(el('strong','',status));
-  if(fit.percent!=null&&!closed) label.append(el('div','help',fit.model?'Evidence coverage':'Unvalidated rule-based estimate — not a suitability rating'));
+  label.append(el('strong','',preview?.label || status));
+  if (preview?.evidence_coverage_percent != null) {
+    label.append(el('div','help',preview.evidence_coverage_percent + '% of criteria assessed'));
+  } else if (fit.percent != null && !closed) {
+    label.append(el('div','help',fit.model?'Evidence coverage':'Unvalidated rule-based estimate — not a suitability rating'));
+  }
   $('detail-overview').replaceChildren(skillGauge(row),label);
 }
 function openFitReview(jobId) {
