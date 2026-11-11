@@ -310,3 +310,25 @@ def test_technology_sources_keep_their_scope_in_full_and_quick_reports(tmp_path)
         with pytest.raises(ValueError,match='public HTTPS'):
             s.start('job','deep_research',{'technology_links':['https://127.0.0.1/secret']})
     finally:s.close()
+
+
+def test_technology_preserves_optional_words_and_skips_investors():
+    from campus_agent.career_research import technology_passages
+    from campus_agent.career_technology import technology_rows
+
+    vacancy={'title':'Systems Coordinator','employer':'Example Employer'}
+    advert=("## What you have\n"
+            "Experience with Oracle Sales Cloud, SAP, ServiceNow or similar platforms would be beneficial. "
+            "We also welcome applications from recent graduates with strong digitalisation skills and practical experience gained through projects or work placements.\n"
+            "- Solid understanding of APIs, with the ability to troubleshoot and articulate API-related concepts clearly.\n"
+            "## About us\n"
+            "Our funding comes from the OpenAI Startup Fund.")
+    rows=technology_rows(technology_passages(advert,vacancy),'vacancy','advert')
+    assert [row['quote'] for row in rows]==[
+        'Experience with Oracle Sales Cloud, SAP, ServiceNow or similar platforms would be beneficial.',
+        'Solid understanding of APIs, with the ability to troubleshoot and articulate API-related concepts clearly.',
+    ]
+    company=technology_rows(['Backed by investors including the OpenAI Startup Fund.',
+                             'Our Australian deployment connects the client’s CRM with Microsoft Fabric.'],
+                            'company','public_example',limit=1)
+    assert company[0]['quote']=='Our Australian deployment connects the client’s CRM with Microsoft Fabric.'

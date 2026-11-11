@@ -17,12 +17,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 from .career_contract import FRAMEWORKS, interview
-from .career_research import GAP_QUESTIONS, research, role_matrix
+from .career_research import GAP_QUESTIONS, research, role_matrix, technology_passages
 from .career_render import RESEARCH_AREAS, render, check_references, check_decision
 from .career_technology import add_candidate_technology, technology_lines, technology_rows
 
 TERMINAL = {'ready_for_review', 'failed', 'cancelled', 'budget_exhausted'}
-VERSION = 'career-1.3.0'
+VERSION = 'career-1.3.1'
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
@@ -349,10 +349,7 @@ class CareerService:
         report={'vacancy':vacancy,'submission':observed['submission'],'employer_pay':observed['employer_pay'],'estimated_pay':None,'pay_note':'No pay benchmark was verified.','claims':[{'id':f'area_{i}','area':a,'kind':'unknown','text':f'{a} has not been verified for this employer.','sources':[],'question':GAP_QUESTIONS[a]} for i,a in enumerate(RESEARCH_AREAS)],'fit':[{'requirement':'Confirm material requirements against the original advert','level':'Gap','detail':'This extractive run does not independently assess competency or alter the saved fit score. Compare each requirement with the sourced work examples below.','sources':['advert']}],'stories':[{'label':sources[ref]['label'],'answer':fact,'cues':['Context','Action','Outcome to confirm'],'sources':[ref]} for ref,fact in facts[:4]],'action':'hold','decision':'Review the evidence and confirm vacancy and application status.','next_step':'Open the original advert and confirm requirements, closing date and whether you have already applied.','application_files':[],'pilot':'Proposed approach, not past experience: clarify the employer’s priority, agree a small safe trial, measure the agreed outcome, then decide whether to expand.','questions':['What are the most important outcomes in the first three months?','What constraints and support will shape the role?','What are the pay range, work arrangement and next hiring steps?']}
         report['technology']=[]
         if r['feature']=='interview_prep' or 'role' in r['options']['scope']:
-            matrix=role_matrix(sources['advert']['excerpt'],vacancy)
-            report['technology']=technology_rows(
-                (item['quote'] for item in matrix if item['kind']=='competency'), 'vacancy', 'advert',
-            )
+            report['technology']=technology_rows(technology_passages(sources['advert']['excerpt'],vacancy), 'vacancy', 'advert')
         prior=r['snapshot'].get('research')
         if prior:
             if 'claims' in prior:
@@ -360,6 +357,7 @@ class CareerService:
                 report['research_gaps']=prior['gaps']
             report['technology'] += [row for row in prior.get('technology',[]) if row['scope'] in {'related','company'}]
         if r['feature']=='deep_research' and 'role' in r['options']['scope']:
+            matrix=role_matrix(sources['advert']['excerpt'],vacancy)
             if extracted.get('evidence') not in {'Saved by you','Saved listing location'} and extracted.get('stated') and _criterion_text(str(j.get('location') or '')) not in {'',_criterion_text(place)}:
                 report['saved_location_difference']=str(j['location'])
             reviewed={_criterion_text(item['quote']):item for item in details.get('reviewed_requirements',[]) if item.get('quote')}

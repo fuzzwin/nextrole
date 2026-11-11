@@ -1,3 +1,7 @@
+## 0.9.36
+
+- Preserve specific technology evidence from full sentences within longer advert paragraphs. Read technical qualifications from relevant sections and exclude investor references from employer technology context.
+
 ## 0.9.35
 
 - Label technology in research and interview reports by evidence scope. Open optional related posting and company links within the research budget, and link evidence in reports and PDFs.

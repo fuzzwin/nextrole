@@ -6,8 +6,8 @@ from urllib.parse import urlsplit
 
 from .career_render import RESEARCH_AREAS
 from .career_technology import technology_rows
-from .evidence_matrix import matrix_requirements
-from .listing_view import listing_view, same_role, source_problem
+from .evidence_matrix import matrix_requirements, section_kind
+from .listing_view import heading_key, listing_view, same_role, source_problem
 from .locations import CITIES, STATES
 
 
@@ -99,13 +99,34 @@ def _opened(response, url):
     return '', ''
 
 
-def role_matrix(text, vacancy):
-    """Recognise explicit deliverable sections without changing the scoring matrix."""
+def _role_listing(text, vacancy):
     text = re.sub(
         r"(?im)^[ \t]*(?:#{1,6}[ \t]*)?(?:what you will deliver|what you['’]ll deliver|what you deliver|what you will own|key deliverables)[ \t]*:?[ \t]*$",
         '## Responsibilities', text,
     )
-    return matrix_requirements(listing_view(text, vacancy['title'], vacancy['employer']))
+    return listing_view(text, vacancy['title'], vacancy['employer'])
+
+
+def role_matrix(text, vacancy):
+    # Use the existing scoring matrix without changing its rules.
+    return matrix_requirements(_role_listing(text, vacancy))
+
+
+def technology_passages(text, vacancy):
+    # Technical context can appear in longer duty or qualification paragraphs.
+    view = _role_listing(text, vacancy)
+    for row in matrix_requirements(view):
+        if row['kind']=='competency':
+            yield row['quote']
+    for section in view['sections']:
+        heading = section['title']
+        if section_kind(heading) not in {'duty','requirement','optional'} and heading_key(heading)!='what you have':
+            continue
+        for block in section['blocks']:
+            if block['kind']=='list':
+                yield from block['items']
+            elif heading_key(heading) != 'skills':
+                yield block['text']
 
 
 def vacancy_check(url, vacancy, response):
@@ -200,7 +221,7 @@ def research(observed, report, scope, limit, web, discover, progress, technology
         if named and in_market and body:
             if role_page and not source_problem(text, label):
                 sibling = {'title': label, 'employer': employer}
-                passages = [row['quote'] for row in role_matrix(text, sibling) if row['kind']=='competency']
+                passages = technology_passages(text, sibling)
                 evidence = technology_rows(passages, 'related', ref, limit=1)
             elif not role_page and _employer_domain(url, employer):
                 evidence = technology_rows(_sentences(body), 'company', ref, limit=1)

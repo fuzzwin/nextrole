@@ -15,7 +15,7 @@ ASK = 'Which systems, devices and access would I use on the first workflow or as
 
 _EXTRA = re.compile(
     r'\b(?:AWS|Amazon Web Services|Microsoft Fabric|Databricks|Snowflake|SAP|Salesforce|'
-    r'Google Cloud|GCP|APIs?|MCP|company[- ]provided equipment|endpoint management|'
+    r'Google Cloud|GCP|Oracle Sales Cloud|Microsoft Copilot|APIs?|MCP|company[- ]provided equipment|endpoint management|'
     r'ticketing system|operating system|hardware (?:support|troubleshooting)|'
     r'Lean|Six Sigma|process mining|service design|ITIL)\b', re.I,
 )
@@ -34,14 +34,23 @@ def _terms(text):
     return found
 
 
+def _passages(quotes, scope):
+    for quote in quotes:
+        quote = ' '.join(quote.split())
+        if scope in {'vacancy','related'} and len(quote.split())>25:
+            yield from re.split(r'(?<=[.!?]) +(?=[A-Z])', quote)
+        elif scope!='company' or not re.search(r'\b(?:startup fund|venture fund|investment round|investors?|valuation|fundrais\w*)\b',quote,re.I):
+            yield quote
+
+
 def technology_rows(quotes, scope, source, limit=3, relevant=None):
     """Keep complete short passages, preserving qualifications and alternatives."""
     result = []
     seen = set()
+    quotes = _passages(quotes, scope)
     if scope in {'related', 'company'}:
         quotes = sorted(quotes, key=lambda quote: -len(_terms(quote)-{'api','apis','mcp'}))
     for quote in quotes:
-        quote = ' '.join(quote.split())
         terms = _terms(quote)
         if relevant is not None:
             terms &= relevant
