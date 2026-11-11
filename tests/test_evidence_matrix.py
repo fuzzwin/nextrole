@@ -69,6 +69,19 @@ def test_required_scope_inside_optional_section_requires_review():
     assert summarise_matrix(rows)['needs_review']==1
 
 
+def test_saved_advert_footer_work_rights_and_optional_certifications_stay_out_of_fit():
+    rows=matrix_requirements({'sections':[{'title':'Requirements','blocks':[
+        {'kind':'list','items':['Strong troubleshooting skills.',
+            'You must create an Indeed account before continuing to the company website to apply',
+            'Hold permanent, unrestricted working rights in Australia.',
+            'Must be based onshore in Australia (citizens, PRs, or those with unrestricted work rights)']},
+        {'kind':'paragraph','text':'Desirable Certifications'},
+        {'kind':'list','items':['MS-102 Microsoft 365 Administrator Expert']},
+    ]}]})
+    summary=summarise_matrix(rows)
+    assert (summary['scored'],summary['optional'],summary['conditions'],summary['administrative'])==(1,1,2,1)
+
+
 def test_generic_project_evidence_cannot_fully_cover_a_detailed_task_list():
     from campus_agent.evidence_matrix import unconfirmed_group_scope
     requirement={'text':'Provide project support including scheduling, action tracking, status reporting and documentation management.', 'logic':'all'}

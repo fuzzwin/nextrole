@@ -23,6 +23,13 @@ def fingerprint(job, profile):
     return hashlib.sha256((rules_hash() + VERSION + MODEL + assessment_day().isoformat() + job.model_dump_json() + profile.model_dump_json()).encode()).hexdigest()
 
 
+def comparison_fingerprint(job, profile):
+    """A saved comparison stays tied to its source and rubric across calendar days."""
+    from .qwen_harness import rules_hash
+    data = rules_hash() + job.model_dump_json() + profile.model_dump_json()
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
 def facts_from_profile(profile):
     facts=[]
     for i,e in enumerate(profile.experience):

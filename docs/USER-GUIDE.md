@@ -1,12 +1,12 @@
 # NextRole for Mac
 
-## Current scoring: transferable fit (0.9.30)
+## Current scoring: transferable fit (0.9.31)
 
 The provisional fit percentage uses direct work (100%), strong transferable work (75%), partial transfer (50%), relevant foundation (25%) and explicit confirmed gaps (0%). Unknown evidence stays outside the fit average. Essential criteria count twice standard criteria. Optional criteria and eligibility/logistics checks remain separate.
 
 The separate **Criteria assessed** percentage shows how much of the extracted advert has an assessment, including partial skills and foundation. It does not mean those criteria are fully met. For example, 100% fit with 10% assessed is too incomplete to use as a whole-job rating.
 
-Use **Calculate fit** in job details. Rules provide narrow direct-proof checks; local Qwen proposes grades and quoted evidence. Qwen can select poor evidence or misgrade transfer even when its control checks pass. Review each criterion, choose confirmed evidence, explain the bridge and gaps, then **Save reviewed fit**. Assistant reviews are attributed separately from user reviews. Saved reviews remain provisional, cannot trigger automatic recommendations, and expire when the advert, profile or scoring logic changes.
+Use **Assess fit** on a job card to open the criteria and check direct evidence. **Suggest grades with local Qwen** is optional. Review each criterion, choose confirmed evidence, explain the transfer and any gaps, then **Save reviewed fit**. The app labels assistant reviews separately from user reviews. Saved reviews remain provisional and current until the advert, profile or scoring logic changes.
 
 Compounds retain their source qualifiers and AND/OR scope. Exact repeated criteria are removed; near-duplicate concepts and omitted requirements still need source review. Older scoring descriptions below describe historical versions, not this current calculation.
 
@@ -658,4 +658,4 @@ The fit percentage is the weighted mean of assessed criteria. Unknown criteria a
 
 The model must quote confirmed records and explain the transfer bridge and remaining scope. Its evidence verifier sees only the selected facts and the claim. A prototype or saved skill alone cannot receive delivery credit. Missing facts cannot become confirmed gaps. Relevant support tenure is calculated from dates, while specialist tool tenure stays unknown unless documented. Current structured credentials are included in the evidence pool.
 
-The rules-only arm uses the same fit calculation but can recognise fewer equivalents. It leaves unresolved matches unknown. Old documented-coverage scores are invalidated when this logic changes. Recalculate a job to obtain the new metric. These starting credit bands still need calibration against a larger manually reviewed sample.
+The rules-only check reports the share of weighted criteria with direct evidence. The job card displays a reviewed fit or a labelled Qwen suggestion when available. Changes to the advert, profile or scoring logic require a new review.

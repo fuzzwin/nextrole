@@ -1,3 +1,9 @@
+## 0.9.31
+
+- Open the fit review from the job card, with a direct-evidence check and optional Qwen suggestions. Rules-only matches display the share of weighted criteria with direct evidence inside the review.
+- Keep saved reviews valid across calendar days while the advert, profile and rubric remain current.
+- Classify optional certifications, work eligibility and application instructions outside fit. Recognise explicit equivalent-experience alternatives in reviewed grades and require review for full credit on delivery counts.
+
 ## 0.9.30
 
 - Add editable, attributed criterion reviews using confirmed fact references, with a reviewed score independent of Qwen. Keep Qwen suggestions visibly unreviewed: passing synthetic controls does not establish reliable real-job judgement.

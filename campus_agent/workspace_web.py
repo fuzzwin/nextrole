@@ -294,7 +294,7 @@ def create_workspace_app(workspace: Workspace):
     @app.post('/api/jobs/{job_id}/compare-evidence')
     async def compare_evidence(job_id: str, request: Request):
         from .scoring_comparison import compare, quoted_requirements
-        from .semantic import fingerprint
+        from .semantic import comparison_fingerprint
 
         data = await request.json()
         if not isinstance(data, dict) or type(data.get('with_qwen')) is not bool:
@@ -308,7 +308,7 @@ def create_workspace_app(workspace: Workspace):
                     or row['fit']['assessment_state'] in {'incomplete', 'closed', 'excluded', 'needs_profile'}):
                 raise ValueError('This comparison requires an open, complete advert and a confirmed profile.')
             job = Job.model_validate(row['job'])
-            key = fingerprint(job, profile)
+            key = comparison_fingerprint(job, profile)
             requirements = quoted_requirements(row)
             result = compare(job, profile, requirements, with_qwen=data['with_qwen'])
             if 'reviewed_decisions' in data:
@@ -317,11 +317,11 @@ def create_workspace_app(workspace: Workspace):
                 from .transfer_fit import reviewed_fit
                 result['reviewed'] = reviewed_fit(requirements, profile, data['reviewed_decisions'], data.get('reviewed_by','user'))
             current_profile = workspace.profile
-            if current_profile is None or fingerprint(workspace.job(job_id)[1], current_profile) != key:
+            if current_profile is None or comparison_fingerprint(workspace.job(job_id)[1], current_profile) != key:
                 raise ValueError('The advert or profile changed during the review. Run the comparison again.')
             with workspace.write_lock:
                 current_profile = workspace.profile
-                if current_profile is None or fingerprint(workspace.job(job_id)[1], current_profile) != key:
+                if current_profile is None or comparison_fingerprint(workspace.job(job_id)[1], current_profile) != key:
                     raise ValueError('The advert or profile changed during the review. Run the comparison again.')
                 previous = workspace.get_meta('comparison:' + job_id)
                 # A failed model call keeps the previous complete comparison.

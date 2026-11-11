@@ -47,6 +47,22 @@ def test_different_credential_cannot_prove_requested_credential():
     assert status=='unknown'
 
 
+def test_current_process_and_explicit_equivalent_experience_can_be_reviewed():
+    fact={'kind':'work','text':'Mapped business processes and delivered approval workflows.'}
+    for text in ['Experience reviewing current processes and finding improvements.',
+                 'Tertiary qualification in technology or equivalent practical experience.']:
+        assert apply_guards({'text':text},'direct',[fact],[fact],scope_reviewed=True)[0]=='direct'
+    assert apply_guards({'text':'Hold current CCNA certification.'},'direct',[fact],[fact],scope_reviewed=True)[0]=='unknown'
+
+
+def test_model_cannot_infer_three_enterprise_solutions_from_one_replication_and_a_prototype():
+    requirement={'text':'Delivery of at least 3 enterprise-scale Power Platform solutions.'}
+    facts=[{'kind':'work','text':'Delivered a Power Automate approval workflow.'},
+           {'kind':'work','text':'Recreated the same approval workflow for another site.'},
+           {'kind':'work','text':'Built a prototype Power App.'}]
+    assert apply_guards(requirement,'direct',facts,facts)[0]=='partial_transfer'
+
+
 def test_transfer_verifier_is_isolated_from_retrieval_and_grades_the_facts(profile):
     calls=[]
     def invoke(system,data):

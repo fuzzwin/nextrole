@@ -30,16 +30,21 @@ ADMIN = re.compile(
     r'^(?:apply\b|how to apply\b|to apply\b|resume required\b|résumé required\b|'
     r'when you contact us\b|please (?:apply|contact|submit|indicate)\b|'
     r'by submitting\b|follow (?:the|this) link\b|(?:source|url|link)\s*:|'
+    r'create a job alert\b|(?:you must )?(?:create|register for) (?:an? )?[^.!?]{0,50}\baccount\b[^.!?]{0,100}\bapply\b|'
+    r'(?:the successful candidate|you) will participate in a comprehensive onboarding, training and development program\b|'
     r'https?://|join or sign in\b|ignore (?:the|all|previous)\b|give (?:the )?candidate\b)', re.I)
 CONDITION = re.compile(
     r'^(?:work mode\b|work (?:arrangement|location)\b|location\s*:|salary\b|'
-    r'(?:the (?:role|position) is |you (?:must|will) be )?based (?:in|at)\b|'
+    r'(?:excellent|competitive|attractive) (?:salary|remuneration|package)\b|'
+    r'(?:(?:the (?:role|position) is |(?:you )?(?:must|will) be )?(?:based|located) (?:onshore )?(?:in|at)\b)|'
     r'reliable (?:internet|internet connection)\b|(?:own|your own) (?:computer|equipment)\b|'
-    r'(?:must (?:have|hold|be)|current|hold|eligible for|eligibility for)?\s*'
-    r'(?:Australian citizenship|Australian citizen|right to work|working rights|AGSVA|NV[12]|security clearance)\b)', re.I)
+    r'(?:a )?(?:current|valid) driver[’\']?s licen[cs]e\b|'
+    r'(?:must (?:have|hold|be)|current|hold|have|eligible for|eligibility for)?\s*'
+    r'(?:(?:permanent[, ]+)?unrestricted )?'
+    r'(?:Australian citizenship|Australian citizen|right to work|working rights|work rights|AGSVA|NV[12]|security clearance)\b)', re.I)
 UNNECESSARY = re.compile(
     r'\b(?:not required|not necessary|not needed|no .{0,60}(?:needed|required)|without requiring)\b', re.I)
-PREFERRED = re.compile(r'\bpreferred\b|\bdesirable\b|\ban advantage\b|\badvantageous\b|\bhighly regarded\b|\bnice to have\b|\bis a plus\b', re.I)
+PREFERRED = re.compile(r'^bonus\s*:|\b(?:preferred|desirable|an advantage|advantageous|highly regarded|nice to have|is a plus|would be beneficial)\b', re.I)
 EXPLICIT = re.compile(
     r'^(?:must|minimum|at least|requires?|you (?:need|must|will)|demonstrated|proven|'
     r'ability|experience|strong|excellent|working knowledge|hands.on|'
@@ -49,6 +54,7 @@ EXPLICIT = re.compile(
 KNOWN_HEADINGS = {_key(heading) for heading in HEADINGS} | {
     'skills and experience', 'your responsibilities', 'skills', 'what is the focus of the role',
 }
+OPTIONAL_HEADING = re.compile(r'(?:desirable|preferred|optional|bonus) (?:certifications|qualifications|credentials|skills|experience)')
 
 
 def matrix_requirements(view):
@@ -70,6 +76,9 @@ def matrix_requirements(view):
                 inline_heading = (len(text) < 90 and not re.search(r'[.!?]', text)
                                   and re.match(r'^(?:key|core|your|our|what|who|skills|requirements|qualifications|responsibilities|duties|we.re looking for|you.ll bring)\b', key)
                                   and section_kind(text) != 'context')
+                if OPTIONAL_HEADING.fullmatch(key):
+                    heading, category = text, 'optional'
+                    continue
                 if len(text) < 110 and (key in KNOWN_HEADINGS or inline_heading):
                     heading, category = text, section_kind(text)
                     continue

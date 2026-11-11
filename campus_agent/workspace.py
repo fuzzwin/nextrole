@@ -588,7 +588,7 @@ class Workspace:
                 row['fit'] = fit_assessment(assessed_job, profile, preferences,
                     row['reading_view'],row['location_info'],full=bool(row.get('full_description')),closed=row['listing']['closed'])
                 self._assessment_cache[row['id']] = (cache_key, copy.deepcopy({key:row[key] for key in ['source_domain', 'summary', 'location_info', 'reading_view', 'skill_overlap', 'fit']}))
-            from .semantic import fingerprint as semantic_fingerprint, render as render_semantic
+            from .semantic import comparison_fingerprint, fingerprint as semantic_fingerprint, render as render_semantic
             semantic = metadata.get('semantic:'+row['id'])
             from .qwen_harness import qualification_current
             row['semantic_stale'] = bool(semantic and (not qualification_current(self.get_meta('semantic_qualification')) or not profile or semantic.get('fingerprint') != semantic_fingerprint(job,profile)))
@@ -610,18 +610,21 @@ class Workspace:
             row['evidence_comparison'] = None
             comparison = metadata.get('comparison:' + row['id'])
             if (comparison and profile and not row['listing']['closed']
-                    and row['fit']['assessment_state'] == 'rating_pending'
-                    and comparison.get('fingerprint') == semantic_fingerprint(job, profile)):
+                    and row['fit']['assessment_state'] in {'rating_pending', 'assessed'}
+                    and comparison.get('fingerprint') == comparison_fingerprint(job, profile)):
                 result = comparison['result']
                 row['evidence_comparison'] = result
-                arm = result.get('reviewed') or result.get('qwen') or result['rules']
-                row['evidence_preview'] = {
-                    'percent': arm['percent'], 'coverage': arm['coverage'],
-                    'label': ('Assistant-reviewed fit' if arm.get('reviewed_by') == 'assistant' else 'Reviewed fit') if result.get('reviewed') else 'Qwen fit suggestion' if result.get('qwen') else 'Rules fit',
-                    'evidence_coverage_percent': arm.get('evidence_coverage_percent'),
-                    'provisional': True,
-                    'meaning': 'Transferable-fit estimate on assessed criteria. Criteria assessed shows how much of the extracted criteria has a supported assessment, including partial experience and foundation; it does not mean all criteria are met. Review the quotes and transfer explanations in job details.',
-                }
+                arm = result.get('reviewed') or result.get('qwen')
+                if arm is not None:
+                    label = 'Qwen fit suggestion'
+                    if result.get('reviewed') is not None:
+                        label = 'Assistant-reviewed fit' if arm.get('reviewed_by') == 'assistant' else 'Reviewed fit'
+                    row['evidence_preview'] = {
+                        'percent': arm['percent'], 'coverage': arm['coverage'], 'label': label,
+                        'evidence_coverage_percent': arm.get('evidence_coverage_percent'),
+                        'provisional': True,
+                        'meaning': 'Transferable-fit estimate on assessed criteria. Criteria assessed includes partial experience and foundation. Review the quotes and transfer explanations in job details.',
+                    }
             if row['fit']['status']=='Closed':
                 row['listing']['closed']=True
             row['missing_metadata'] = missing_fields(row)
