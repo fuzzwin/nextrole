@@ -403,3 +403,15 @@ About You
         'Partner with frontline teams to map existing work and find bottlenecks.',
         'Develop low-code tools for the agreed process with frontline staff.',
     ]
+
+
+def test_research_does_not_turn_a_job_board_estimate_into_employer_pay(tmp_path):
+    s, w = service(tmp_path)
+    try:
+        w.job('job')[1].data['description'] += '\n\nEst. AUD 85,000 - 115,000'
+        run = wait(s, s.start('job', 'deep_research', {'scope': ['role', 'pay']})['run_id'])
+        assert run['result']['assessment']['employer_pay'] is None
+        assert 'Advertised pay' in run['result']['quality']['gaps']
+        assert '85,000' not in run['result']['quick_markdown']
+    finally:
+        s.close()

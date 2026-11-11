@@ -1,5 +1,6 @@
 ## 0.9.37
 
+- Pay marked as a job-board estimate stays out of employer-stated compensation.
 - Deep Research can reopen a specific passage on an official company page, check another copy of the same job, and recover duties written as prose.
 - Research briefs put pay, job, company, hiring priorities and technology first. The full guide retains checked passages, source scope and questions for unresolved details.
 

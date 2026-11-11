@@ -432,6 +432,10 @@ def salary_info(text):
     symbol=r'(?:AUD\s*\$?|USD\s*\$?|NZD\s*\$?|GBP|EUR|AU\$|US\$|A\$|[$£€])'
     number=r'\d[\d,]*(?:\.\d+)?[kK]?'
     pattern=re.compile(symbol+r'\s*'+number+r'(?:\s*(?:–|—|-|to)\s*(?:'+symbol+r')?\s*'+number+r')?',re.I)
+    estimate_prefix = re.compile(
+        r'^(?:(?:salary|pay|compensation)(?: range)?\s*:\s*)?'
+        r'(?:est\.|estimated\b|(?:job[ -]board|platform) estimate\b)', re.I
+    )
     candidates=[]
     lines=text.splitlines()
     for i,raw in enumerate(lines):
@@ -439,6 +443,10 @@ def salary_info(text):
         labelled=bool(re.match(r'^(?:salary(?: range)?|remuneration|pay(?: range| rate)?|base salary|rate|compensation)\s*(?::|$)',line,re.I))
         if labelled and not pattern.search(line) and i+1<len(lines): line+=' '+lines[i+1].strip()
         evidence=line
+        # Keep a board's estimated compensation out of employer-stated pay.
+        # A period in "Est." would otherwise be read as the end of a sentence.
+        if estimate_prefix.match(line):
+            continue
         # A repeated identical unit belongs to one range, e.g. A$93/hr – A$112/hr.
         unit = r'(?:hour|hr|day|week|month|year|annum)'
         line = re.sub(r'(' + symbol + r'\s*' + number + r')(/\s*' + unit + r')'

@@ -22,7 +22,7 @@ from .career_render import RESEARCH_AREAS, render, check_references, check_decis
 from .career_technology import add_candidate_technology, technology_lines, technology_rows
 
 TERMINAL = {'ready_for_review', 'failed', 'cancelled', 'budget_exhausted'}
-VERSION = 'career-1.4.0'
+VERSION = 'career-1.4.1'
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)

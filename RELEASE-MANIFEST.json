@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 19863,
-      "sha256": "ec6978779b56c89a5959d1bff20709217b62a3c226c736f95fff12bdcab2d876",
+      "bytes": 19943,
+      "sha256": "f0d773a2c01ab2a85e2875ac1d97004556c988fcc91b9a8e0b0f26c41a04d838",
       "mode": "0o644"
     },
     {
@@ -256,8 +256,8 @@
     },
     {
       "path": "campus_agent/listing_view.py",
-      "bytes": 38687,
-      "sha256": "ff6ee04a6132e912e86ba2f23c4e04a9d89ecdc0bdb953849082bd26253af454",
+      "bytes": 39082,
+      "sha256": "4e8391156fc0ead8a989a64106d35e6e9bfa57bca4c958a84fac2dd1821f76cc",
       "mode": "0o644"
     },
     {
@@ -389,7 +389,7 @@
     {
       "path": "campus_agent/career.py",
       "bytes": 44848,
-      "sha256": "54a8e9e312d7ab26651bbf1d08e2b9802c29cffeecf8555eff1045e038fb3bbe",
+      "sha256": "910d808031fd4c127057f7fa622e4cb066da8f06962b0b4fb174131c84813eb0",
       "mode": "0o644"
     },
     {
