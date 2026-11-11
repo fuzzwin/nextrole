@@ -32,7 +32,7 @@ def test_career_dialog_research_prep_practice_cache_and_cancel(tmp_path, profile
     ws.save_profile(profile.model_copy(update={'is_example': False}))
     job = Job(source_id='browser-fixture', title='Service Coordinator', employer='Example Employer',
               url='https://example.com/jobs/coordinator', location='Melbourne',
-              description='Coordinate service support and documentation across the customer operations team.')
+              description='Responsibilities\n- Coordinate service support and documentation across the customer operations team.\n- Maintain reports and share changes with service managers.')
     ws.add_job(job, full=True)
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))

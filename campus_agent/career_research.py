@@ -5,15 +5,18 @@ from concurrent.futures import TimeoutError
 from urllib.parse import urlsplit
 
 from .career_render import RESEARCH_AREAS
+from .evidence_matrix import matrix_requirements
+from .listing_view import listing_view, same_role, source_problem
+from .locations import CITIES, STATES
 
 
 TOPICS = dict(zip(RESEARCH_AREAS, (
-    r'\b(?:founded|established|specialises|specializes|manufactures|provides|operates|develops|supplies|offers|delivers|is an? .{0,55}(?:company|provider|insurer|fund|firm|manufacturer|organisation|organization|platform))\b',
-    r'\b(?:serves?|supports?|helps?|provides?|customers|clients|members|patients|healthcare providers|law firms)\b.{0,100}\b(?:customers|clients|members|patients|hospitals|law firms|healthcare providers|organisations|organizations|teams|businesses)\b',
+    r'\b(?:founded|established|specialises|specializes|manufactures|provides|recruits|operates|develops|supplies|offers|delivers|is an? .{0,55}(?:company|provider|insurer|fund|firm|manufacturer|organisation|organization|platform))\b',
+    r'\b(?:serves?|supports?|helps?|provides?|builds?|building|works?|customers|clients|members|patients|healthcare providers|law firms)\b.{0,100}\b(?:customers|clients|members|patients|hospitals|law firms|healthcare providers|organisations|organizations|teams|businesses)\b',
     r'\b(?:member.owned|owned by|subsidiary of|listed on|majority stake|mutual organisation|not.for.profit|owns (?:a |the )?(?:majority|minority|[\d.]+\s*%))\b',
     r'\b(?:revenue|funding round|net profit|net loss|operating profit|cash flow|claims paid|raised)\b',
-    r'\b(?:chief executive|ceo|appointed|board of directors|employee survey|employee resource groups)\b',
-    r'\b(?:regulated by|under the .{5,80} act|licen[cs]ed by|accredited by|accreditation)\b',
+    r'\b(?:chief executive|ceo|appointed|founder.led|leadership team|board of directors|employee survey|employee resource groups)\b',
+    r'\b(?:regulated by|under the .{5,80} act|licen[cs]ed by|accredited by|accreditation|hiring index|tracked .{0,70}(?:openings|vacancies|job ads))\b',
     r'\b(?:support|coordinate|develop|manage|deliver|implement|administer|maintain|analyse|analyze|map|test|monitor|lead|build|design|partner|work with|provide|triage|troubleshoot|resolve|improve)\b',
 )))
 
@@ -47,6 +50,14 @@ def _employer_domain(url, employer):
                 and re.sub(r'[^a-z0-9]', '', labels[-1]) in {
                     ''.join(name), ''.join(name) + 'au', ''.join(name) + 'bpo',
                 })
+
+
+_AU_LOCATION = re.compile(r'\b(?:Australia(?:n)?|'+'|'.join(map(re.escape, (*CITIES, *STATES.values())))+r')\b', re.I)
+
+
+def _in_market(url, page, australian):
+    """Require local issuer evidence for a same-name company on a foreign domain."""
+    return not australian or (urlsplit(url).hostname or '').endswith('.au') or bool(_AU_LOCATION.search(page))
 
 
 def _sentences(body, minimum=7, require_punctuation=False):
@@ -87,10 +98,42 @@ def _opened(response, url):
     return '', ''
 
 
+def role_matrix(text, vacancy):
+    """Recognise explicit deliverable sections without changing the scoring matrix."""
+    text = re.sub(
+        r"(?im)^[ \t]*(?:#{1,6}[ \t]*)?(?:what you will deliver|what you['’]ll deliver|what you deliver|what you will own|key deliverables)[ \t]*:?[ \t]*$",
+        '## Responsibilities', text,
+    )
+    return matrix_requirements(listing_view(text, vacancy['title'], vacancy['employer']))
+
+
+def vacancy_check(url, vacancy, response):
+    heading, body = _opened(response, url)
+    text = re.sub(r'(?m)^L\d+:\s*', '', body)
+    # Both strings may include job-board decorations. Strip only the saved publisher's name.
+    def title(value):
+        value = re.sub(r'^\[Hiring\]\s*', '', value, flags=re.I)
+        return re.sub(r'\s+@\s*'+re.escape(vacancy['employer'])+r'\s*$', '', value, flags=re.I)
+    headers = [heading, *re.findall(r'(?m)^#{1,6}\s+([^\n]+)', text[:4000])[:2]]
+    matches = any(same_role(title(vacancy['title']), title(h), vacancy['employer']) for h in headers)
+    issuer = re.sub(r'\W+', '', vacancy['employer'].casefold())
+    if not matches or issuer not in re.sub(r'\W+', '', (heading+' '+text[:4000]).casefold()):
+        return 'unconfirmed'
+    text = re.split(r'(?im)^#{1,6}\s+More [^\n]{1,90} jobs (?:in|from)\b', text, maxsplit=1)[0]
+    problem = source_problem(text, vacancy['title'])
+    if problem:
+        return 'closed' if problem[0] == 'closed' else 'unconfirmed'
+    if not any(row['kind'] == 'competency' for row in role_matrix(text, vacancy)):
+        return 'unconfirmed'
+    return 'readable'
+
+
 def research(observed, report, scope, limit, web, discover, progress):
     """Discovery supplies URLs. The separate open pass supplies all public answers."""
     vacancy = observed['vacancy']
     employer = vacancy['employer']
+    australian = any(_AU_LOCATION.search(place) for place in vacancy['locations'])
+    market = ' Australia' if australian else ''
     sources = observed['sources']
     answers = {}
     pages = {}
@@ -115,13 +158,31 @@ def research(observed, report, scope, limit, web, discover, progress):
             return {}
 
     if 'role' in scope:
-        # The saved advert can establish its stated duties, even if its availability is unconfirmed.
-        roles = [s for s in _sentences(sources['advert']['excerpt'], minimum=5)
-                 if re.match(TOPICS[_ROLE], s, re.I) or re.search(r'\b(?:you will|responsible for)\b', s, re.I)]
-        if roles:
-            # Prefer the specific duty when the advert also has a short slogan.
-            role = max(roles, key=lambda s: (len(s.split()) >= 8, len(re.findall(r'\b[A-Z0-9]{2,}\b', s)), len(s.split())))
-            answers[_ROLE] = {'text': role, 'source': 'advert'}
+        advert = sources['advert']
+        rows = role_matrix(advert['excerpt'], vacancy)
+        material = [row for row in rows if row['kind'] == 'competency' and row['importance'] != 'optional']
+        duties = [row['quote'] for row in material if row['category'] == 'duty']
+        report['role_research'] = {
+            'duties': duties,
+            'requirements': len(material),
+            'conditions': [row['quote'] for row in rows if row['kind'] == 'condition'],
+            'scope_questions': [row['quote'] for row in rows if row['kind'] == 'review'],
+            'source_check': 'unconfirmed',
+        }
+        url = advert.get('read_url') or advert.get('url')
+        if url and ('employer' not in scope or limit >= 4):
+            response = call({'open': [{'ref_id': url}], 'response_length': 'long'}, 'Reopening the original vacancy')
+            report['role_research']['source_check'] = vacancy_check(url, vacancy, response)
+        state = report['role_research']['source_check']
+        if state == 'closed':
+            vacancy['status'] = 'closed'
+            report['decision'] = 'The original posting says this vacancy has closed.'
+            report['next_step'] = 'Use this guide for preparation if the employer posts a new requisition.'
+        if len(material) >= 2:
+            answers[_ROLE] = {
+                'text': f"The saved advert contains {len(duties)} stated duties and {len(material)} material criteria. See the role and fit sections below.",
+                'source': 'advert',
+            }
 
     def rank(area, sentence):
         lower = sentence.casefold()
@@ -130,11 +191,11 @@ def research(observed, report, scope, limit, web, discover, progress):
         if not _FINITE.search(sentence) or not re.search(TOPICS[area], sentence, re.I):
             return None
         metric = bool(re.search(r'[%€£$]|\b(?:million|billion|thousand)\b', lower))
-        if area == 'Finances and trajectory' and not metric:
+        if area == 'Finances and trajectory' and (not metric or not re.search(r'\b(?:20\d{2}|FY\s*\d{2})\b', sentence, re.I)):
             return None
         if area == 'Business and history' and not named:
             return None
-        if area == 'Customers and users' and not (named or re.search(r'^we (?:serve|support|provide|help|work)', lower)):
+        if area == 'Customers and users' and not (named or re.search(r'^we (?:serve|support|provide|help|work|build|partner)', lower)):
             return None
         return (named, metric, bool(re.search(r'\b(?:founded|established)\b', lower)), len(sentence.split()))
 
@@ -160,6 +221,8 @@ def research(observed, report, scope, limit, web, discover, progress):
                                'response_length': 'medium'}, 'Finding employer sources'))
         candidates = [lead['url'] for lead in leads if lead['url'] not in tried
                       and _employer_domain(lead['url'], employer)]
+        if australian:
+            candidates.sort(key=lambda url: not (urlsplit(url).hostname or '').endswith('.au'))
         for url in candidates:
             if attempts >= limit-reserve or all(area in answers for area in RESEARCH_AREAS[:-1]):
                 break
@@ -167,7 +230,7 @@ def research(observed, report, scope, limit, web, discover, progress):
             label, body = _opened(call({'open': [{'ref_id': url}], 'response_length': 'long'},
                                        'Reading and checking employer pages'), url)
             identity = re.sub(r'[^a-z0-9]', '', (label + ' ' + body).casefold())
-            if not body or (employer_key not in identity and not (acronym and re.search(r'\b'+re.escape(acronym)+r'\b', (label+' '+body).casefold()))):
+            if not body or not _in_market(url, label+' '+body, australian) or (employer_key not in identity and not (acronym and re.search(r'\b'+re.escape(acronym)+r'\b', (label+' '+body).casefold()))):
                 continue
             ref = f'employer_{len(tried)}'
             pages[ref] = {'kind': 'employer', 'label': label or employer, 'url': url,
@@ -180,12 +243,12 @@ def research(observed, report, scope, limit, web, discover, progress):
             select_answers()
 
     if 'employer' in scope:
-        collect([f'"{employer}" official about business founded',
-                 f'"{employer}" official customers case studies',
-                 f'"{employer}" official annual report ownership leadership'], reserve=2 if limit >= 4 else 0)
+        collect([f'{employer}{market} official company website about services history',
+                 f'{employer_key}{market} customers official case studies',
+                 f'{employer}{market} official ownership leadership'],  reserve=2 if limit >= 4 else 0)
         missing = [area for area in RESEARCH_AREAS[:-1] if area not in answers]
         if missing and attempts+1 < limit:
-            collect([f'"{employer}" official {area.lower()}' for area in missing[:4]])
+            collect([f'"{employer}"{market} official {area.lower()}' for area in missing[:4]])
 
     sources.update({answer['source']: pages[answer['source']] for answer in answers.values() if answer['source'] in pages})
     for claim in report['claims']:
@@ -202,7 +265,9 @@ def research(observed, report, scope, limit, web, discover, progress):
     if 'employer' in scope and (RESEARCH_AREAS[0] not in answers or employer_count < 3 or len({a['source'] for k, a in answers.items() if k != _ROLE}) < 2):
         blockers.append('Employer research needs business context and three supported topics from at least two employer pages.')
     if 'role' in scope and _ROLE not in answers:
-        blockers.append('A material responsibility needs evidence from the saved advert.')
+        blockers.append('The saved advert needs enough material criteria to map the work and its requirements.')
+    if 'role' in scope and report['role_research']['source_check']=='unconfirmed':
+        gaps.append('Vacancy availability')
     if 'pay' in scope and not observed['employer_pay']:
         gaps.append('Advertised pay')
         if not relevant:
@@ -210,4 +275,5 @@ def research(observed, report, scope, limit, web, discover, progress):
     if failures:
         progress(f'{failures} source checks could not be completed', attempts, limit)
     report['research_gaps'] = gaps
-    return {'export_ready': not blockers, 'verified_topics': list(answers), 'gaps': gaps, 'blockers': blockers}
+    return {'export_ready': not blockers, 'verified_topics': list(answers), 'gaps': gaps, 'blockers': blockers,
+            'role_criteria': report.get('role_research', {}).get('requirements', 0)}

@@ -17,20 +17,24 @@ def employer_pages(args, employer='Example'):
             f'{employer} provides service management and reporting for organisations across Australia.',
         ],
         'https://example.com/customers': [
-            f'{employer} serves customers in healthcare and other regulated industries.',
+            f'{employer} serves Australian customers in healthcare and other regulated industries.',
             f'{employer} is owned by an independent member cooperative.',
         ],
     }
     if 'open' not in args:
         return {'results':[{'url':url,'title':employer,'snippet':'A fabricated snippet that claims universal approval.'} for url in pages]}
     url=args['open'][0]['ref_id']
+    if url not in pages:
+        return {'text': f'Coordinator ({url})\nSource: open(test)\nL0: # Coordinator\nL1: Employer: Example\nL2: ## Responsibilities\n'
+                        'L3: - Coordinate service support and documentation across the customer operations team.\n'
+                        'L4: - Maintain reports and share changes with service managers.'}
     lines='\n'.join(f'L{i}: {line}' for i,line in enumerate(pages[url]))
     return {'text':f'{employer} ({url})\nCrawled: today; Source: open(test)\n{lines}'}
 
 def service(tmp_path):
     root=tmp_path; (root/'data').mkdir(); (root/'artifacts').mkdir()
     profile=Model(summary='Experienced service delivery professional.',experience=[{'organization':'Real Co','role':'Coordinator','dates':'2020–2024','bullets':['Coordinated support requests.','Documented a service process.']}],skills=['Support'],education=[],is_example=False)
-    job=Model(title='Coordinator',employer='Example',url='https://example.com/job',description='Coordinate service support and documentation across the customer operations team.',location='Melbourne')
+    job=Model(title='Coordinator',employer='Example',url='https://example.com/job',description='What you will deliver\n- Coordinate service support and documentation across the customer operations team.\n- Maintain reports and share changes with service managers.',location='Melbourne')
     w=SimpleNamespace(root=root,data=root/'data',artifacts=root/'artifacts',profile=profile,bridge=Bridge(),job=lambda jid:({'revision':'r1'},job))
     return CareerService(w),w
 
@@ -67,11 +71,14 @@ def test_bounded_research_and_private_profile(tmp_path):
     try:
         rid=s.start('job','deep_research',{'max_web_calls':2,'scope':['role','pay']})['run_id']; r=wait(s,rid)
         assert r['status']=='ready_for_review',r
-        assert not w.bridge.calls
+        assert w.bridge.calls == [('search_service.web_run', {'open':[{'ref_id':'https://example.com/job'}], 'response_length':'long'})]
         assert 'Coordinated support' not in str(w.bridge.calls)
         assert r['usage']['input_tokens'] is None
         assert r['result']['quality']['verified_topics']==['Operating stack and remit']
         assert r['result']['quality']['gaps']==['Advertised pay']
+        assert r['result']['quality']['role_criteria']==2
+        assert r['result']['assessment']['role_research']['source_check']=='readable'
+        assert len(r['result']['assessment']['role_research']['duties'])==2
     finally:s.close()
 
 def test_unknown_owner_and_invalid_options(tmp_path):
@@ -211,4 +218,49 @@ def test_navigation_does_not_count_as_employer_evidence(tmp_path):
         run=wait(s,s.start('job','deep_research')['run_id'])
         assert not run['result']['quality']['export_ready']
         assert run['result']['quality']['verified_topics']==['Operating stack and remit']
+    finally:s.close()
+
+def test_australian_role_rejects_foreign_same_name_employer(tmp_path):
+    s,w=service(tmp_path)
+    original=w.bridge.call
+    foreign='https://example.com/foreign'
+    def competing(name,args):
+        if 'open' not in args:
+            result=original(name,args)
+            result['results'].insert(0,{'url':foreign,'title':'Example','snippet':'Exact employer name'})
+            return result
+        if args['open'][0]['ref_id']==foreign:
+            return {'text':f'Example ({foreign})\nSource: open(test)\nL0: Example provides US healthcare staffing for hospitals in Texas.'}
+        return original(name,args)
+    w.bridge.call=competing
+    try:
+        run=wait(s,s.start('job','deep_research')['run_id'])
+        assert run['result']['quality']['export_ready']
+        assert 'Texas' not in run['result']['markdown']
+        assert not any(item.get('url')==foreign for item in run['result']['sources'].values())
+    finally:s.close()
+
+def test_vacancy_check_accepts_board_title_and_checks_employer():
+    from campus_agent.career_research import vacancy_check
+    url='https://example.com/job'
+    vacancy={'title':'[Hiring] Coordinator @Example','employer':'Example'}
+    body='Coordinator ({url})\nSource: open(test)\nL0: # Coordinator\nL1: Employer: {name}\nL2: ## Responsibilities\nL3: - Coordinate a busy customer service team.'
+    assert vacancy_check(url,vacancy,{'text':body.format(url=url,name='Example')})=='readable'
+    assert vacancy_check(url,vacancy,{'text':body.format(url=url,name='Other company')})=='unconfirmed'
+
+def test_undated_company_revenue_story_is_not_a_financial_finding(tmp_path):
+    s,w=service(tmp_path)
+    original=w.bridge.call
+    def employer_story(name,args):
+        if args.get('open',[{}])[0].get('ref_id')=='https://example.com/about':
+            result=original(name,args)
+            result['text']+='\nL1: When our business took a 70% revenue hit overnight, we had two choices.'
+            return result
+        return original(name,args)
+    w.bridge.call=employer_story
+    try:
+        run=wait(s,s.start('job','deep_research')['run_id'])
+        assert run['result']['quality']['export_ready']
+        assert 'Finances and trajectory' in run['result']['quality']['gaps']
+        assert '70% revenue hit' not in run['result']['markdown']
     finally:s.close()

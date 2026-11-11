@@ -42,10 +42,25 @@ def render(observed, report):
         report["next_step"],
         f"**Application** {report['submission']['description']}",
         f"**Closing date** {job['deadline'] or 'Undisclosed in the listing'}",
-        f"**Employer pay** {money_range(report['employer_pay']) if report['employer_pay'] else 'Undisclosed in the listing'}",
+        f"**Employer pay** {(report['employer_pay'].get('advertised_text') or money_range(report['employer_pay'])) if report['employer_pay'] else 'Undisclosed in the listing'}",
     ]
     if report.get("estimated_pay"):
         lines.append(f"**Discussion estimate** {money_range(report['estimated_pay'])}. {report['pay_note']}")
+    role = report.get('role_research')
+    if role:
+        states = {
+            'readable': 'The original advert was readable in this check. Confirm that it is still accepting applications.',
+            'closed': 'The original posting reports this vacancy closed.',
+            'unconfirmed': 'The original posting could not be verified. The role evidence below comes from the saved advert.',
+        }
+        lines += ["", "## Vacancy check", states[role['source_check']]]
+        if report.get('saved_location_difference'):
+            lines.append(f"The saved location says {report['saved_location_difference']}. The advert places the role in {', '.join(job['locations'])}. Confirm the expected work location.")
+        if role['duties']:
+            lines += ["", "## What you would deliver", *[f"- {duty} [advert]" for duty in role['duties']]]
+        if role['conditions'] or role['scope_questions']:
+            lines += ["", "## Conditions and scope to confirm",
+                      *[f"- {condition} [advert]" for condition in role['conditions'] + role['scope_questions']]]
     claims = [claim for claim in report['claims'] if claim['kind'] != 'unknown']
     for entry in claims:
         refs = ", ".join(entry["sources"])
@@ -59,7 +74,9 @@ def render(observed, report):
             lines.append("- What pay range and inclusions apply to this vacancy?")
     lines += ["", "## Fit to the role"]
     for row in report["fit"]:
-        lines.append(f"- **{row['requirement']} ({row['level']})** {row['detail']} [{', '.join(row['sources'])}]")
+        lines.append(f"- **{row['requirement']} ({row.get('label',row['level'])})** {row['detail']} [{', '.join(row['sources'])}]")
+        if role:
+            lines.extend(f"  - {observed['sources'][ref]['excerpt']} [{ref}]" for ref in row['sources'] if ref.startswith('experience_'))
     lines += ["", "## Application files"]
     for item in report["application_files"]:
         lines.append(f"- **{item['label']}** {item['name']}")

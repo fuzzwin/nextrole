@@ -17,11 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 from .career_contract import FRAMEWORKS, interview
-from .career_research import GAP_QUESTIONS, research
+from .career_research import GAP_QUESTIONS, research, role_matrix
 from .career_render import RESEARCH_AREAS, render, check_references, check_decision
 
 TERMINAL = {'ready_for_review', 'failed', 'cancelled', 'budget_exhausted'}
-VERSION = 'career-1.1.0'
+VERSION = 'career-1.2.0'
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
@@ -71,6 +71,30 @@ def research_sources(response):
     unique={}
     for source in found: unique.setdefault(source['url'],source)
     return list(unique.values())[:8]
+
+def _criterion_text(text):
+    return ' '.join(re.findall(r'\w+', text.casefold()))
+
+
+def _research_fit(row, reviewed, legacy, facts):
+    item = reviewed or legacy or {}
+    by_text = {text: ref for ref, text in facts}
+    matches = [by_text[evidence['text']] for evidence in item.get('evidence', [])
+               if isinstance(evidence, dict) and evidence.get('text') in by_text]
+    state = item.get('evidence_state')
+    level = 'Gap'
+    label = 'Evidence unconfirmed'
+    detail = 'Look for a specific example with your contribution and outcome.'
+    if state == 'confirmed_gap' and matches:
+        label = 'Confirmed gap'
+        detail = item.get('transfer_reason') or 'The saved review marks a gap.'
+    elif matches and state != 'unknown':
+        level = 'Direct' if state == 'direct' or (not reviewed and item.get('value')==1) else 'Transferable'
+        label = {'strong_transfer':'Strong transfer','partial_transfer':'Partial transfer','foundation':'Foundation'}.get(state,level)
+        detail = item.get('transfer_reason') or 'Review the saved example and its scope.'
+    return {'requirement': row['quote'], 'level': level, 'label': label, 'detail': detail,
+            'sources': list(dict.fromkeys(['advert', *matches])), 'category': row['category']}
+
 
 class CareerService:
     def __init__(self, workspace, recover=True):
@@ -147,6 +171,8 @@ class CareerService:
         if profile.get('is_example'): raise ValueError('Replace the example profile before preparing career material')
         enriched = next((x for x in self.workspace.jobs() if x['id']==job_id), {}) if hasattr(self.workspace,'jobs') else {}
         snapshot={'details':{k:enriched.get(k) for k in ('reading_view','location_info','listing','fit')},'job':job.model_dump(mode='json'),'profile':profile,'job_revision':row.get('revision',''),'captured_at':now()}
+        reviewed=(enriched.get('evidence_comparison') or {}).get('reviewed') or {}
+        snapshot['details']['reviewed_requirements']=reviewed.get('requirements', [])
         if feature=='interview_prep':
             prior=next((x for x in self.list(job_id) if x['feature']=='deep_research' and x['status']=='ready_for_review' and x['result'].get('quality',{}).get('export_ready') and 'employer' in x['options']['scope'] and x['snapshot']['job']==snapshot['job'] and x['snapshot']['profile']==profile and time.time()-datetime.fromisoformat(x['created_at']).timestamp()<86400),None)
             if prior: snapshot['research']={'run_id':prior['id'],'output_hash':prior['output_hash'],'review':prior['review'],'sources':prior['result']['sources'],'claims':prior['result']['assessment']['claims'],'gaps':prior['result']['quality']['gaps']}
@@ -230,6 +256,11 @@ class CareerService:
         j=r['snapshot']['job']; p=r['snapshot']['profile']; sources={}
         details=r['snapshot'].get('details',{}); view=details.get('reading_view') or {}; location=details.get('location_info') or {}
         sources['advert']={'kind':'employer','label':'Saved vacancy text (employer claims, not independently verified)','locator':f"Frozen saved role {r['job_id']}",'url':public_url(j.get('url','')),'excerpt':str(j.get('description',''))[:20000]}
+        parsed=urlsplit(str(j.get('url','')))
+        if sources['advert']['url'] and (parsed.hostname or '').endswith('.linkedin.com'):
+            regional=parsed._replace(query='',fragment='').geturl()
+            if public_url(regional)==sources['advert']['url']:
+                sources['advert']['read_url']=regional
         sources['application']={'kind':'application_record','label':'Application status not verified in this run','locator':'No submission check performed. Check your application records before applying.'}
         sources['profile']={'kind':'candidate','label':'Your saved profile summary','locator':'Frozen local profile summary','excerpt':str(p.get('summary') or '')}
         for key,value in r['snapshot'].get('research',{}).get('sources',{}).items():
@@ -246,11 +277,23 @@ class CareerService:
                 ref=f'experience_{ix}_{bi}'
                 sources[ref]={'kind':'candidate','label':f"{e.get('role','Role')} — {e.get('organization','Organisation')}",'locator':f"Saved experience {ix+1}, bullet {bi+1}; {e.get('dates','dates not stated')}",'excerpt':bullet}
                 facts.append((ref,bullet))
-        vacancy={'id':r['job_id'],'employer':str(j.get('employer') or 'Employer unconfirmed'),'title':str(j.get('title') or 'Role unconfirmed'),'mode':location.get('arrangement') or 'Not verified','employment':next((str(x.get('value')) for x in view.get('facts',[]) if isinstance(x,dict) and x.get('label')=='Work type' and x.get('value')), 'Not verified'),'locations':[str(j.get('location') or 'Not stated')],'source':'advert','status':'closed' if (details.get('listing') or {}).get('closed') else 'unknown','deadline':(details.get('listing') or {}).get('closes_on') or None}
+        from .locations import location_info
+        extracted=location_info(j, '') if not location.get('stated') else location
+        place=extracted['display'] if extracted.get('stated') else str(j.get('location') or 'Not stated')
+        vacancy={'id':r['job_id'],'employer':str(j.get('employer') or 'Employer unconfirmed'),'title':str(j.get('title') or 'Role unconfirmed'),'mode':location.get('arrangement') or extracted.get('arrangement') or 'Not verified','employment':next((str(x.get('value')) for x in view.get('facts',[]) if isinstance(x,dict) and x.get('label')=='Work type' and x.get('value')), 'Not verified'),'locations':[place],'source':'advert','status':'closed' if (details.get('listing') or {}).get('closed') else 'unknown','deadline':(details.get('listing') or {}).get('closes_on') or None}
+        if vacancy['mode']=='Not verified' and re.search(r'\bthis is a remote (?:role|position)\b', sources['advert']['excerpt'], re.I):
+            vacancy['mode']='Remote'
+        if vacancy['employment']=='Not verified':
+            employment=re.search(r'(?im)^[ \t]*(?:[*•-][ \t]+)?(?:#{1,6}[ \t]+)?(?:employment|work|job) type(?:[ \t]*:[ \t]*|[ \t]*(?:\n[ \t]*)+)(contract|temporary|casual|permanent|full[ -]time|part[ -]time)\b', sources['advert']['excerpt'])
+            if employment:
+                vacancy['employment']=employment[1].capitalize()
         observed={'checked_on':now()[:10],'vacancy':vacancy,'submission':{'status':'unconfirmed','description':'No application receipt was checked in this run.','source':'application'},'sources':sources,'employer_pay':None}
-        salary=view.get('salary') or {}
+        from .listing_view import salary_info
+        salary=salary_info(sources['advert']['excerpt'])
+        if salary['status']=='not_stated':
+            salary=view.get('salary') or {}
         if salary.get('status')=='stated' and salary.get('minimum') and salary.get('maximum') and salary.get('currency') and salary.get('period'):
-            observed['employer_pay']={'low':int(salary['minimum']),'high':int(salary['maximum']),'currency':salary['currency'],'basis':salary.get('display') or str(salary['period'])}
+            observed['employer_pay']={'low':int(salary['minimum']),'high':int(salary['maximum']),'currency':salary['currency'],'basis':'per '+str(salary['period']), 'advertised_text':salary.get('display')}
         questions=[{'id':'intro','question':'Tell me about your relevant experience for this role.','evidence':p.get('summary') or 'Add your summary.'}]
         stage_questions={'recruiter':'What are your availability, work arrangement preferences and pay expectations?','hiring_manager':'Which supported example best demonstrates delivery against this role’s priorities?','panel':'How did you work with stakeholders with different priorities?','technical':'Explain the reasoning and checks behind a technical decision you actually made.','practical':'How would you clarify and approach a practical task in this role?','unknown':'What would you like to confirm about the interview format?'}
         questions.append({'id':'stage','question':stage_questions[r['options']['stage']],'evidence':'Use confirmed personal evidence, or label a hypothetical approach clearly.'})
@@ -270,17 +313,38 @@ class CareerService:
         if prior:
             report['claims']=prior['claims']
             report['research_gaps']=prior['gaps']
-        requirements=(details.get('fit') or {}).get('requirements',[])
-        if requirements:
-            report['fit']=[]
-            for ix,item in enumerate(requirements[:30]):
-                refs=['advert']; matched=[]
-                for ev in item.get('evidence',[]):
-                    text=ev.get('text','') if isinstance(ev,dict) else str(ev)
-                    ref=next((key for key,bullet in facts if text==bullet),None)
-                    if ref: refs.append(ref); matched.append(text)
-                report['fit'].append({'requirement':item['text'],'level':'Direct' if matched and item.get('value')==1 else 'Transferable' if matched else 'Gap','detail':'; '.join(item.get('reasons') or []) or ('Saved matching evidence: '+'; '.join(matched) if matched else 'Needs evidence confirmation.'),'sources':refs})
-                if ix<3: questions.append({'id':f'requirement_{ix}','question':'What evidence demonstrates: '+item['text'],'evidence':'; '.join(matched) or 'No confirmed supporting example saved.'})
+        if r['feature']=='deep_research' and 'role' in r['options']['scope']:
+            matrix=role_matrix(sources['advert']['excerpt'],vacancy)
+            if extracted.get('evidence') not in {'Saved by you','Saved listing location'} and extracted.get('stated') and _criterion_text(str(j.get('location') or '')) not in {'',_criterion_text(place)}:
+                report['saved_location_difference']=str(j['location'])
+            reviewed={_criterion_text(item['quote']):item for item in details.get('reviewed_requirements',[]) if item.get('quote')}
+            legacy={_criterion_text(item['text']):item for item in (details.get('fit') or {}).get('requirements',[])}
+            fit=[]
+            for row in matrix:
+                if row['kind']!='competency' or row['importance']=='optional':
+                    continue
+                key=_criterion_text(row['quote'])
+                fit.append(_research_fit(row, reviewed.get(key), legacy.get(key), facts))
+            if fit:
+                report['fit']=fit
+            report['questions']=[
+                'Which advertised deliverable would you prioritise in the first month, and what baseline will we use?',
+                'Who does the work today, who signs off on changes, and who owns the outcome after handover?',
+                'Which tools, data and decision authority would be available to the person in this role?',
+                'Can you confirm the employing entity, work location, arrangement and pay basis?',
+            ]
+        else:
+            requirements=(details.get('fit') or {}).get('requirements',[])
+            if requirements:
+                report['fit']=[]
+                for ix,item in enumerate(requirements[:30]):
+                    refs=['advert']; matched=[]
+                    for ev in item.get('evidence',[]):
+                        text=ev.get('text','') if isinstance(ev,dict) else str(ev)
+                        ref=next((key for key,bullet in facts if text==bullet),None)
+                        if ref: refs.append(ref); matched.append(text)
+                    report['fit'].append({'requirement':item['text'],'level':'Direct' if matched and item.get('value')==1 else 'Transferable' if matched else 'Gap','detail':'; '.join(item.get('reasons') or []) or ('Saved matching evidence: '+'; '.join(matched) if matched else 'Needs evidence confirmation.'),'sources':refs})
+                    if ix<3: questions.append({'id':f'requirement_{ix}','question':'What evidence demonstrates: '+item['text'],'evidence':'; '.join(matched) or 'No confirmed supporting example saved.'})
         fact=facts[0][1] if facts else 'No work example has been saved. Add a real example before using a past-experience answer.'
         factref=facts[0][0] if facts else 'profile'
         methods=[]
@@ -321,10 +385,19 @@ class CareerService:
         claims=[claim for claim in report['claims'] if claim['kind']=='confirmed']
         if feature=='deep_research':
             lines=['# Job research brief',title]
-            for claim in claims:
+            role=report.get('role_research')
+            if role:
+                lines += ['## Vacancy', report['decision'], report['next_step']]
+                if report['employer_pay']:
+                    lines += ['Advertised pay · '+(report['employer_pay'].get('advertised_text') or report['employer_pay']['basis'])]
+                if role['duties']:
+                    lines += ['## What you would deliver',*['- '+duty for duty in role['duties'][:3]]]
+            for claim in claims[:4]:
+                if claim['area']==RESEARCH_AREAS[-1]:
+                    continue
                 source=observed['sources'][claim['sources'][0]]
                 lines += ['## '+claim['area'],claim['text'],f"[{source['label']}]({source['url']})"]
-            lines += ['## Ask next',*['- '+GAP_QUESTIONS[area] for area in report['research_gaps'] if area in GAP_QUESTIONS][:3]]
+            lines += ['## Ask next',*['- '+question for question in report['questions'][:3]]]
             return '\n\n'.join(lines)
         lines=['# Quick rehearsal sheet',title,guide['opening'],'## Examples to rehearse']
         for card in guide['cards'][:3]: lines += [card['answer'],'Cues: '+' → '.join(card['cues'])]

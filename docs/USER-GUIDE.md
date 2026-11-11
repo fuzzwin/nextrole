@@ -1,6 +1,6 @@
 # NextRole for Mac
 
-## Prepare a full package (0.9.33)
+## Prepare a full package (0.9.34)
 
 Open a saved job and choose **Prepare full package** in **Next steps**. Before starting, select a ZIP with PDF and Word files, one combined PDF, or separate downloads. Choose **Email me after I review** to send the finished files to your connected Gmail account once you have reviewed them. You can download the output in either mode.
 
@@ -604,7 +604,7 @@ The status line shows jobs checked, fields filled and unresolved jobs. An unsucc
 
 ## Per-role research and interview preparation
 
-Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Choose the scope, stage and frameworks before starting. Review the evidence and any missing details, then download the editable guide and quick sheet or practise one question at a time. Research uses bounded connected searches; rehearsal drafts use your saved evidence. These are reviewable evidence workbooks, not independently verified company conclusions or a generative interview-writing service. See [Career Harness guide](CAREER-HARNESS.md) for limits and usage.
+Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Choose the scope, stage and frameworks before starting. Review the evidence and any missing details, then download the editable guide and quick sheet or practise one question at a time. Deep Research checks the original advert, maps duties and requirements to saved evidence, and shows conditions to confirm. Rehearsal drafts use your saved work examples. These are reviewable evidence workbooks, not independently verified company conclusions or a generative interview-writing service. See [Career Harness guide](CAREER-HARNESS.md) for limits and usage.
 
 
 ## Evidence scoring

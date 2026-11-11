@@ -1,3 +1,8 @@
+## 0.9.34
+
+- Deep Research reopens the exact posting and maps material duties and requirements to the current saved evidence review. It shows advertised work location, employment type, pay and unresolved conditions together.
+- Prefer evidence for the role’s market when employers share a name. Read repeated hourly units as a single advertised pay range.
+
 ## 0.9.33
 
 - Reopen employer pages before using them in job research. Keep supported findings with their sources and group gaps into questions for the employer.

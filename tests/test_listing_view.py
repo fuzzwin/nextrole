@@ -108,6 +108,14 @@ def test_salary_range_is_literal_and_does_not_invent_an_unknown_salary():
     assert not listing_view('Competitive remuneration and flexible working.','Support Specialist')['facts']
 
 
+def test_repeated_hourly_unit_is_one_advertised_range():
+    from campus_agent.listing_view import salary_info
+    text='A$93.00/hr - A$112.00/hr'
+    result=salary_info(text)
+    assert (result['status'],result['currency'],result['period'])==('stated','AUD','hour')
+    assert (result['minimum'],result['maximum'],result['evidence'])==(93,112,text)
+
+
 def test_structured_employer_salary_and_html_requirements_are_read():
     import json
     posting={'@type':'JobPosting','title':'Automation Specialist','description':'<h2>About the role</h2><p>Build business workflows.</p><h2>Requirements</h2><ul><li>Python automation experience.</li><li>Power Automate workflow experience.</li><li>Microsoft 365 systems support experience.</li></ul>','baseSalary':{'currency':'AUD','value':{'minValue':110000,'maxValue':130000,'unitText':'YEAR'}},'jobLocation':{'address':{'addressLocality':'Melbourne','addressRegion':'VIC','addressCountry':'Australia'}}}
