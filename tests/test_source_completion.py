@@ -125,7 +125,7 @@ def test_backfill_persists_explicit_employer_without_resetting_tracking(workspac
 
 
 def test_parsing_an_employer_does_not_clear_latest_blocked_source_check(workspace):
-    from campus_agent.fit import VERSION
+    from campus_agent.fit import SOURCE_VERSION as VERSION
     j=job();text='# Systems Specialist\nExample Employer Melbourne, VIC\nSee who Example Employer has hired for this role\nRequirements\n- Python automation experience.'
     workspace.add_job(j.model_copy(update={'description':text}),full=True)
     row,_=workspace.job(j.identity)
@@ -144,7 +144,7 @@ def test_source_correction_is_guarded_and_original_link_is_preserved(workspace):
     workspace.correct_saved_source(j.identity,expected,{'description':SOURCE_AD,'employer':'Example Employer'})
     row=workspace.jobs()[0]
     assert row['job']['url']==str(j.url)
-    assert row['fit']['percent'] is not None
+    assert row['fit']['assessment_state']=='rating_pending' and row['legacy_fit']['percent'] is not None
     calls=[];workspace.bridge.call=lambda tool,args:(calls.append(args) or {'content':AD})
     workspace.hydrate(j.identity)
     assert calls[0]['open'][0]['ref_id']==str(j.url)

@@ -1,4 +1,4 @@
-name: Publish NextRole 0.9.22
+name: Publish NextRole
 
 on:
   pull_request:
@@ -13,6 +13,9 @@ jobs:
   verify-release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      package: ${{ steps.package.outputs.name }}
+      version: ${{ steps.package.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,10 +41,13 @@ jobs:
       - name: Build clean source distribution
         run: python scripts/build_release.py
       - name: Inspect release contents
+        id: package
         run: |
           python - <<'PY'
-          import json, pathlib, zipfile
-          name="NextRole-Mac-0.9.22"
+          import json, os, pathlib, re, tomllib, zipfile
+          version=tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]
+          assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
+          name=f"NextRole-Mac-{version}"
           z=pathlib.Path("dist")/(name+".zip")
           assert z.exists()
           with zipfile.ZipFile(z) as archive:
@@ -50,15 +56,18 @@ jobs:
               assert any(x.endswith("/docs/ROLE-TAILORING.md") for x in files)
               assert not any("/workspace/" in x or "/artifacts/" in x for x in files)
               m=json.loads(archive.read(name+"/RELEASE-MANIFEST.json"))
-              assert m["version"]=="0.9.22"
+              assert m["version"]==version
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"name={name}", file=output)
+              print(f"version={version}", file=output)
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.9.22-Verified
+          name: ${{ steps.package.outputs.name }}-Verified
           path: |
-            dist/NextRole-Mac-0.9.22.zip
-            dist/NextRole-Mac-0.9.22.zip.sha256
-            dist/NextRole-Mac-0.9.22.manifest.json
+            dist/${{ steps.package.outputs.name }}.zip
+            dist/${{ steps.package.outputs.name }}.zip.sha256
+            dist/${{ steps.package.outputs.name }}.manifest.json
           if-no-files-found: error
 
   publish-release:
@@ -70,23 +79,25 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: NextRole-Mac-0.9.22-Verified
+          name: ${{ needs.verify-release.outputs.package }}-Verified
           path: dist
       - name: Release verified Mac package
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.verify-release.outputs.version }}
+          RELEASE_PACKAGE: ${{ needs.verify-release.outputs.package }}
         run: |
           set -euo pipefail
-          if gh release view v0.9.22 --repo "$GH_REPO" >/dev/null 2>&1; then
-            echo "Release v0.9.22 already exists; refusing to overwrite artifacts."
+          if gh release view "v$RELEASE_VERSION" --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release v$RELEASE_VERSION already exists; refusing to overwrite artifacts."
           else
-            gh release create v0.9.22 \
-              dist/NextRole-Mac-0.9.22.zip \
-              dist/NextRole-Mac-0.9.22.zip.sha256 \
-              dist/NextRole-Mac-0.9.22.manifest.json \
+            gh release create "v$RELEASE_VERSION" \
+              "dist/$RELEASE_PACKAGE.zip" \
+              "dist/$RELEASE_PACKAGE.zip.sha256" \
+              "dist/$RELEASE_PACKAGE.manifest.json" \
               --repo "$GH_REPO" \
               --target "$GITHUB_SHA" \
-              --title "NextRole Mac 0.9.22" \
-              --notes "Compact application rows, evidence-based email summaries, improved employer and role identity extraction, and bounded rereading of older receipts. Ambiguous roles remain for review; no email is sent or modified."
+              --title "NextRole Mac $RELEASE_VERSION" \
+              --notes "Verified Mac source package. See CHANGELOG.md for the changes in this version."
           fi

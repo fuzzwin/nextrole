@@ -19,18 +19,18 @@ def test_unchanged_reads_do_not_repeat_assessment_and_results_are_isolated(tmp_p
  monkeypatch.setattr(module,'fit_assessment',observed)
  ws,job=setup(tmp_path)
  try:
-  first=ws.jobs();first[0]['fit']['percent']=-99
+  first=ws.jobs();first[0]['legacy_fit']['percent']=-99
   again=ws.jobs()
-  assert len(calls)==1 and again[0]['fit']['percent']>=80
+  assert len(calls)==1 and again[0]['legacy_fit']['percent']>=80 and again[0]['fit']['percent'] is None
  finally:ws.close()
 
 
 def test_profile_and_employer_corrections_invalidate_saved_assessment(tmp_path):
  ws,job=setup(tmp_path)
  try:
-  assert ws.jobs()[0]['fit']['auto_eligible']
+  assert ws.jobs()[0]['legacy_fit']['percent'] >= 80
   ws.save_profile(candidate().model_copy(update={'experience':[],'skills':[]}))
-  assert not ws.jobs()[0]['fit']['auto_eligible']
+  assert ws.jobs()[0]['legacy_fit']['percent'] < 80
   ws.save_profile(candidate())
   ws.add_job(job.model_copy(update={'employer':'Unknown'}),full=True)
   assert ws.jobs()[0]['fit']['percent'] is None
@@ -40,7 +40,7 @@ def test_profile_and_employer_corrections_invalidate_saved_assessment(tmp_path):
 def test_closing_date_and_manual_pins_remain_fresh(tmp_path):
  ws,job=setup(tmp_path)
  try:
-  assert ws.jobs()[0]['top_match']
+  assert ws.jobs()[0]['fit']['assessment_state']=='rating_pending'
   ws.set_meta('listing:'+job.identity,{'closes_on':'2020-01-01'})
   ws.set_top_listing(job.identity,True)
   value=ws.jobs()[0]
@@ -51,9 +51,9 @@ def test_closing_date_and_manual_pins_remain_fresh(tmp_path):
 def test_unread_flag_and_location_override_remain_fresh(tmp_path):
  ws,job=setup(tmp_path)
  try:
-  assert ws.jobs()[0]['top_match']
+  assert ws.jobs()[0]['fit']['assessment_state']=='rating_pending'
   ws.set_meta('location_override:'+job.identity,'Sydney NSW')
-  assert not ws.jobs()[0]['top_match']
+  assert ws.jobs()[0]['location_info']['display'].startswith('Sydney')
   with ws.store.connect() as db:db.execute('UPDATE job_details SET full_description=0 WHERE job_id=?',(job.identity,))
   assert ws.jobs()[0]['fit']['percent'] is None
  finally:ws.close()
@@ -82,5 +82,5 @@ def test_simultaneous_readers_share_the_initial_work(tmp_path,monkeypatch):
  ws,job=setup(tmp_path)
  try:
   with ThreadPoolExecutor(max_workers=4) as pool:values=list(pool.map(lambda _:ws.jobs(),range(4)))
-  assert len(calls)==1 and all(v[0]['fit']['auto_eligible'] for v in values)
+  assert len(calls)==1 and all(v[0]['fit']['assessment_state']=='rating_pending' for v in values)
  finally:ws.close()

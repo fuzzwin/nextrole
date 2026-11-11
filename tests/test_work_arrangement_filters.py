@@ -10,6 +10,7 @@ def test_combined_work_filters_and_legacy_saved_choices():
     lines=html.splitlines()
     js='\n'.join(next(l for l in lines if l.startswith('const '+n+'=')) for n in ['WORK_MODES','AU_STATE_NAMES','AU_CITY_STATES'])
     js+='\n'+'\n'.join(next(l for l in lines if l.startswith('function '+n+'(')) for n in names)
+    js+='\n'+html[html.index('function displayedCoverage('):html.index('function skillGauge(')]
     js+=r'''
 const assert=require('node:assert/strict');
 function row(id,city,mode,description='',country='Australia'){
@@ -29,6 +30,10 @@ assert.equal(locationAndWorkMatches(row('x','','Remote','Remote anywhere in Aust
 assert.equal(locationAndWorkMatches(row('x','','Remote','We operate in Australia. This role is remote.'),options),false);
 assert.equal(filterJobRows(rows,{...options,types:['project_delivery']},'2026-11-03').length,0);
 assert.equal(filterJobRows(rows,{...options,minimum:60},'2026-11-03').length,0);
+rows[0].fit.percent=null;rows[0].evidence_preview={percent:75};
+assert.equal(filterJobRows(rows,{...options,minimum:60},'2026-11-03').some(r=>r.id==='mel-hybrid'),true);
+rows[0].evidence_preview.percent=0;
+assert.equal(displayedCoverage(rows[0]),0);
 rows[0].listing.closed=true;
 assert.equal(filterJobRows(rows,{...options,hideClosed:true},'2026-11-03').some(r=>r.id==='mel-hybrid'),false);
 assert.equal(locationAndWorkMatches(row('conflict','Melbourne','Remote','NSW only'),options),false);

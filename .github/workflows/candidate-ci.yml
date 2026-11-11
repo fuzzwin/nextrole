@@ -43,26 +43,29 @@ jobs:
       - name: Build audited clean Mac ZIP
         run: python scripts/build_release.py
       - name: Verify release metadata and contents
+        id: package
         run: |
           python - <<'PY'
-          import pathlib,zipfile,json
-          output=pathlib.Path("dist")
-          zips=list(output.glob("NextRole-Mac-0.9.22.zip"))
-          assert len(zips)==1, zips
-          with zipfile.ZipFile(zips[0]) as archive:
+          import json, os, pathlib, re, tomllib, zipfile
+          version=tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]
+          assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
+          name=f"NextRole-Mac-{version}"
+          with zipfile.ZipFile(pathlib.Path("dist") / (name + ".zip")) as archive:
               assert archive.testzip() is None
               paths=archive.namelist()
               assert any(p.endswith("/docs/ROLE-TAILORING.md") for p in paths)
               assert not any("/workspace/" in p for p in paths)
-              manifest=json.loads(archive.read("NextRole-Mac-0.9.22/RELEASE-MANIFEST.json"))
-              assert manifest["version"]=="0.9.22"
+              manifest=json.loads(archive.read(f"{name}/RELEASE-MANIFEST.json"))
+              assert manifest["version"]==version
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"name={name}", file=output)
           PY
       - name: Upload clean release candidate
         uses: actions/upload-artifact@v4
         with:
-          name: NextRole-Mac-0.9.22-Candidate
+          name: ${{ steps.package.outputs.name }}-Candidate
           path: |
-            dist/NextRole-Mac-0.9.22.zip
-            dist/NextRole-Mac-0.9.22.zip.sha256
-            dist/NextRole-Mac-0.9.22.manifest.json
+            dist/${{ steps.package.outputs.name }}.zip
+            dist/${{ steps.package.outputs.name }}.zip.sha256
+            dist/${{ steps.package.outputs.name }}.manifest.json
           if-no-files-found: error

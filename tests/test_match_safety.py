@@ -23,7 +23,13 @@ def test_unknown_obligations_survive_recognised_tool_matches(separator):
  text=DESC.replace('Python workflow automation experience.','Python workflow automation experience'+separator+'professional fluency in Japanese.').replace('Power Automate workflow experience.','Power Automate workflow experience'+separator+'hands-on SAP S/4HANA migration ownership.').replace('Microsoft 365 systems support experience.','Microsoft 365 systems support experience'+separator+'an active CISSP certification.')
  value=fit(role(text))
  assert not value['auto_eligible'] and value['percent']<80
- assert all(r['status']!='Supported' for r in value['requirements'])
+ if separator=='; ':
+  # Independent clauses retain their own credit; every unsupported obligation
+  # remains in the denominator and blocks automatic eligibility.
+  for marker in ('Japanese','SAP','CISSP'):
+   assert any(marker in r['text'] and r['status']!='Supported' for r in value['requirements'])
+ else:
+  assert all(r['status']!='Supported' for r in value['requirements'])
 
 @pytest.mark.parametrize('text',[
  'Salary: $120,000 - $140,000 per year + super + annual bonus.',

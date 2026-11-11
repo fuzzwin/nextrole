@@ -1,5 +1,15 @@
 # NextRole for Mac
 
+## Current scoring: transferable fit (0.9.31)
+
+The provisional fit percentage uses direct work (100%), strong transferable work (75%), partial transfer (50%), relevant foundation (25%) and explicit confirmed gaps (0%). Unknown evidence stays outside the fit average. Essential criteria count twice standard criteria. Optional criteria and eligibility/logistics checks remain separate.
+
+The separate **Criteria assessed** percentage shows how much of the extracted advert has an assessment, including partial skills and foundation. It does not mean those criteria are fully met. For example, 100% fit with 10% assessed is too incomplete to use as a whole-job rating.
+
+Use **Assess fit** on a job card to open the criteria and check direct evidence. **Suggest grades with local Qwen** is optional. Review each criterion, choose confirmed evidence, explain the transfer and any gaps, then **Save reviewed fit**. The app labels assistant reviews separately from user reviews. Saved reviews remain provisional and current until the advert, profile or scoring logic changes.
+
+Compounds retain their source qualifiers and AND/OR scope. Exact repeated criteria are removed; near-duplicate concepts and omitted requirements still need source review. Older scoring descriptions below describe historical versions, not this current calculation.
+
 ## Start here — give Codex the ZIP and your resume
 
 **Recommended setup: open a local Codex chat, attach the NextRole ZIP and
@@ -599,3 +609,53 @@ The score measures recorded evidence, not your chance of being hired. Explicit e
 ## Reading your application tracker
 
 Applications uses compact rows with employer, role, latest status, dates and a source email link. Expand the email details to inspect the evidence. The tracker reads message contents; it does not assume every email from a company proves a new application. Prior-thread identity can help resolve a reply, while ambiguous company-only messages remain for review. Position cancellation is distinct from rejection. Older receipts are rechecked in bounded batches as the parser changes. Checking Gmail never sends, archives or labels mail.
+
+
+## Local Qwen evidence review
+
+Open a fully read, open role and choose **Assess with local Qwen**. List actions can review up to ten eligible filtered roles. Allow several minutes per advert. This requires a local llama.cpp service at 127.0.0.1:9931 with model alias `qwen3.5:9B`; the tested model is Qwen3.5-9B Q4_K_M, with a 4096-token context and one request at a time. The model itself is not included in the download.
+
+The model interprets requirements and selects saved profile facts by ID. Original quotations are retrieved by code. An independent pass reviews the selected evidence without seeing the initial verdict. Code computes documented evidence coverage: supported = 1, partial = 0.5, undocumented = 0; explicit essential criteria count twice, optional criteria and conditions are separate. This is not a verified ability score or hiring probability. Low coverage must not dismiss a role. Review each quoted fact and the original requirement. A second model pass is not independent human verification.
+
+Reviews remain marked Needs review and cannot automatically become strong matches or trigger application actions. Existing rule estimates remain clearly labelled until a current local review is available. Saved reviews become stale after profile, advert or date changes. Incomplete or excluded adverts are not sent to the model. The local service receives only the saved advert and relevant profile records, excluding contact details and referees. Requests cannot redirect to an external endpoint and have no cloud fallback or tools.
+
+Malformed, incomplete, oversized or timed-out output is rejected without replacing a saved review. Check the task result for failures. If the model service is offline, start your local model service and retry. An 8 GB machine has not been qualified; memory measurements on a larger Mac do not establish smooth 8 GB operation.
+
+Before assessment, choose **Check local Qwen rules** in List actions. The harness checks alternative requirements, compound abilities, source-link and instruction exclusion, prototype/production claims, absent credentials, strongest-evidence selection, tenure, fixed arithmetic and the actual full assessment pipeline. Every check must pass. A failed or incomplete run cannot qualify the model. Qualification is bound to the model weights, model name and rule-code hash; changing those invalidates it. Even after passing, every assessment remains subject to source/evidence validation and human review. Passing a finite test set is not proof of correctness for every advert.
+
+The same harness can run from the installation directory with `python -m campus_agent.qwen_harness --output /path/to/report.json --workspace /path/to/workspace`. It exits nonzero on failure and stores a readable JSON report. All fixtures are synthetic; private career facts are not part of the distributed harness.
+
+
+## Compare evidence coverage
+
+Open a complete, active job and expand **Compare evidence coverage** under **Requirements and your evidence**. **Run rules only** gives a conservative check against recorded work and dates. **Compare with local AI** also runs Qwen on this Mac and shows both percentages and the quotes behind each decision.
+
+The methods share the same explicit requirements from the saved advert. Essential requirements count twice. Full evidence earns one point, partial evidence earns half a point, and missing evidence earns zero. The rules-only arm awards full credit for direct work evidence or dated general support and leaves other cases for review. The comparison covers the extracted requirements and may miss requirements that the advert parser did not identify.
+
+Completed comparison previews appear on job cards. Calculate coverage runs local Qwen for one complete, open job. The label identifies a Qwen preview or a rules-only preview. A preview becomes unavailable when the profile or advert changes. Automatic recommendations still require a validated rating. From the source folder, run `python -m campus_agent.scoring_comparison` for the labelled controls. Add `--with-qwen` to run both arms against the same controls using the local model service.
+
+Use **Update saved jobs** for missing facts and adverts. In a job, **Next steps** contains the research document, interview preparation document, and résumé and cover letter. Research can use public search service credits. The research setup explains its scope before you start.
+
+
+## Source matrix (0.9.29)
+
+Coverage comparisons now collect quoted duties as well as candidate requirements directly from the advert. Repeated identical statements share one row. Optional criteria, logistics, eligibility conditions and application/source instructions are listed separately and excluded from the percentage. A clause that mixes mandatory and preferred scope requires review before calculation.
+
+An AND group must have all its stated parts established for full credit. An OR group requires a qualifying alternative, including shared scope or duration. Source wording stays intact so qualifiers are visible. Different descriptions of a related duty can still overlap and need human review.
+
+The fixed formula remains one point for supported evidence, half a point for partial evidence, and zero for undocumented evidence. Explicit essential criteria have double weight. The comparison also shows the fully documented percentage and the percentage that would result if its partially documented criteria were completed. The rules-only result is labelled a lower bound because it misses equivalent experience.
+
+Changing the matrix invalidates older previews. Recalculate a job to see its current set of duties, optional items, conditions and evidence.
+
+A proposed full-credit AND/list match also passes a literal scope cross-check. Residual unconfirmed terms reduce it to partial and are shown for review. Equivalent wording can trigger this conservative check, so it is a review aid with false negatives.
+
+
+## Transferable-fit scoring (0.9.30)
+
+Job cards now distinguish transferable fit from evidence coverage. Direct demonstrated work earns 100% credit. Strongly comparable delivered work earns 75%, a meaningful demonstrated subset earns 50%, and relevant training, prototypes or conceptual foundations earn 25%. An explicitly confirmed capability gap earns zero. Missing evidence remains unknown.
+
+The fit percentage is the weighted mean of assessed criteria. Unknown criteria are excluded from that denominator and reduce the separate evidence-coverage percentage. Essential criteria count twice, ordinary criteria once. Preferred criteria and logistics/eligibility conditions stay separate. A high score based on little assessed evidence is provisional.
+
+The model must quote confirmed records and explain the transfer bridge and remaining scope. Its evidence verifier sees only the selected facts and the claim. A prototype or saved skill alone cannot receive delivery credit. Missing facts cannot become confirmed gaps. Relevant support tenure is calculated from dates, while specialist tool tenure stays unknown unless documented. Current structured credentials are included in the evidence pool.
+
+The rules-only check reports the share of weighted criteria with direct evidence. The job card displays a reviewed fit or a labelled Qwen suggestion when available. Changes to the advert, profile or scoring logic require a new review.

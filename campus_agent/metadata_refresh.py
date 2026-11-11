@@ -143,6 +143,8 @@ def extract_fields(text, job, search_area):
 def refresh_one(workspace, row):
     from .workspace import source_text, search_results, public_listing_url, SourceChanged, ReadInProgress
     job=Job.model_validate(row['job'])
+    from .source_policy import require_allowed_source
+    require_allowed_source(str(job.url))
     wanted=missing_fields(row)
     report={'version':VERSION,'source_hash':source_hash(row['job']),'checked_at':utcnow(),'requested':wanted,
             'fields':copy.deepcopy((row.get('metadata_refresh') or {}).get('fields',{})),

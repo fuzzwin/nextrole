@@ -31,8 +31,8 @@ def test_old_pending_roles_get_real_details_and_scores_with_history(workspace):
     preferences=workspace.preferences.model_dump();profile=workspace.profile.model_dump()
     queue.start();result=queue.run_batch()
     after=workspace.jobs()[0]
-    assert result['assessed']==1 and result['waiting']==0
-    assert after['fit']['percent'] is not None
+    assert result['rating_pending']==1 and result['waiting']==0
+    assert after['fit']['percent'] is None and after['fit']['assessment_state']=='rating_pending'
     assert after['reading_view']['salary']['status']!='not_stated'
     assert after['id']==row['id'] and after['job']['url']==row['job']['url']
     assert after['notes']=='keep my note' and after['top_saved']
@@ -48,7 +48,7 @@ def test_host_pacing_and_restart_resume_without_repeating_assessed_job(workspace
     queue=DetailRefreshQueue(workspace,clock=lambda:clock[0])
     assert queue.run_batch()['checked']==1
     clock[0]+=HOST_DELAY+1
-    assert queue.run_batch()['assessed']==2
+    assert queue.run_batch()['rating_pending']==2
 
 
 def test_pause_during_read_stops_after_current_job(workspace):
@@ -63,7 +63,7 @@ def test_pause_during_read_stops_after_current_job(workspace):
     release.set();thread.join(3);assert not thread.is_alive()
     assert queue.summary()['checked']==1 and not queue.summary()['enabled']
     clock[0]+=HOST_DELAY+1;queue.start();queue.run_batch()
-    assert queue.summary()['assessed']==2
+    assert queue.summary()['rating_pending']==2
 
 
 def test_failures_retry_once_after_day_then_hold_even_after_restart(workspace):
@@ -99,7 +99,7 @@ def test_manual_source_edit_reopens_exhausted_record(workspace):
     workspace.add_job(updated,full=True)
     workspace.bridge.call=lambda *_:{'content':AD}
     clock[0]+=HOST_DELAY+1;queue.run_batch()
-    assert queue.summary()['assessed']==1
+    assert queue.summary()['rating_pending']==1
 
 
 def test_excluded_and_directory_records_never_fetched(workspace):
@@ -188,7 +188,7 @@ def test_restoring_archived_job_requeues_without_resetting_attempts(workspace):
     with workspace.store.connect() as db:db.execute("UPDATE job_details SET stage='archived' WHERE job_id=?",(jobs[0].identity,))
     queue.run_batch();assert queue.summary()['checked']==1
     with workspace.store.connect() as db:db.execute("UPDATE job_details SET stage='saved' WHERE job_id=?",(jobs[0].identity,))
-    queue.run_batch();assert queue.summary()['assessed']==1
+    queue.run_batch();assert queue.summary()['rating_pending']==1
 
 
 def test_interrupted_reads_do_not_reset_attempt_budget(workspace):
@@ -247,4 +247,4 @@ def test_source_edit_during_failed_read_is_not_charged_to_new_source(workspace):
     assert row['assessment_source'] is None
     workspace.bridge.call=lambda *_:{'content':AD}
     clock[0]+=HOST_DELAY+1;queue.run_batch()
-    assert queue.summary()['assessed']==1
+    assert queue.summary()['rating_pending']==1

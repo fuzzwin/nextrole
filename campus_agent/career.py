@@ -26,6 +26,8 @@ def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
 def digest(value): return hashlib.sha256(encoded(value).encode()).hexdigest()
 def public_url(value):
+    from .source_policy import source_exclusion
+    if source_exclusion(value): return ''
     try:
         from ipaddress import ip_address
         p = urlsplit(str(value)); host = p.hostname or ''
@@ -134,7 +136,9 @@ class CareerService:
             o[key]=v
         o.update(stage=stage,frameworks=names)
         row,job=self.workspace.job(job_id)
+        from .source_policy import require_allowed_source
         if not row or job is None: raise ValueError('Saved role not found')
+        require_allowed_source(job.model_dump(mode='json')['url'])
         # Only the current candidate, never examples, mail, referees or credentials.
         profile=self.workspace.profile.model_dump()
         profile={k:profile.get(k) for k in ('summary','headline','skills','education','experience','is_example','credentials','availability','technical_projects')}

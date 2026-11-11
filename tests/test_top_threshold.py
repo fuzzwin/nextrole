@@ -17,18 +17,18 @@ def seventy_role(workspace, role):
     return job
 
 
-def test_actual_seventy_percent_fit_respects_selected_threshold(workspace,role):
+def test_legacy_seventy_percent_cannot_trigger_automatic_top(workspace,role):
     job=seventy_role(workspace,role)
     assert Preferences().auto_top_threshold==70
     row=workspace.jobs()[0]
-    assert row['fit']['percent']==70 and row['fit']['auto_eligible'] and row['top_match']
-    assert '70%' in row['top_reason']
+    assert row['legacy_fit']['percent']==70 and row['fit']['percent'] is None
+    assert not row['fit']['auto_eligible'] and not row['top_match']
     workspace.save_preferences(workspace.preferences.model_copy(update={'auto_top_threshold':71}))
     assert not workspace.jobs()[0]['top_match']
     workspace.set_top_listing(job.identity,True)
     assert workspace.jobs()[0]['top_listing']
     workspace.save_preferences(workspace.preferences.model_copy(update={'auto_top_threshold':70}))
-    assert workspace.jobs()[0]['top_match']
+    assert not workspace.jobs()[0]['top_match']
     workspace.add_job(job.model_copy(update={'description':job.description+'\n- Kubernetes development experience required.'}),full=True)
     assert not workspace.jobs()[0]['top_match']
     assert workspace.jobs()[0]['top_saved']

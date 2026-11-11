@@ -926,11 +926,12 @@ def setup_automatic_top_role(workspace,role):
     return job
 
 
-def test_automatic_top_includes_threshold_boundary_and_preserves_manual_pins(workspace,role):
+def test_legacy_threshold_cannot_add_a_top_listing_and_preserves_pins(workspace,role):
     job=setup_automatic_top_role(workspace,role)
     workspace.save_preferences(workspace.preferences.model_copy(update={'auto_top_enabled':True,'auto_top_threshold':100}))
     row=next(r for r in workspace.jobs() if r['id']==job.identity)
-    assert row['fit']['percent']==100 and row['top_match'] and row['top_listing'] and not row['top_saved']
+    assert row['legacy_fit']['percent']==100 and row['fit']['percent'] is None
+    assert not row['top_match'] and not row['top_listing'] and not row['top_saved']
     workspace.set_top_listing(job.identity,True)
     workspace.save_preferences(workspace.preferences.model_copy(update={'auto_top_enabled':False}))
     row=next(r for r in workspace.jobs() if r['id']==job.identity)
@@ -938,9 +939,9 @@ def test_automatic_top_includes_threshold_boundary_and_preserves_manual_pins(wor
     assert workspace.preferences.auto_top_threshold==100
 
 
-def test_requirement_gap_removes_automatic_top_but_keeps_manual_pin(workspace,role):
+def test_requirement_gap_keeps_manual_pin(workspace,role):
     job=setup_automatic_top_role(workspace,role)
-    assert next(r for r in workspace.jobs() if r['id']==job.identity)['top_match']
+    assert not next(r for r in workspace.jobs() if r['id']==job.identity)['top_match']
     workspace.set_top_listing(job.identity,True)
     workspace.save_preferences(workspace.preferences.model_copy(update={'auto_top_threshold':0}))
     changed=job.model_copy(update={'description':job.description+'\n- Kubernetes development experience required.'})
@@ -955,7 +956,7 @@ def test_automatic_top_excludes_applied_and_archived_roles(workspace,role,stage)
     job=setup_automatic_top_role(workspace,role)
     with workspace.store.connect() as db:db.execute('UPDATE job_details SET stage=? WHERE job_id=?',(stage,job.identity))
     row=next(r for r in workspace.jobs() if r['id']==job.identity)
-    assert row['fit']['status']=='Good match' and not row['top_match']
+    assert row['legacy_fit']['status']=='Good match' and not row['top_match']
 
 
 def test_automatic_top_excludes_unread_and_closed_roles_and_validates_threshold(workspace,role):

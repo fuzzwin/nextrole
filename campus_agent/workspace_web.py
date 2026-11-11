@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import ValidationError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from .models import Job, Profile
 from .workspace import Preferences, Workspace
@@ -48,8 +49,11 @@ def create_workspace_app(workspace: Workspace):
     @app.get("/api/state")
     def state():
         jobs = workspace.jobs()
-        return {"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES,
-            "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": jobs,
+        from .semantic import facts_from_profile
+        from .qwen_harness import qualification_current
+        qualification=workspace.get_meta('semantic_qualification')
+        return {"local_model":{"model":"Qwen3.5-9B","qualified":qualification_current(qualification),"status":qualification.get("status") if qualification else "not_checked","checks":qualification.get("checks",[]) if qualification else []},"document_style": workspace.document_style_state(), "role_type_options": ROLE_TYPES,
+            "profile_evidence": facts_from_profile(workspace.profile) if workspace.profile else [], "custom_role_options": custom_role_options(workspace.preferences), "kind": "job-workspace", "path": str(workspace.root), "jobs": jobs,
             "preferences": workspace.preferences.model_dump(), "profile": workspace.profile.model_dump() if workspace.profile else None,
             "sources": workspace.sources_info(), "connections": workspace.get_meta("connections", {}),
             "activity": workspace.activity(), "approvals": workspace.bridge.pending_approvals(),
@@ -268,6 +272,69 @@ def create_workspace_app(workspace: Workspace):
         if not isinstance(ids,list) or len(ids)>10000 or not all(isinstance(i,str) for i in ids):
             raise ValueError('Choose valid saved jobs to check.')
         return workspace.start_metadata_refresh(ids)
+
+    @app.post('/api/check-local-model')
+    async def check_local_model(request: Request):
+        from .qwen_harness import run_checks
+        def check():
+            receipt=run_checks()
+            workspace.set_meta('semantic_qualification',receipt)
+            return {'status':receipt['status'],'checks':receipt['checks'],'model':receipt['model']}
+        return workspace.task('Check local Qwen rules',check)
+
+    @app.post('/api/assess-local')
+    async def assess_local(request: Request):
+        from .semantic import assess_saved
+        data = await request.json()
+        ids = data.get('job_ids', [])
+        if not isinstance(ids,list) or not 1 <= len(ids) <= 10 or not all(isinstance(i,str) for i in ids):
+            raise ValueError('Choose between one and ten saved roles.')
+        return workspace.task('Assess evidence with local Qwen', lambda: assess_saved(workspace,ids))
+
+    @app.post('/api/jobs/{job_id}/compare-evidence')
+    async def compare_evidence(job_id: str, request: Request):
+        from .scoring_comparison import compare, quoted_requirements
+        from .semantic import comparison_fingerprint
+
+        data = await request.json()
+        if not isinstance(data, dict) or type(data.get('with_qwen')) is not bool:
+            raise ValueError('Choose rules only or compare with local AI.')
+
+        def review():
+            row = next((row for row in workspace.jobs() if row['id'] == job_id), None)
+            profile = workspace.profile
+            if (row is None or not profile or profile.is_example or not row['full_description']
+                    or row['source_policy'] or row['listing']['closed']
+                    or row['fit']['assessment_state'] in {'incomplete', 'closed', 'excluded', 'needs_profile'}):
+                raise ValueError('This comparison requires an open, complete advert and a confirmed profile.')
+            job = Job.model_validate(row['job'])
+            key = comparison_fingerprint(job, profile)
+            requirements = quoted_requirements(row)
+            result = compare(job, profile, requirements, with_qwen=data['with_qwen'])
+            if 'reviewed_decisions' in data:
+                if data['with_qwen']:
+                    raise ValueError('Save the reviewed grades separately from a new model calculation.')
+                from .transfer_fit import reviewed_fit
+                result['reviewed'] = reviewed_fit(requirements, profile, data['reviewed_decisions'], data.get('reviewed_by','user'))
+            current_profile = workspace.profile
+            if current_profile is None or comparison_fingerprint(workspace.job(job_id)[1], current_profile) != key:
+                raise ValueError('The advert or profile changed during the review. Run the comparison again.')
+            with workspace.write_lock:
+                current_profile = workspace.profile
+                if current_profile is None or comparison_fingerprint(workspace.job(job_id)[1], current_profile) != key:
+                    raise ValueError('The advert or profile changed during the review. Run the comparison again.')
+                previous = workspace.get_meta('comparison:' + job_id)
+                # A failed model call keeps the previous complete comparison.
+                if not result.get('qwen_error'):
+                    if previous and previous.get('fingerprint') == key:
+                        if not data['with_qwen']:
+                            result['qwen'] = previous['result'].get('qwen')
+                        if 'reviewed' not in result and previous['result'].get('reviewed'):
+                            result['reviewed'] = previous['result']['reviewed']
+                    workspace.set_meta('comparison:' + job_id, {'fingerprint': key, 'result': result})
+            return result
+
+        return await run_in_threadpool(review)
 
     @app.post('/api/assess-filtered')
     async def assess_filtered(request: Request):

@@ -1,5 +1,5 @@
 {
-  "version": "0.9.14",
+  "version": "0.9.31",
   "platform": "macOS",
   "files": [
     {
@@ -29,19 +29,19 @@
     {
       "path": "README.md",
       "bytes": 4916,
-      "sha256": "077a094cd62c4a51ffd5fa987d2ae470518c5129e9a2e83a0318a4a5614313ad",
+      "sha256": "c210ba1b64c2694db4ad51c1aec51ec0b67e1d9f1bf07d44c21744b472bcf250",
       "mode": "0o644"
     },
     {
       "path": "setup/START HERE.txt",
       "bytes": 4354,
-      "sha256": "9ea97377779295412b30758226c28a9f3c38eee24af321bb4c4fd2043ee826ef",
+      "sha256": "d884edb14e48f3e6a9b2c793b8a7bbade62f564a5613d18d5944421237a0c3a6",
       "mode": "0o644"
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 51807,
-      "sha256": "f0ca7e26b7010d93bc706c0ed97b47a8a0fff3d646a5fef7390c77d5ae6d88e1",
+      "bytes": 66497,
+      "sha256": "9808d926839c94674d5186474532e21d36e6075c9a4261a92c896516e84ccd0b",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 10236,
-      "sha256": "dcbe231b1f64253b94b9ca936be7406d0ac6cf493b2fae9dc061f5adf24944fa",
+      "bytes": 17897,
+      "sha256": "6001c90e8e3b4300c0cd98c1faf03cd9f9db49e60dab3b84a6bea6200a27dd7f",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 950,
-      "sha256": "4add4922638d4a47e3c92d1eba0ca3baab6bce1be5822f8c282c9e695c3af24b",
+      "sha256": "1a7e70c20866c9ad98719081115b2943a0ff0d7c772d2a09c7fff3b02ec891f3",
       "mode": "0o644"
     },
     {
@@ -129,9 +129,15 @@
       "mode": "0o755"
     },
     {
+      "path": "docs/CAREER-HARNESS.md",
+      "bytes": 2381,
+      "sha256": "73cb064753244984790ce1ff2472403fe30e15e7e3625ad78ec3294973b0601e",
+      "mode": "0o644"
+    },
+    {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 41241,
-      "sha256": "a79adc854dca35a1eb7b3222351345a95d8b1b1156cdabf5a4463116b9df3328",
+      "bytes": 54894,
+      "sha256": "4063443cfc87eac757447e79054a0c5677c6ebf7aa6c313c264194769f75fd72",
       "mode": "0o644"
     },
     {
@@ -148,8 +154,8 @@
     },
     {
       "path": "scripts/build_release.py",
-      "bytes": 6356,
-      "sha256": "b937912a8b5058e8aa5ab7443896821701dedb85c9050402206327207918b703",
+      "bytes": 6618,
+      "sha256": "a9735730ea9f45c3a2c0ee83c37444751ad7666b38c5358227fcc194aaa0a000",
       "mode": "0o644"
     },
     {
@@ -178,8 +184,8 @@
     },
     {
       "path": "campus_agent/applications.py",
-      "bytes": 10479,
-      "sha256": "8837566db00b2b0ec7174d4132496579c3cc682fba68d306daf2d15a4f41ee62",
+      "bytes": 17757,
+      "sha256": "f93324a13c50e32e6d2bc8e6880a7916263c856154390545290f7f502cf671a0",
       "mode": "0o644"
     },
     {
@@ -202,8 +208,14 @@
     },
     {
       "path": "campus_agent/detail_refresh.py",
-      "bytes": 12477,
-      "sha256": "b03d016d6b969f370a229aa7436b3f14ac4cf3008665e481bfec7c5cc7175dcc",
+      "bytes": 12818,
+      "sha256": "1ef681287e4287cd12b378577d4f724359782e247b67b44ce596ca37bfca7663",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/metadata_refresh.py",
+      "bytes": 17378,
+      "sha256": "31c5672810dca464c02b8ef74044bedc3459400b7bae1e811818227762540a2f",
       "mode": "0o644"
     },
     {
@@ -220,8 +232,14 @@
     },
     {
       "path": "campus_agent/fit.py",
-      "bytes": 45060,
-      "sha256": "8272e46e557b8fa45da897d7a8a587f531e50f1eceab1754fdc3d43bc02c70a5",
+      "bytes": 55892,
+      "sha256": "98ad8c343073437dd55ae8bf21a03c6ab465904d977735b545b76af758735b16",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/tenure.py",
+      "bytes": 5108,
+      "sha256": "40f56ae0268355807a9c4b20608abe69dbee8cd68c15feeb311b2a2875a6d075",
       "mode": "0o644"
     },
     {
@@ -232,8 +250,8 @@
     },
     {
       "path": "campus_agent/listing_view.py",
-      "bytes": 37285,
-      "sha256": "0bcac8eb4b724fb29d3368a531de73e3c09af2f058213e55ca0c96c1e920c6e5",
+      "bytes": 38307,
+      "sha256": "14ecb8b987555d80b6a01f668b103c2e343bc6f4c9e8a5b27aac700cfdb7eb4e",
       "mode": "0o644"
     },
     {
@@ -262,8 +280,8 @@
     },
     {
       "path": "campus_agent/morning.py",
-      "bytes": 19938,
-      "sha256": "dc824627746bfea89758eaf41481153eb46f10593bc749a05d4c93fa6758a83a",
+      "bytes": 19969,
+      "sha256": "53b2e00564e7712384b0731297fbc326d849ec28b02eb9afb630e5028135328d",
       "mode": "0o644"
     },
     {
@@ -291,6 +309,42 @@
       "mode": "0o644"
     },
     {
+      "path": "campus_agent/source_policy.py",
+      "bytes": 2678,
+      "sha256": "9483ef77dd8788ded0f3da464406e79475e37c2c30f2d850256b1f54a82e5b60",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/semantic.py",
+      "bytes": 24551,
+      "sha256": "fd02fa78ecfae4a427bddd1294c430a4ea00d22b15192c141d6b41bd0497734a",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/qwen_harness.py",
+      "bytes": 10838,
+      "sha256": "14d47987dc0bd43258cc722fe78b9b3dcb666fa2c873e2614998db2d58783592",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/scoring_comparison.py",
+      "bytes": 5970,
+      "sha256": "db61790f3a9f20c854654b8551b64dbaa8e59726321a05b2e97be4741a4a2346",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/evidence_matrix.py",
+      "bytes": 9427,
+      "sha256": "07bef60094ea18e2eb41de559f1cdb23f92930ea0a9f3942b64530542fa065a9",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/transfer_fit.py",
+      "bytes": 16181,
+      "sha256": "6f39a58c061d60d5d197944f39325c8a5a342abfcdaf157d0de743e31f6cd18d",
+      "mode": "0o644"
+    },
+    {
       "path": "campus_agent/store.py",
       "bytes": 4783,
       "sha256": "13b84c5d4fe84f396a660bde9d4dd946c58374ab2271f0dedf660911ebba4549",
@@ -310,20 +364,44 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 165162,
-      "sha256": "f6b4b81d331e4e4e7f9f62b0ebe3daa331b7463f443c020bec31681c18957fe4",
+      "bytes": 231486,
+      "sha256": "4a26bb36f5d88e56e495d53d7cfc486ca5c8fa7fc430031bf68bb95aafb97b5d",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace.py",
-      "bytes": 75099,
-      "sha256": "4a2d851ec00bc530904945b691199e9c7d973e1ce9792b22293a256dfef71d0d",
+      "bytes": 83523,
+      "sha256": "7f46d935c77ff00be7033833d071a01c319ae9c7449c615e11b472eb69e77b60",
       "mode": "0o644"
     },
     {
       "path": "campus_agent/workspace_web.py",
-      "bytes": 13393,
-      "sha256": "3b164c294d945ada048f0a441c4948e943ec374783ccd329744a1f864483caba",
+      "bytes": 21533,
+      "sha256": "e3e2b84d869115bb86bb4e5d770b2eb011e8cd376848b2e824573f5630e0d649",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/career.py",
+      "bytes": 34425,
+      "sha256": "f0ab4a763d55342833e6084ce27d8308934a55f0528927ae5691e9234d1dbf97",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/career_contract.py",
+      "bytes": 7592,
+      "sha256": "93813b90fc712f2c1d6f6a71a06e12f95b8b2a5deef7f90ed4298a3b8bdd253b",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/career_render.py",
+      "bytes": 7740,
+      "sha256": "c46cfac1f2dafd588879c3af8bc0820092d2808ee2ab2e20945d912a96374e18",
+      "mode": "0o644"
+    },
+    {
+      "path": "campus_agent/career_exports.py",
+      "bytes": 7668,
+      "sha256": "12d3feef8edf7b68eacb07303963cabd73ebd8792ffabed47e884d8ca59374e1",
       "mode": "0o644"
     }
   ]

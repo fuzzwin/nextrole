@@ -35,15 +35,16 @@ def test_negated_and_prototype_facts_do_not_prove_delivery():
     assert next(b for b in value['breakdown'] if b['id']=='skills')['points']<30
 
 
-def test_fully_supported_role_can_be_an_automatic_strong_match(tmp_path):
+def test_legacy_score_cannot_make_an_automatic_strong_match(tmp_path):
     ws=Workspace(tmp_path)
     try:
         ws.save_profile(candidate())
         job=role('Location: Melbourne VIC\nAbout the role\nBuild workflow automations and support business systems.\nRequirements\n- Python workflow automation experience.\n- Power Automate workflow delivery experience.\n- Microsoft 365 systems support experience.')
         ws.add_job(job,full=True)
         row=ws.jobs()[0]
-        assert row['fit']['percent']>=80 and row['fit']['auto_eligible'] and row['top_match']
-        assert row['top_reason'] and row['reading_view']['overview']
+        assert row['legacy_fit']['percent']>=80 and row['fit']['percent'] is None
+        assert not row['fit']['auto_eligible'] and not row['top_match']
+        assert row['reading_view']['overview']
         ws.set_top_listing(job.identity,True)
         ws.save_profile(candidate().model_copy(update={'skills':[], 'experience':[]}))
         row=ws.jobs()[0]
