@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import tempfile
 from pathlib import Path
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, quoteattr
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from pypdf import PdfReader
@@ -17,6 +17,12 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from .documents import font_names
 
+INVALID_XML = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]')
+
+
+def _markup(text: str) -> str:
+    return escape(INVALID_XML.sub(' ', text))
+
 
 def _plain(text: str) -> str:
     # Retain citation destinations, even in readers that do not follow hyperlinks.
@@ -24,7 +30,26 @@ def _plain(text: str) -> str:
     return re.sub(r'(\*\*|__|`)', '', text).strip()
 
 
-def _blocks(markdown: str):
+def _pdf_markup(text: str) -> str:
+    """Convert the report's bold labels and HTTP(S) citations to PDF markup."""
+    text = re.sub(r'(__|`)', '', text)
+    markup = []
+    end = 0
+    tokens = re.compile(r'\*\*([^*]+)\*\*|\[([^\]]+)\]\((https?://[^\s)<>"<>]+)\)')
+    for match in tokens.finditer(text):
+        markup.append(_markup(text[end:match.start()]))
+        if match[1]:
+            markup.append('<b>'+_markup(match[1])+'</b>')
+        else:
+            target = quoteattr(INVALID_XML.sub('', match[3]))
+            label = _markup(f'{match[2]} ({match[3]})')
+            markup.append(f'<link href={target} color="#126858">{label}</link>')
+        end = match.end()
+    markup.append(_markup(text[end:]))
+    return ''.join(markup)
+
+
+def _blocks(markdown: str, transform=_plain):
     """Small deliberately non-executing Markdown subset, preserving all text."""
     paragraph = []
     for raw in markdown.splitlines():
@@ -33,16 +58,16 @@ def _blocks(markdown: str):
         bullet = re.match(r'^(?:[-*+]\s+|\d+[.)]\s+)(.*)', line)
         if not line or heading or bullet:
             if paragraph:
-                yield 'body', _plain(' '.join(paragraph))
+                yield 'body', transform(' '.join(paragraph))
                 paragraph = []
             if heading:
-                yield 'heading', _plain(heading[2])
+                yield 'heading', transform(heading[2])
             elif bullet:
-                yield 'bullet', _plain(bullet[1])
+                yield 'bullet', transform(bullet[1])
         elif line not in ('---', '```'):
             paragraph.append(line)
     if paragraph:
-        yield 'body', _plain(' '.join(paragraph))
+        yield 'body', transform(' '.join(paragraph))
 
 
 def _pdf(path: Path, title: str, content: str, notice: str):
@@ -53,9 +78,9 @@ def _pdf(path: Path, title: str, content: str, notice: str):
         'body': ParagraphStyle('CareerBody', fontName=regular, fontSize=10, leading=13, spaceAfter=5, splitLongWords=True, alignment=TA_LEFT),
         'bullet': ParagraphStyle('CareerBullet', fontName=regular, fontSize=10, leading=13, leftIndent=10, firstLineIndent=-7, spaceAfter=4),
     }
-    story = [Paragraph(escape(title), styles['title']), Paragraph(escape(notice), styles['body']), Spacer(1, 3 * mm)]
-    for kind, text in _blocks(content):
-        story.append(Paragraph(('• ' if kind == 'bullet' else '') + escape(text), styles[kind]))
+    story = [Paragraph(_markup(title), styles['title']), Paragraph(_markup(notice), styles['body']), Spacer(1, 3 * mm)]
+    for kind, text in _blocks(content, _pdf_markup):
+        story.append(Paragraph(('• ' if kind == 'bullet' else '') + text, styles[kind]))
     def footer(canvas, doc):
         canvas.setFont(regular, 8)
         canvas.drawString(18 * mm, 12 * mm, 'NextRole · Career preparation · Verify evidence before use')
@@ -68,7 +93,7 @@ def _docx(path: Path, title: str, content: str, notice: str):
     # Standard OOXML keeps this editable without a new runtime dependency.
     ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
     def para(text, style='Normal'):
-        return f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr><w:r><w:t xml:space="preserve">{escape(text)}</w:t></w:r></w:p>'
+        return f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr><w:r><w:t xml:space="preserve">{_markup(text)}</w:t></w:r></w:p>'
     body = para(title, 'Title') + para(notice)
     for kind, text in _blocks(content):
         body += para(('• ' if kind == 'bullet' else '') + text, 'Heading1' if kind == 'heading' else 'Normal')

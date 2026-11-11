@@ -10,6 +10,7 @@ from test_workspace import FakeBridge, profile
 from campus_agent.models import Job
 from campus_agent.workspace import Workspace
 from campus_agent.workspace_web import create_workspace_app
+from test_career import employer_pages
 
 
 @pytest.mark.skipif(not os.getenv('PLAYWRIGHT_EXECUTABLE_PATH'), reason='Set Chromium path for browser integration')
@@ -19,19 +20,24 @@ def test_career_dialog_research_prep_practice_cache_and_cancel(tmp_path, profile
     entered, release = threading.Event(), threading.Event()
     block = [False]
     original_call = bridge.call
+    related = "https://example.com/jobs/systems-engineer"
     def call(name, args=None):
         if 'search' in name and 'google_drive' not in name:
             if block[0]:
                 entered.set()
                 release.wait(15)
-            return {'text': 'Example Employer https://example.com/about Public company information.'}
+            if (args or {}).get('open',[{}])[0].get('ref_id')==related:
+                return {'text':f'Systems Engineer ({related})\nSource: open(test)\nL0: # Systems Engineer\n'
+                               'L1: Employer: Example Employer, Australia\nL2: ## Responsibilities\n'
+                               'L3: - Build Python integrations on AWS for the service team.'}
+            return employer_pages(args, 'Example Employer')
         return original_call(name, args)
     bridge.call = call
     ws = Workspace(tmp_path / 'workspace', bridge)
     ws.save_profile(profile.model_copy(update={'is_example': False}))
     job = Job(source_id='browser-fixture', title='Service Coordinator', employer='Example Employer',
               url='https://example.com/jobs/coordinator', location='Melbourne',
-              description='Coordinate service support and documentation. Work with stakeholders and report progress.')
+              description='Responsibilities\n- Coordinate service support and documentation across the customer operations team.\n- Maintain reports and share changes with service managers.')
     ws.add_job(job, full=True)
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))
@@ -57,10 +63,15 @@ def test_career_dialog_research_prep_practice_cache_and_cancel(tmp_path, profile
             expect(page.locator('#career-disclosure')).to_be_visible()
             assert not ws.career.list(job.identity), 'Opening disclosure must not dispatch research'
             page.locator('#career-scopes input[value="pay"]').uncheck()
+            page.get_by_label('Technology evidence links (optional)').fill(related)
             page.locator('#career-start').click()
             expect(page.locator('#career-status')).to_contain_text('ready_for_review', timeout=15000)
             research = ws.career.list(job.identity)[0]
             assert research['options']['scope'] == ['employer', 'role']
+            assert research['options']['technology_links'] == [related]
+            stack = page.locator('#career-result details').filter(has_text='Possible technology stack')
+            expect(stack.get_by_text('Related posting',exact=True)).to_be_visible()
+            expect(stack.get_by_role('link',name='Systems Engineer')).to_have_attribute('href',related)
             expect(page.locator('#career-downloads a')).to_have_count(4)
             href = page.locator('#career-downloads a').first.get_attribute('href')
             response = page.request.get(f'http://127.0.0.1:{port}'+href)
@@ -71,6 +82,7 @@ def test_career_dialog_research_prep_practice_cache_and_cancel(tmp_path, profile
             page.locator('#career-research-job').click()
             expect(page.locator('#career-status')).to_contain_text('ready_for_review')
             assert len(ws.career.list(job.identity)) == 1
+            expect(page.get_by_label('Technology evidence links (optional)')).to_have_value(related)
             page.locator('[data-close="career-dialog"]').click()
             page.locator('#career-interview-job').click()
             page.locator('#career-stage').select_option('panel')

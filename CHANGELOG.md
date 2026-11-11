@@ -1,3 +1,27 @@
+## 0.9.36
+
+- Preserve specific technology evidence from full sentences within longer advert paragraphs. Read technical qualifications from relevant sections and exclude investor references from employer technology context.
+
+## 0.9.35
+
+- Label technology in research and interview reports by evidence scope. Open optional related posting and company links within the research budget, and link evidence in reports and PDFs.
+
+## 0.9.34
+
+- Deep Research reopens the exact posting and maps material duties and requirements to the current saved evidence review. It shows advertised work location, employment type, pay and unresolved conditions together.
+- Prefer evidence for the role’s market when employers share a name. Read repeated hourly units as a single advertised pay range.
+
+## 0.9.33
+
+- Reopen employer pages before using them in job research. Keep supported findings with their sources and group gaps into questions for the employer.
+- Require source coverage before exporting research or downloading or emailing a full package. Carry checked research into the interview guide alongside rehearsal answers from saved work.
+
+## 0.9.32
+
+- Prepare a full application package from a saved role. Recheck its advert and fit, collect research leads, create interview prep and tailor the résumé and cover letter in one run.
+- Choose a ZIP, combined PDF or separate files before starting. Download in the app or choose to email the files to your connected Gmail inbox after review.
+- Keep reviewed scores when refreshed adverts contain the same scored criteria. Clean invalid characters from research exports so Word can open them.
+
 ## 0.9.31
 
 - Open the fit review from the job card, with a direct-evidence check and optional Qwen suggestions. Rules-only matches display the share of weighted criteria with direct evidence inside the review.

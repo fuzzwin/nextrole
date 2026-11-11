@@ -269,7 +269,7 @@ def listing_view(text, title='', employer=''):
     facts = []
     for label, aliases in [('Work format', ['Work format']), ('Work type', ['Work type','Employment type','Job type']), ('Listed level', ['Grade'])]:
         for i, line in enumerate(lines):
-            match = re.fullmatch(r'(?:'+ '|'.join(aliases) + r')\s*(?::\s*(.*))?', re.sub(r'^#+\s*','',line), re.I)
+            match = re.fullmatch(r'(?:'+ '|'.join(aliases) + r')\s*(?::\s*(.*))?', re.sub(r'^(?:[*•-]\s+)?#+\s*','',line), re.I)
             if not match:
                 continue
             value = (match[1] or '').strip() or next((v for v in lines[i+1:] if v), '')
@@ -439,6 +439,11 @@ def salary_info(text):
         labelled=bool(re.match(r'^(?:salary(?: range)?|remuneration|pay(?: range| rate)?|base salary|rate|compensation)\s*(?::|$)',line,re.I))
         if labelled and not pattern.search(line) and i+1<len(lines): line+=' '+lines[i+1].strip()
         evidence=line
+        # A repeated identical unit belongs to one range, e.g. A$93/hr – A$112/hr.
+        unit = r'(?:hour|hr|day|week|month|year|annum)'
+        line = re.sub(r'(' + symbol + r'\s*' + number + r')(/\s*' + unit + r')'
+                      r'(\s*(?:–|—|-|to)\s*(?:' + symbol + r')?\s*' + number + r')\2\b',
+                      r'\1\3\2', line, flags=re.I)
         # An explicitly suffixed currency is just another source spelling.
         line=re.sub(r'('+number+r'(?:\s*(?:–|—|-|to)\s*'+number+r')?)\s+(AUD|USD|NZD|GBP|EUR)\b',r'\2 \1',line,flags=re.I)
         matches=list(pattern.finditer(line))

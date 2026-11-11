@@ -10,11 +10,31 @@ class Model:
 class Bridge:
     def __init__(self): self.calls=[]
     def call(self,name,args):
-        self.calls.append((name,args)); return {'text':'Employer information (https://example.com/about) Some public excerpt.'}
+        self.calls.append((name,args)); return employer_pages(args)
+def employer_pages(args, employer='Example'):
+    pages={
+        'https://example.com/about': [
+            f'{employer} provides service management and reporting for organisations across Australia.',
+        ],
+        'https://example.com/customers': [
+            f'{employer} serves Australian customers in healthcare and other regulated industries.',
+            f'{employer} is owned by an independent member cooperative.',
+        ],
+    }
+    if 'open' not in args:
+        return {'results':[{'url':url,'title':employer,'snippet':'A fabricated snippet that claims universal approval.'} for url in pages]}
+    url=args['open'][0]['ref_id']
+    if url not in pages:
+        return {'text': f'Coordinator ({url})\nSource: open(test)\nL0: # Coordinator\nL1: Employer: Example\nL2: ## Responsibilities\n'
+                        'L3: - Coordinate service support and documentation across the customer operations team.\n'
+                        'L4: - Maintain reports and share changes with service managers.'}
+    lines='\n'.join(f'L{i}: {line}' for i,line in enumerate(pages[url]))
+    return {'text':f'{employer} ({url})\nCrawled: today; Source: open(test)\n{lines}'}
+
 def service(tmp_path):
     root=tmp_path; (root/'data').mkdir(); (root/'artifacts').mkdir()
     profile=Model(summary='Experienced service delivery professional.',experience=[{'organization':'Real Co','role':'Coordinator','dates':'2020–2024','bullets':['Coordinated support requests.','Documented a service process.']}],skills=['Support'],education=[],is_example=False)
-    job=Model(title='Coordinator',employer='Example',url='https://example.com/job',description='Coordinate service support and documentation.',location='Melbourne')
+    job=Model(title='Coordinator',employer='Example',url='https://example.com/job',description='What you will deliver\n- Coordinate service support and documentation across the customer operations team.\n- Maintain reports and share changes with service managers.',location='Melbourne')
     w=SimpleNamespace(root=root,data=root/'data',artifacts=root/'artifacts',profile=profile,bridge=Bridge(),job=lambda jid:({'revision':'r1'},job))
     return CareerService(w),w
 
@@ -51,11 +71,14 @@ def test_bounded_research_and_private_profile(tmp_path):
     try:
         rid=s.start('job','deep_research',{'max_web_calls':2,'scope':['role','pay']})['run_id']; r=wait(s,rid)
         assert r['status']=='ready_for_review',r
-        assert len(w.bridge.calls)==2
+        assert w.bridge.calls == [('search_service.web_run', {'open':[{'ref_id':'https://example.com/job'}], 'response_length':'long'})]
         assert 'Coordinated support' not in str(w.bridge.calls)
         assert r['usage']['input_tokens'] is None
-        assert 'web_0_0' in r['result']['sources']
-        assert all(c['kind']=='unknown' for c in r['result']['assessment']['claims'])
+        assert r['result']['quality']['verified_topics']==['Operating stack and remit']
+        assert r['result']['quality']['gaps']==['Advertised pay']
+        assert r['result']['quality']['role_criteria']==2
+        assert r['result']['assessment']['role_research']['source_check']=='readable'
+        assert len(r['result']['assessment']['role_research']['duties'])==2
     finally:s.close()
 
 def test_unknown_owner_and_invalid_options(tmp_path):
@@ -111,7 +134,7 @@ def test_prep_inherits_current_research_and_saved_metadata(tmp_path):
     s,w=service(tmp_path)
     w.jobs=lambda:[{'id':'job','reading_view':{'salary':{'status':'stated','minimum':90000,'maximum':100000,'currency':'AUD','period':'annual','display':'AUD 90,000–100,000 per year'},'facts':[{'label':'Work type','value':'Full time'}]},'location_info':{'arrangement':'Hybrid'},'fit':{'requirements':[{'text':'Coordinate support','value':1,'evidence':[{'text':'Coordinated support requests.'}],'reasons':[]}]},'listing':{'closes_on':'2027-12-01'}}]
     try:
-        research=wait(s,s.start('job','deep_research',{'max_web_calls':1})['run_id'])
+        research=wait(s,s.start('job','deep_research',{'max_web_calls':3})['run_id'])
         prep=wait(s,s.start('job','interview_prep',{'stage':'technical'})['run_id'])
         assert prep['snapshot']['research']['run_id']==research['id']
         result=prep['result']
@@ -120,7 +143,7 @@ def test_prep_inherits_current_research_and_saved_metadata(tmp_path):
         assert result['observations']['vacancy']['deadline']=='2027-12-01'
         assert result['observations']['employer_pay']['low']==90000
         assert result['assessment']['fit'][0]['level']=='Direct'
-        assert any(k.startswith('research_web_') for k in result['sources'])
+        assert any(k.startswith('employer_') for k in result['sources'])
         assert 'technical decision' in result['questions'][1]['question']
     finally:s.close()
 
@@ -137,12 +160,12 @@ def test_default_budget_includes_pay_and_credentials_change_cache(tmp_path):
     w.profile.data.update(credentials=[{'name':'Nursing registration','status':'pending','expires_on':'2027-01-01','jurisdiction':'VIC'}],availability='Four weeks',technical_projects=[{'title':'Personal prototype','stage':'prototype','summary':'A private test project, not employer work.'}])
     try:
         r=wait(s,s.start('job','deep_research')['run_id'])
-        assert any('salary remuneration' in str(args) for _,args in w.bridge.calls)
+        assert 'Advertised pay' in r['result']['quality']['gaps']
         prep=wait(s,s.start('job','interview_prep',{'stage':'recruiter'})['run_id'])
         assert 'pending' in prep['result']['markdown']
         assert 'Private project — not employer work' in prep['result']['markdown']
         methods={m['name']:m for m in prep['result']['guide']['strategy']['methods']}
-        assert 'profile:' in methods['CAR']['question']
+        assert 'similar task' in methods['CAR']['question']
         assert 'first month' in methods['Approach']['question']
         assert 'yourself' in methods['ICAN+']['question']
         w.profile.data['credentials'][0]['status']='current'
@@ -150,3 +173,162 @@ def test_default_budget_includes_pay_and_credentials_change_cache(tmp_path):
         assert not next_run['cached'] and next_run['run_id']!=prep['id']
         wait(s,next_run['run_id'])
     finally:s.close()
+
+def test_search_snippets_do_not_clear_the_export_gate(tmp_path):
+    s,w=service(tmp_path)
+    try:
+        r=wait(s,s.start('job','deep_research',{'max_web_calls':1})['run_id'])
+        assert r['status']=='ready_for_review'
+        assert not r['result']['quality']['export_ready']
+        assert 'universal approval' not in r['result']['markdown']
+        assert s.artifact(r['id'],'markdown').is_file()
+        with pytest.raises(ValueError,match='Employer research needs'):
+            s.artifact(r['id'],'guide_pdf')
+        prep=wait(s,s.start('job','interview_prep')['run_id'])
+        assert 'research' not in prep['snapshot']
+    finally:s.close()
+
+
+def test_reopened_employer_sources_support_findings(tmp_path):
+    s,w=service(tmp_path)
+    try:
+        r=wait(s,s.start('job','deep_research')['run_id'])
+        assert r['result']['quality']['export_ready']
+        assert len(r['result']['quality']['verified_topics'])==4
+        assert 'independent member cooperative' in r['result']['markdown']
+        assert 'universal approval' not in r['result']['markdown']
+        assert 'has not been verified' not in r['result']['markdown']
+        assert s.artifact(r['id'],'guide_pdf').is_file()
+    finally:s.close()
+
+def test_navigation_does_not_count_as_employer_evidence(tmp_path):
+    s,w=service(tmp_path)
+    original=w.bridge.call
+    def navigation(name,args):
+        if 'open' not in args:
+            return original(name,args)
+        url=args['open'][0]['ref_id']
+        return {'text':f'Example ({url})\nSource: open(test)\n'
+                        'L0: About us Our board of directors has announced a new leader.\n'
+                        'L1: # About Example\n'
+                        'L2: Our partners Learn how our services help our customers.\n'
+                        'L3: Reports & presentationsFinancial calendarShare informationAnnual Shareholders’ Meeting\n'}
+    w.bridge.call=navigation
+    try:
+        run=wait(s,s.start('job','deep_research')['run_id'])
+        assert not run['result']['quality']['export_ready']
+        assert run['result']['quality']['verified_topics']==['Operating stack and remit']
+    finally:s.close()
+
+def test_australian_role_rejects_foreign_same_name_employer(tmp_path):
+    s,w=service(tmp_path)
+    original=w.bridge.call
+    foreign='https://example.com/foreign'
+    def competing(name,args):
+        if 'open' not in args:
+            result=original(name,args)
+            result['results'].insert(0,{'url':foreign,'title':'Example','snippet':'Exact employer name'})
+            return result
+        if args['open'][0]['ref_id']==foreign:
+            return {'text':f'Example ({foreign})\nSource: open(test)\nL0: Example provides US healthcare staffing for hospitals in Texas.'}
+        return original(name,args)
+    w.bridge.call=competing
+    try:
+        run=wait(s,s.start('job','deep_research')['run_id'])
+        assert run['result']['quality']['export_ready']
+        assert 'Texas' not in run['result']['markdown']
+        assert not any(item.get('url')==foreign for item in run['result']['sources'].values())
+    finally:s.close()
+
+def test_vacancy_check_accepts_board_title_and_checks_employer():
+    from campus_agent.career_research import vacancy_check
+    url='https://example.com/job'
+    vacancy={'title':'[Hiring] Coordinator @Example','employer':'Example'}
+    body='Coordinator ({url})\nSource: open(test)\nL0: # Coordinator\nL1: Employer: {name}\nL2: ## Responsibilities\nL3: - Coordinate a busy customer service team.'
+    assert vacancy_check(url,vacancy,{'text':body.format(url=url,name='Example')})=='readable'
+    assert vacancy_check(url,vacancy,{'text':body.format(url=url,name='Other company')})=='unconfirmed'
+
+def test_undated_company_revenue_story_is_not_a_financial_finding(tmp_path):
+    s,w=service(tmp_path)
+    original=w.bridge.call
+    def employer_story(name,args):
+        if args.get('open',[{}])[0].get('ref_id')=='https://example.com/about':
+            result=original(name,args)
+            result['text']+='\nL1: When our business took a 70% revenue hit overnight, we had two choices.'
+            return result
+        return original(name,args)
+    w.bridge.call=employer_story
+    try:
+        run=wait(s,s.start('job','deep_research')['run_id'])
+        assert run['result']['quality']['export_ready']
+        assert 'Finances and trajectory' in run['result']['quality']['gaps']
+        assert '70% revenue hit' not in run['result']['markdown']
+    finally:s.close()
+
+
+def test_technology_sources_keep_their_scope_in_full_and_quick_reports(tmp_path):
+    s,w=service(tmp_path)
+    row,job=w.job('job')
+    job.data['description']+='\n- Provide Microsoft 365 support for the operations team.'
+    w.profile.data['experience'][0]['bullets'].append('Administered Microsoft 365 accounts for the support team.')
+    related='https://example.com/jobs/technical-engineer'
+    company='https://example.com/case-study'
+    foreign='https://other.example/jobs/engineering'
+    pages={
+        related:('Engineer', ['# Engineer','Employer: Example, Australia','## Responsibilities','- Build Python integrations on AWS for existing business applications.']),
+        company:('Example case study', ['# Example case study','Example uses Salesforce in one Australian customer project.']),
+        foreign:('Other company', ['# Engineer','Employer: Another Employer, Australia','## Responsibilities','- Develop production Snowflake models across the customer estate.']),
+    }
+    original=w.bridge.call
+    def sources(name,args):
+        url=args['open'][0]['ref_id']
+        if url not in pages:
+            return original(name,args)
+        title,body=pages[url]
+        return {'text': f'{title} ({url})\nSource: open(test)\n'+'\n'.join(f'L{i}: {line}' for i,line in enumerate(body))}
+    w.bridge.call=sources
+    try:
+        options={'scope':['role'],'technology_links':[related,company,foreign]}
+        run=wait(s,s.start('job','deep_research',options)['run_id'])
+        result=run['result']
+        assert result['quality']['export_ready']
+        tech=result['assessment']['technology']
+        assert [entry['scope'] for entry in tech]==['vacancy','related','company','candidate']
+        assert '**Related posting** Build Python integrations on AWS' in result['markdown']
+        assert '**Company context** Example uses Salesforce' in result['markdown']
+        assert '**Your experience** Administered Microsoft 365' in result['markdown']
+        assert '**Named in this vacancy** Provide Microsoft 365' in result['quick_markdown']
+        assert related in result['quick_markdown'] and company in result['markdown']
+        assert 'Snowflake' not in result['markdown']
+        assert '**Ask to confirm**' in result['markdown']
+        calls=len(w.bridge.calls)
+        prep=wait(s,s.start('job','interview_prep')['run_id'])
+        assert prep['result']['quality']['export_ready']
+        assert prep['snapshot']['research']['technology_run_id']==run['id']
+        assert related in prep['result']['markdown']
+        assert len(w.bridge.calls)==calls
+        with pytest.raises(ValueError,match='public HTTPS'):
+            s.start('job','deep_research',{'technology_links':['https://127.0.0.1/secret']})
+    finally:s.close()
+
+
+def test_technology_preserves_optional_words_and_skips_investors():
+    from campus_agent.career_research import technology_passages
+    from campus_agent.career_technology import technology_rows
+
+    vacancy={'title':'Systems Coordinator','employer':'Example Employer'}
+    advert=("## What you have\n"
+            "Experience with Oracle Sales Cloud, SAP, ServiceNow or similar platforms would be beneficial. "
+            "We also welcome applications from recent graduates with strong digitalisation skills and practical experience gained through projects or work placements.\n"
+            "- Solid understanding of APIs, with the ability to troubleshoot and articulate API-related concepts clearly.\n"
+            "## About us\n"
+            "Our funding comes from the OpenAI Startup Fund.")
+    rows=technology_rows(technology_passages(advert,vacancy),'vacancy','advert')
+    assert [row['quote'] for row in rows]==[
+        'Experience with Oracle Sales Cloud, SAP, ServiceNow or similar platforms would be beneficial.',
+        'Solid understanding of APIs, with the ability to troubleshoot and articulate API-related concepts clearly.',
+    ]
+    company=technology_rows(['Backed by investors including the OpenAI Startup Fund.',
+                             'Our Australian deployment connects the client’s CRM with Microsoft Fabric.'],
+                            'company','public_example',limit=1)
+    assert company[0]['quote']=='Our Australian deployment connects the client’s CRM with Microsoft Fabric.'

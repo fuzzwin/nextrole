@@ -1,5 +1,11 @@
 # NextRole for Mac
 
+## Prepare a full package (0.9.36)
+
+Open a saved job and choose **Prepare full package** in **Next steps**. Before starting, select a ZIP with PDF and Word files, one combined PDF, or separate downloads. Choose **Email me after I review** to send the finished files to your connected Gmail account once you have reviewed them. You can download the output in either mode.
+
+The run rereads the advert, checks evidence, opens employer sources and checks the evidence, prepares interview material, and tailors the résumé and cover letter. You can ask local Qwen for a fit suggestion. A current review is kept when the refreshed advert has the same scored criteria. Research with thin source coverage stays in preview until it can support the guide. The results show what to check next.
+
 ## Current scoring: transferable fit (0.9.31)
 
 The provisional fit percentage uses direct work (100%), strong transferable work (75%), partial transfer (50%), relevant foundation (25%) and explicit confirmed gaps (0%). Unknown evidence stays outside the fit average. Essential criteria count twice standard criteria. Optional criteria and eligibility/logistics checks remain separate.
@@ -45,7 +51,7 @@ A web-only chat without local file/command access cannot launch this Mac app.
 ## Step 2 — attach the NextRole ZIP
 
 1. Open **Finder** (the blue smiling face in the Dock), then **Downloads**.
-2. Find **NextRole-Mac-0.9.22.zip**, the download you received.
+2. Find **NextRole Mac ZIP**, the download you received.
 3. Drag the ZIP into the Codex message box. Alternatively, use the chat's
    attachment control and select the ZIP in Downloads.
 4. Wait until the attachment appears beside the message. Leave it attached;
@@ -283,7 +289,7 @@ Keep your confirmed profile accurate and read both PDFs before using them.
 You can use the same setup prompt with an already-extracted folder.
 
 1. In **Finder → Downloads**, double-click the NextRole ZIP once to unzip it.
-2. Drag the whole **NextRole-Mac-0.9.22** folder into **Documents**.
+2. Drag the whole **NextRole Mac** folder into **Documents**.
 3. Open it and check that **launcher.py** and **Start NextRole.command** are
    inside. Keep all files together; do not move only the launcher to the Desktop.
 4. In Codex, use its project/folder chooser to open **that extracted folder**,
@@ -598,7 +604,7 @@ The status line shows jobs checked, fields filled and unresolved jobs. An unsucc
 
 ## Per-role research and interview preparation
 
-Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Choose the scope, stage and frameworks before starting. Review the evidence and any missing details, then download the editable guide and quick sheet or practise one question at a time. Research uses bounded connected searches; rehearsal drafts use your saved evidence. These are reviewable evidence workbooks, not independently verified company conclusions or a generative interview-writing service. See [Career Harness guide](CAREER-HARNESS.md) for limits and usage.
+Open a saved opportunity and choose **Deep Research** or **Interview Prep**. Choose the scope, stage and frameworks before starting. Review the evidence and any missing details, then download the editable guide and quick sheet or practise one question at a time. Deep Research checks the original advert, maps duties and requirements to saved evidence, and shows conditions to confirm. Rehearsal drafts use your saved work examples. These are reviewable evidence workbooks, not independently verified company conclusions or a generative interview-writing service. See [Career Harness guide](CAREER-HARNESS.md) for limits and usage.
 
 
 ## Evidence scoring
