@@ -617,7 +617,7 @@ class Workspace:
                 arm = result.get('qwen') or result['rules']
                 row['evidence_preview'] = {
                     'percent': arm['percent'], 'coverage': arm['coverage'],
-                    'label': 'Qwen preview' if result.get('qwen') else 'Rules preview',
+                    'label': 'Qwen preview' if result.get('qwen') else 'Rules lower bound',
                     'meaning': 'Documented evidence coverage from the saved comparison. Review the quoted requirements and evidence in job details.',
                 }
             if row['fit']['status']=='Closed':

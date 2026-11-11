@@ -625,3 +625,16 @@ The methods share the same explicit requirements from the saved advert. Essentia
 Completed comparison previews appear on job cards. Calculate coverage runs local Qwen for one complete, open job. The label identifies a Qwen preview or a rules-only preview. A preview becomes unavailable when the profile or advert changes. Automatic recommendations still require a validated rating. From the source folder, run `python -m campus_agent.scoring_comparison` for the labelled controls. Add `--with-qwen` to run both arms against the same controls using the local model service.
 
 Use **Update saved jobs** for missing facts and adverts. In a job, **Next steps** contains the research document, interview preparation document, and résumé and cover letter. Research can use public search service credits. The research setup explains its scope before you start.
+
+
+## Source matrix (0.9.29)
+
+Coverage comparisons now collect quoted duties as well as candidate requirements directly from the advert. Repeated identical statements share one row. Optional criteria, logistics, eligibility conditions and application/source instructions are listed separately and excluded from the percentage. A clause that mixes mandatory and preferred scope requires review before calculation.
+
+An AND group must have all its stated parts established for full credit. An OR group requires a qualifying alternative, including shared scope or duration. Source wording stays intact so qualifiers are visible. Different descriptions of a related duty can still overlap and need human review.
+
+The fixed formula remains one point for supported evidence, half a point for partial evidence, and zero for undocumented evidence. Explicit essential criteria have double weight. The comparison also shows the fully documented percentage and the percentage that would result if its partially documented criteria were completed. The rules-only result is labelled a lower bound because it misses equivalent experience.
+
+Changing the matrix invalidates older previews. Recalculate a job to see its current set of duties, optional items, conditions and evidence.
+
+A proposed full-credit AND/list match also passes a literal scope cross-check. Residual unconfirmed terms reduce it to partial and are shown for review. Equivalent wording can trigger this conservative check, so it is a review aid with false negatives.

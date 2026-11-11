@@ -1,3 +1,10 @@
+## 0.9.29
+
+- Build a shared source matrix from advert duties and candidate requirements, independently of legacy scores.
+- Exclude optional criteria, logistics, eligibility and application instructions from coverage. Flag mixed mandatory/preferred clauses for review.
+- Preserve complete AND/OR groups and their qualifiers, expose matrix counts and partial-evidence bounds, and label rules-only results as lower bounds.
+- Include the source matrix and comparison code in preview invalidation checks.
+
 ## 0.9.28
 
 - Save completed evidence comparisons against the advert and profile, and display their percentages as labelled previews on job cards.

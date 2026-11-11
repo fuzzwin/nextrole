@@ -384,7 +384,7 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
         <div id="detail-profile-checks"></div>
         <details id="compare-evidence" class="fit-evidence">
           <summary>Compare evidence coverage</summary>
-          <p class="help">Two methods review the same quoted requirements. The percentages measure documented coverage. Completed previews appear on the job card. Review the quoted evidence before relying on them.</p>
+          <p class="help">Two methods review the same duties and requirements from the saved advert. The percentages measure documented coverage. Rules provide a conservative lower bound and may miss equivalent experience. Completed previews appear on the job card. Review the quoted evidence before relying on them.</p>
           <div class="actions">
             <button id="compare-rules" class="small">Run rules only</button>
             <button id="compare-qwen" class="small">Compare with local AI</button>
@@ -899,15 +899,38 @@ async function compareEvidence(withQwen) {
 function renderComparison(result) {
     const host = $('compare-results');
     host.replaceChildren();
-    host.append(el('p','comparison-totals','Rules only: '+result.rules.percent+'%'+
+    if (result.matrix) {
+      const matrix = result.matrix;
+      host.append(el('p', 'help', matrix.scored + ' scored criteria, including ' + matrix.duties +
+        ' duties · ' + matrix.optional + ' optional · ' + matrix.conditions +
+        ' conditions · ' + matrix.administrative + ' application/source statements excluded.'));
+      host.append(el('p', 'help', 'Full evidence earns 1 point, partial evidence 0.5, and undocumented evidence 0. Essential criteria count twice. AND groups require all parts for full credit; OR groups require one qualifying option.'));
+    }
+    if (result.qwen?.coverage_range) {
+      const range = result.qwen.coverage_range;
+      host.append(el('p', 'help', range.confirmed_percent + '% fully documented · ' +
+        range.including_partial_percent + '% if partially documented criteria were completed.'));
+    }
+    if (result.separate_requirements?.length) {
+      const separate = el('details', 'fit-evidence');
+      separate.append(el('summary', '', 'Optional criteria and separate checks'));
+      for (const row of result.separate_requirements) {
+        separate.append(el('p', 'help', (row.kind === 'competency' ? 'Optional' : row.kind) + ' · ' + row.quote));
+      }
+      host.append(separate);
+    }
+
+    host.append(el('p','comparison-totals','Rules lower bound: '+result.rules.percent+'%'+
       (result.qwen ? ' · Local Qwen: '+result.qwen.percent+'%' : '')));
     for (const [index, criterion] of result.rules.requirements.entries()) {
       const item = el('details','fit-evidence');
       item.append(el('summary','',criterion.quote));
-      for (const [label, row] of [['Rules only',criterion],['Local Qwen',result.qwen?.requirements[index]]]) {
+      for (const [label, row] of [['Rules only',criterion],['Local Qwen',result.qwen?.requirements.find(row => row.id === criterion.id)]]) {
         if (!row) continue;
         item.append(el('p','help',label+' · '+row.status));
         for (const fact of row.evidence) item.append(el('blockquote','',fact.text));
+        if (row.unconfirmed_scope?.length) item.append(el('p','help',
+          'Group scope needs review. The literal cross-check could not confirm: ' + row.unconfirmed_scope.join(', ') + '. Equivalent wording may need your confirmation.'));
       }
       host.append(item);
     }

@@ -157,8 +157,14 @@ def assess(job,profile,view,invoke=call_model, *, fixed_requirements=None):
     employment=[{'id_prefix':f'work:{i}:','role':e.role,'dates':e.dates} for i,e in enumerate(profile.experience)]
     if len(json.dumps(model_facts))>9500:raise AssessmentError('Profile exceeds the tested local context budget; assessment not saved.')
     outcomes=[]
-    for batch in chunks(requirements,1000):
-        matched=validate_rows(invoke(MATCH,{'requirements':batch,'facts':model_facts,'employment':employment}), 'matches',[r['id'] for r in batch],{'supported','partial','not_documented'})
+    match_inputs = ([{key: row[key] for key in ('id', 'text', 'importance', 'kind')} for row in requirements]
+                    if fixed_requirements is not None else requirements)
+    requirement_lookup = {row['id']: row for row in requirements}
+    for model_requirements in chunks(match_inputs, 1800 if fixed_requirements is not None else 1000):
+        batch = [requirement_lookup[row['id']] for row in model_requirements]
+        matched = validate_rows(invoke(MATCH, {'facts': model_facts, 'employment': employment,
+                                              'requirements': model_requirements}),
+                                'matches', [row['id'] for row in batch], {'supported', 'partial', 'not_documented'})
         proposals=[]
         for m in matched:
             ids=m.get('evidence_ids')
@@ -192,8 +198,14 @@ def assess(job,profile,view,invoke=call_model, *, fixed_requirements=None):
                 status='not_documented';evidence=[]
             if status=='supported' and all(f.get('kind')=='skill' for f in evidence):
                 status='partial';reasons.append('Saved skills alone do not establish demonstrated delivery.')
+            unconfirmed_scope = []
+            if fixed_requirements is not None and status == 'supported':
+                from .evidence_matrix import unconfirmed_group_scope
+                unconfirmed_scope = unconfirmed_group_scope(r, evidence)
+                if unconfirmed_scope:
+                    status = 'partial'
             outcomes.append({**r,'status':status,'evidence':evidence if status!='not_documented' else [],
-                             'model_reason':check['reason'],
+                             'model_reason':check['reason'], 'unconfirmed_scope':unconfirmed_scope,
                              'reasons':reasons if any('tenure' in e for e in evidence) else [{'supported':'The local model proposes that these exact saved facts support this requirement. Verify the scope and qualifiers.', 'partial':'The local model found related evidence but did not establish the full requirement.', 'not_documented':'The local model did not establish this requirement from the supplied facts. This is not demonstrated inability.'}[status]]})
     return {'version':VERSION,'model':MODEL,'fingerprint':fingerprint(job,profile),'requirements':outcomes,'seconds':round(time.monotonic()-start,2),'as_of':assessment_day().isoformat()}
 
@@ -202,6 +214,7 @@ def render(report, baseline):
     """Fixed evidence coverage, never an ability score or automatic decision."""
     result={**baseline};rows=[];checks=[]
     for r in report['requirements']:
+        if r['kind'] in {'administrative', 'review'}:continue
         if r['kind']=='condition':checks.append({'text':r['quote'],'status':'Check separately'});continue
         value={'supported':1,'partial':.5,'not_documented':0}[r['status']]
         rows.append({**r,'status':{'supported':'Supported by recorded evidence','partial':'Partially documented','not_documented':'Not documented'}[r['status']],
@@ -209,8 +222,13 @@ def render(report, baseline):
     scored=[r for r in rows if r['importance']!='optional'];weight=lambda r:2 if r['importance']=='essential' else 1
     total=sum(weight(r) for r in scored);earned=sum(weight(r)*r['value'] for r in scored)
     percent=round(100*earned/total) if total else None
+    confirmed = sum(weight(row) for row in scored if row['value'] == 1)
+    partial = sum(weight(row) for row in scored if row['value'] == .5)
+    coverage_range = {'confirmed_percent': round(100 * confirmed / total) if total else None,
+                      'including_partial_percent': round(100 * (confirmed + partial) / total) if total else None}
+
     result.update(version=VERSION,model=report['model'],percent=percent,status='Needs review',assessment_state='assessed' if total else 'incomplete',assessment_notice='',auto_eligible=False,cap=None,
-        requirements=rows,separate_checks=checks,confidence={'level':'needs_review','meaning':'Model interpretation checked against source quotes; human review still needed.'},
+        requirements=rows,separate_checks=checks,coverage_range=coverage_range,confidence={'level':'needs_review','meaning':'Model interpretation checked against source quotes; human review still needed.'},
         coverage={'criteria_count':len(scored),'supported':sum(r['value']==1 for r in scored),'partial':sum(r['value']==.5 for r in scored),'unconfirmed':sum(r['value']==0 for r in scored),'work_examples':len({e['text'] for r in scored for e in r['evidence'] if e.get('kind')=='work'})},
         breakdown=[{'id':'evidence','label':'Documented evidence coverage','weight':100,'points':percent,'covered':sum(r['value'] for r in scored),'total':len(scored),'state':'assessed' if total else 'pending'}],
         method='Local Qwen interprets requirements and selects exact saved facts; a second pass checks support. Code awards 1 for supported, 0.5 for partial and 0 for undocumented; explicit essential criteria count twice. Optional criteria and conditions are excluded. This measures documented evidence coverage, not ability or hiring probability. Low coverage must not dismiss a role.',

@@ -13,7 +13,7 @@ HARNESS_VERSION='qwen-acceptance-v1'
 
 def rules_hash():
     base=Path(__file__).parent
-    return hashlib.sha256(b''.join((base/f).read_bytes() for f in ('semantic.py','qwen_harness.py','tenure.py'))).hexdigest()
+    return hashlib.sha256(b''.join((base/f).read_bytes() for f in ('semantic.py','qwen_harness.py','tenure.py','evidence_matrix.py','scoring_comparison.py'))).hexdigest()
 
 
 def runtime_identity():

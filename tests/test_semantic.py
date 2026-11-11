@@ -25,6 +25,7 @@ def test_fixed_coverage_excludes_optional_and_conditions():
     report={'requirements':rows,'model':'qwen3.5:4B'}
     result=render(report,{'assessment_state':'assessed'})
     assert result['percent']==62 # 2.5 / 4 weighted evidence units
+    assert result['coverage_range']=={'confirmed_percent':50,'including_partial_percent':75}
     assert result['auto_eligible'] is False and len(result['separate_checks'])==1
     assert result['coverage']['unconfirmed']==1
     closed=render(report,{'assessment_state':'closed','status':'Closed'})

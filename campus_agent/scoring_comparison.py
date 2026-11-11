@@ -9,24 +9,9 @@ from .tenure import DURATION, general_support_duration
 
 
 def quoted_requirements(row):
-    """Freeze one shared denominator from explicit, traceable advert requirements."""
-    blocks = semantic.source_blocks(row['reading_view'])
-    report = row.get('legacy_fit', row['fit'])
-    requirements = {}
-    for item in report['requirements']:
-        if item.get('importance') == 'optional':
-            continue
-        for quote in item['source_texts']:
-            if not any(quote in block['text'] for block in blocks):
-                continue
-            key = ' '.join(quote.casefold().split())
-            importance = 'essential' if item.get('importance_weight') == 2 or item.get('importance') == 'essential' else 'standard'
-            if key not in requirements:
-                requirements[key] = dict(id=str(len(requirements)), text=quote, quote=quote,
-                                         kind='competency', importance=importance)
-            elif importance == 'essential':
-                requirements[key]['importance'] = importance
-    return list(requirements.values())
+    """Build the shared matrix from the advert, independently of legacy ratings."""
+    from .evidence_matrix import matrix_requirements
+    return matrix_requirements(row['reading_view'])
 
 
 def rules_review(requirements, profile):
@@ -50,23 +35,31 @@ def rules_review(requirements, profile):
 def _arm(rows, model):
     result = semantic.render({'requirements': rows, 'model': model}, {})
     return {'percent': result['percent'], 'coverage': result['coverage'],
-            'requirements': result['requirements']}
+            'requirements': result['requirements'], 'coverage_range': result['coverage_range']}
 
 
 def compare(job, profile, requirements, *, with_qwen=False, invoke=None):
     if not requirements:
         raise ValueError('No explicit, quoted requirements are available for this comparison.')
-    if len(requirements) > 80:
+    from .evidence_matrix import summarise_matrix
+    matrix = summarise_matrix(requirements)
+    if matrix['needs_review']:
+        raise ValueError('This advert mixes mandatory and preferred scope. Review the flagged matrix clauses before calculating a percentage.')
+    assessed_requirements = [row for row in requirements if row['kind'] == 'competency' and row['importance'] != 'optional']
+    if not assessed_requirements:
+        raise ValueError('The matrix contains no scored duties or requirements.')
+    if len(assessed_requirements) > 80:
         raise ValueError('This advert has too many requirements for one local comparison.')
-    result = {'rules': _arm(rules_review(requirements, profile), 'Rules only'),
-              'qwen': None, 'qwen_error': None}
+    result = {'rules': _arm(rules_review(assessed_requirements, profile), 'Rules only'),
+              'qwen': None, 'qwen_error': None, 'matrix': matrix,
+              'separate_requirements': [row for row in requirements if row not in assessed_requirements]}
     if with_qwen:
         if not semantic._LOCK.acquire(blocking=False):
             result['qwen_error'] = 'A local model check is already running. Try again after it finishes.'
             return result
         try:
             report = semantic.assess(job, profile, {}, invoke or semantic.call_model,
-                                     fixed_requirements=requirements)
+                                     fixed_requirements=assessed_requirements)
             result['qwen'] = _arm(report['requirements'], report['model'])
         except semantic.AssessmentError as exc:
             result['qwen_error'] = str(exc)
