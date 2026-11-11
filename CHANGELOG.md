@@ -1,3 +1,9 @@
+## 0.9.32
+
+- Prepare a full application package from a saved role. Recheck its advert and fit, collect research leads, create interview prep and tailor the résumé and cover letter in one run.
+- Choose a ZIP, combined PDF or separate files before starting. Download in the app or choose to email the files to your connected Gmail inbox after review.
+- Keep reviewed scores when refreshed adverts contain the same scored criteria. Clean invalid characters from research exports so Word can open them.
+
 ## 0.9.31
 
 - Open the fit review from the job card, with a direct-evidence check and optional Qwen suggestions. Rules-only matches display the share of weighted criteria with direct evidence inside the review.

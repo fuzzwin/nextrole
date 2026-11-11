@@ -211,6 +211,32 @@ def create_workspace_app(workspace: Workspace):
         if not hmac.compare_digest(supplied,token):
             raise HTTPException(403,'Open this local workspace to access career research.')
 
+    from .application_workflow import ApplicationWorkflow
+    preparation = ApplicationWorkflow(workspace)
+
+    @app.get('/api/jobs/{job_id}/preparation')
+    def preparation_status(job_id: str, request: Request):
+        career_owner(request)
+        return preparation.get(job_id)
+
+    @app.post('/api/jobs/{job_id}/preparation')
+    async def preparation_start(job_id: str, request: Request):
+        data = await request.json()
+        return await run_in_threadpool(preparation.start, job_id, data)
+
+    @app.get('/api/jobs/{job_id}/preparation/{run_id}/files/{name}')
+    def preparation_download(job_id: str, run_id: str, name: str, request: Request):
+        career_owner(request)
+        path = preparation.file(job_id, run_id, name)
+        return FileResponse(path, filename=path.name)
+
+    @app.post('/api/jobs/{job_id}/preparation/{run_id}/email')
+    async def preparation_email(job_id: str, run_id: str, request: Request):
+        data = await request.json()
+        if not isinstance(data, dict) or data.get('reviewed') is not True:
+            raise ValueError('Review the preparation files before emailing them to yourself.')
+        return await run_in_threadpool(preparation.send, job_id, run_id)
+
     @app.get('/api/jobs/{job_id}/career-runs')
     def career_runs(job_id: str, request: Request):
         career_owner(request)

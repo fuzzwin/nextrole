@@ -17,6 +17,12 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from .documents import font_names
 
+INVALID_XML = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]')
+
+
+def _markup(text: str) -> str:
+    return escape(INVALID_XML.sub(' ', text))
+
 
 def _plain(text: str) -> str:
     # Retain citation destinations, even in readers that do not follow hyperlinks.
@@ -53,9 +59,9 @@ def _pdf(path: Path, title: str, content: str, notice: str):
         'body': ParagraphStyle('CareerBody', fontName=regular, fontSize=10, leading=13, spaceAfter=5, splitLongWords=True, alignment=TA_LEFT),
         'bullet': ParagraphStyle('CareerBullet', fontName=regular, fontSize=10, leading=13, leftIndent=10, firstLineIndent=-7, spaceAfter=4),
     }
-    story = [Paragraph(escape(title), styles['title']), Paragraph(escape(notice), styles['body']), Spacer(1, 3 * mm)]
+    story = [Paragraph(_markup(title), styles['title']), Paragraph(_markup(notice), styles['body']), Spacer(1, 3 * mm)]
     for kind, text in _blocks(content):
-        story.append(Paragraph(('• ' if kind == 'bullet' else '') + escape(text), styles[kind]))
+        story.append(Paragraph(('• ' if kind == 'bullet' else '') + _markup(text), styles[kind]))
     def footer(canvas, doc):
         canvas.setFont(regular, 8)
         canvas.drawString(18 * mm, 12 * mm, 'NextRole · Career preparation · Verify evidence before use')
@@ -68,7 +74,7 @@ def _docx(path: Path, title: str, content: str, notice: str):
     # Standard OOXML keeps this editable without a new runtime dependency.
     ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
     def para(text, style='Normal'):
-        return f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr><w:r><w:t xml:space="preserve">{escape(text)}</w:t></w:r></w:p>'
+        return f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr><w:r><w:t xml:space="preserve">{_markup(text)}</w:t></w:r></w:p>'
     body = para(title, 'Title') + para(notice)
     for kind, text in _blocks(content):
         body += para(('• ' if kind == 'bullet' else '') + text, 'Heading1' if kind == 'heading' else 'Normal')

@@ -222,6 +222,9 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
 @media(max-width:650px){.search-steps,.maintenance-actions{grid-template-columns:minmax(0,1fr)}}
 .gauge-label small{display:block;font-size:10px;color:var(--muted);margin-top:3px;max-width:150px}
 .criterion-review{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:6px}.criterion-review select,.criterion-review textarea{width:100%;margin-top:4px}.criterion-review .check{align-items:flex-start}
+#preparation-dialog{width:min(620px,calc(100% - 24px));max-height:calc(100dvh - 24px)}
+#preparation-dialog .dialogbody{padding:14px 20px;overflow:auto}
+#preparation-files{margin:8px 0;display:flex;flex-wrap:wrap;gap:6px 12px}
 </style></head><body>
 <div class="layout"><aside><div class="brand"><div class="mark">↗</div><div>NextRole<small>YOUR NEXT CHAPTER</small></div></div><nav class="nav" aria-label="Workspace navigation"><button data-view="opportunities" class="active" title="Opportunities"><span aria-hidden="true">▦</span>Opportunities</button><button data-view="applications" title="Applications"><span aria-hidden="true">✓</span>Applications</button><button data-view="profile" title="Profile and sources"><span aria-hidden="true">▤</span>Profile & sources</button><button data-view="document-style" title="Preview, adjust and approve"><span aria-hidden="true">▥</span>Document style</button><button data-view="connections" title="Gmail and Drive"><span aria-hidden="true">⇄</span>Gmail & Drive</button><button data-view="examples" title="Role examples"><span aria-hidden="true">▧</span>Role examples</button><button data-view="activity" title="Activity"><span aria-hidden="true">◷</span>Activity</button><button data-view="settings" title="Search settings"><span aria-hidden="true">⚙</span>Search settings</button></nav><div class="account"><b id="account-name">Your workspace</b><small id="account-email">Connect Gmail and Drive</small></div></aside>
 <main><div class="topbar"><div class="eyebrow">WORKSPACE / AUSTRALIAN JOB SEARCH</div><div class="topbar-actions"><span id="connection-badge" class="pill">Connections not checked</span><button id="open-appearance" class="appearance-trigger" aria-haspopup="dialog"><span aria-hidden="true">◐</span>Appearance</button></div></div><div id="message" class="notice hide" role="status"></div><div id="running" class="notice running" aria-live="polite"></div><div id="approvals"></div>
@@ -382,6 +385,10 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
       <section class="detail-next-steps" aria-labelledby="detail-next-title">
         <h3 id="detail-next-title">Next steps</h3>
         <div class="prep-action">
+          <button id="prepare-full-job" class="small primary" aria-haspopup="dialog">Prepare full package</button>
+          <p class="help">Recheck this role, review fit, research the employer and create interview and application files.</p>
+        </div>
+        <div class="prep-action">
           <button id="career-research-job" class="small">Create job research document</button>
           <p class="help">Research the employer, role and pay. Public searches may use extra service credits.</p>
         </div>
@@ -420,6 +427,28 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
     <div class="actions">
       <button id="detail-delivery-hold" class="small" hidden>Delivery held · See checks</button>
     </div>
+  </div>
+</dialog>
+<dialog id="preparation-dialog" aria-labelledby="preparation-title">
+  <div class="dialoghead"><div><h2 id="preparation-title">Prepare full package</h2><p id="preparation-role" class="help"></p></div><button class="close" data-close="preparation-dialog" aria-label="Close preparation">×</button></div>
+  <div class="dialogbody">
+    <p>NextRole rereads the advert, checks your fit, gathers research leads, then creates interview prep, a tailored résumé and a cover letter.</p>
+    <div class="formgrid">
+      <div><label for="preparation-format">Output format</label><select id="preparation-format"><option value="zip">ZIP with PDF and Word files</option><option value="pdf">One combined PDF</option><option value="files">Separate PDF and Word files</option></select></div>
+      <div><label for="preparation-delivery">When the package is ready</label><select id="preparation-delivery"><option value="download">Download here</option><option value="email">Email me after I review</option></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="preparation-deeper">Ask local Qwen for a deeper fit suggestion</label>
+    <p class="help">Research uses public searches and may use service credits. Local Qwen can add several minutes and its grades need review.</p>
+    <button id="preparation-start" class="primary">Start preparation</button>
+    <p id="preparation-status" role="status" aria-live="polite"></p>
+    <p id="preparation-fit" class="help"></p>
+    <ul id="preparation-warnings" class="help" hidden></ul>
+    <div id="preparation-files" aria-label="Preparation downloads"></div>
+    <div id="preparation-email-box" hidden>
+      <label class="check"><input type="checkbox" id="preparation-reviewed">I reviewed these files and want them sent to my connected Gmail inbox.</label>
+      <button id="preparation-email" class="small">Email this package to me</button>
+    </div>
+    <p id="preparation-email-status" class="help" role="status"></p>
   </div>
 </dialog>
 <dialog id="career-dialog" aria-labelledby="career-title">
@@ -1231,7 +1260,7 @@ $('detail-delivery-hold').onclick=()=>{
   $('document-checks').querySelector('summary').focus();
 };
 function renderApplicationReview(row){let host=$('detail-tailoring-review');host.replaceChildren();let report=row.quality?.application_review;if(!report)return;host.append(el('h3','','Why these examples were chosen'));host.append(el('p','help',report.mode==='focused'?'Focused résumé: '+report.bullet_count+' of '+report.bullets_in_master+' employment bullets selected, '+report.skills_selected+' of '+report.skills_in_master+' skills retained. Original employment roles and dates stay the same.':'Complete résumé: all professional employment bullets remain in the saved order.'));if(report.selected_project_titles?.length)host.append(el('p','help','Selected personal projects: '+report.selected_project_titles.join(', ')+' (shown in a separate section).'));if(report.selected_examples?.length){let heading=el('h4','','Selected employment examples'),list=el('ul');for(let fact of report.selected_examples)list.append(el('li','',fact));host.append(heading,list)}if(report.omitted_examples?.length){let details=el('details'),summary=el('summary','','What was left out of this focused version'),list=el('ul');for(let fact of report.omitted_examples)list.append(el('li','',fact));details.append(summary,list);host.append(details)}if(report.requirements?.length){let heading=el('h4','','Requirements mapped to your evidence'),list=el('ul');for(let item of report.requirements){let li=el('li');li.append(el('strong','',item.requirement+': '),document.createTextNode(item.status));if(item.evidence)li.append(el('blockquote','',item.evidence));list.append(li)}host.append(heading,list)}if(report.gaps?.length)host.append(el('p','help','Genuine evidence gaps to review: '+report.gaps.join(', ')+'. These are not automatically disqualifying.'));host.append(el('p','help','Keyword matching is advisory. Check the employer’s mandatory criteria, evidence maturity, page breaks, confidentiality, referee permission and final language yourself.'))}
-function renderDetail(){let row=state.jobs.find(r=>r.id===selectedJob);if(!row)return;updateDetailNavigation();let j=row.job;$('detail-title').textContent=row.reading_view?.title||j.title;$('detail-search-match').textContent=row.search_match?'Search match · '+row.role_types.map(role=>role.label).join(' · '):'Outside your current search';$('detail-employer').textContent=row.reading_view?.employer||j.employer;$('detail-link').href=j.url;renderFit(row);renderListingReading(row);renderOverview(row);renderListingResearch(row);renderMetadataReport(row);$('detail-profile-checks').replaceChildren();if(!row.fit&&row.shortlist?.reasons?.length){let checks=el('section','profile-checks');checks.append(el('h3','','Requirements to review against your profile'));let list=el('ul');for(let reason of row.shortlist.reasons)list.append(el('li','',reason));checks.append(list);$('detail-profile-checks').append(checks)}$('detail-tags').replaceChildren(...row.skills.map(s=>el('span','chip',s)));renderDocumentChecks(row);renderApplicationReview(row);$('detail-packet').classList.toggle('hide',!row.packet_dir);$('detail-delivery-hold').hidden=!row.quality||row.quality.delivery_ready;$('detail-hint').textContent=!row.full_description?'Read or paste the full advert to prepare documents.':!state.profile?'Save a profile to prepare documents.':'';for(let kind of ['resume','cover','email'])$(kind+'-link').href='/files/'+row.id+'/'+kind;let busy=activeJobTasks.has(row.id);$('prepare-job').disabled=!!row.source_policy||!state.profile||!row.full_description||busy;$('prepare-job').textContent=busy?'Working…':'Create résumé and cover letter';$('read-job').disabled=!!row.source_policy||busy;$('research-job').disabled=busy;$('read-job').textContent=row.full_description?'Revalidate role':'Read full listing';$('read-job-help').textContent=row.full_description?'Revalidate role rereads this vacancy’s saved advert and checks its text, employer and closing information. Use Review evidence to assess your fit.':'Read full listing fetches the advert from this role’s saved link. You can paste it in Edit details & notes if access is blocked.';$('j-url').disabled=!!editId;for(let b of document.querySelectorAll('[data-cloud]'))b.disabled=!!row.source_policy||!$('packet-reviewed').checked||!row.quality?.delivery_ready}
+function renderDetail(){let row=state.jobs.find(r=>r.id===selectedJob);if(!row)return;updateDetailNavigation();let j=row.job;$('detail-title').textContent=row.reading_view?.title||j.title;$('detail-search-match').textContent=row.search_match?'Search match · '+row.role_types.map(role=>role.label).join(' · '):'Outside your current search';$('detail-employer').textContent=row.reading_view?.employer||j.employer;$('detail-link').href=j.url;renderFit(row);renderListingReading(row);renderOverview(row);renderListingResearch(row);renderMetadataReport(row);$('detail-profile-checks').replaceChildren();if(!row.fit&&row.shortlist?.reasons?.length){let checks=el('section','profile-checks');checks.append(el('h3','','Requirements to review against your profile'));let list=el('ul');for(let reason of row.shortlist.reasons)list.append(el('li','',reason));checks.append(list);$('detail-profile-checks').append(checks)}$('detail-tags').replaceChildren(...row.skills.map(s=>el('span','chip',s)));renderDocumentChecks(row);renderApplicationReview(row);$('detail-packet').classList.toggle('hide',!row.packet_dir);$('detail-delivery-hold').hidden=!row.quality||row.quality.delivery_ready;$('detail-hint').textContent=!row.full_description?'Read or paste the full advert to prepare documents.':!state.profile?'Save a profile to prepare documents.':'';for(let kind of ['resume','cover','email'])$(kind+'-link').href='/files/'+row.id+'/'+kind;let busy=activeJobTasks.has(row.id);$('prepare-job').disabled=!!row.source_policy||!state.profile||!row.full_description||busy;$('prepare-full-job').disabled=!!row.source_policy||!state.profile||!!row.listing?.closed||busy;$('prepare-job').textContent=busy?'Working…':'Create résumé and cover letter';$('read-job').disabled=!!row.source_policy||busy;$('research-job').disabled=busy;$('read-job').textContent=row.full_description?'Revalidate role':'Read full listing';$('read-job-help').textContent=row.full_description?'Revalidate role rereads this vacancy’s saved advert and checks its text, employer and closing information. Use Review evidence to assess your fit.':'Read full listing fetches the advert from this role’s saved link. You can paste it in Edit details & notes if access is blocked.';$('j-url').disabled=!!editId;for(let b of document.querySelectorAll('[data-cloud]'))b.disabled=!!row.source_policy||!$('packet-reviewed').checked||!row.quality?.delivery_ready}
 function editJob(id=null){editId=id;let row=state.jobs.find(r=>r.id===id),j=row?.job||{};$('edit-heading').textContent=id?'Edit role & tracking':'Add a role';const directory=row?.fit?.source_state==='search_results';$('edit-source-guidance').hidden=!directory;$('edit-source-guidance').textContent=directory?'Use one vacancy from the directory. Enter the exact job title and employer, then paste the full advert.':'';for(let key of ['title','employer','location','url','description'])$('j-'+key).value=j[key]||(key==='location'?state.preferences.location:'');$('j-url').disabled=!!id;$('j-stage').value=row?.stage||'saved';$('j-notes').value=row?.notes||'';$('edit-dialog').showModal()}
 function notifyCompletedTasks() {
   const jobsByTask = new Map([...activeJobTasks].map(([jobId, taskId]) => [taskId, jobId]));
@@ -1281,6 +1310,97 @@ function careerOptions(){let frameworks=[...$('career-frameworks').querySelector
 async function careerStart(refresh){let epoch=careerEpoch,options=careerOptions();if(careerFeature==='deep_research'&&!options.scope.length)throw Error('Choose at least one research area.');$('career-start').disabled=true;$('career-refresh').disabled=true;try{$('career-status').textContent='Starting…';let result=await api('/api/jobs/'+encodeURIComponent(careerJobId)+'/career-runs',{feature:careerFeature,options,refresh});if(epoch!==careerEpoch)return;$('career-setup').open=false;$('career-evidence').textContent=result.cached?'Reusing a saved result for this evidence and these preferences.':result.reused?'Attached to the existing active run.':'New run started for this job and these preferences.';await careerLoad(result.id||result.run_id||result.run?.id)}finally{$('career-start').disabled=false;$('career-refresh').disabled=false}}
 function renderCareer(){let r=careerRun;if(!r)return;let id=r.id||r.run_id,result=r.result||{},running=careerActive(r);$('career-run-section').hidden=false;$('career-cancel').hidden=!running;$('career-start').disabled=running;$('career-refresh').hidden=false;$('career-refresh').disabled=running;let start=Date.parse(r.started_at||r.created_at||r.created),end=Date.parse(r.finished_at||r.completed_at||(!running?r.updated_at:null));let elapsed=Number.isFinite(start)?Math.max(0,Math.round(((Number.isFinite(end)?end:Date.now())-start)/1000)):null;$('career-status').textContent=(r.status||'Unknown')+' · '+(r.progress?.message||'')+(elapsed===null?'':' · '+elapsed+'s elapsed');let usage=r.usage||{};$('career-usage').textContent='Public searches: '+(usage.web_calls??'not reported')+' · Tokens: '+(usage.input_tokens==null||usage.output_tokens==null?'not reported':usage.input_tokens+' input / '+usage.output_tokens+' output')+' · AUD cost: '+(usage.cost_aud==null?'not reported':usage.cost_aud)+' · '+(result.mode==='extractive'?'Evidence extract and structured guide; no model-generated synthesis.':'');$('career-review-status').textContent='This output: '+(r.review?.disposition||r.review_state||'not reviewed')+' · Evidence captured '+fmt(r.created_at)+' · Run '+id+(r.completed_at?' · '+fmt(r.completed_at):'');let validation=$('career-validation');validation.replaceChildren();if(result.markdown){validation.append(el('strong','',result.validation?.passed?'Structural checks passed · source and experience review still required':'Structural checks need attention · approval unavailable'));for(let finding of [...(result.validation?.findings||[]),...(result.limitations||[])])validation.append(el('p','help',careerText(finding)))}$('career-reviewed').disabled=result.validation?.passed!==true;careerMarkdown($('career-result'),result.markdown||r.error||'');$('career-sources').replaceChildren();let sources=Array.isArray(result.sources)?result.sources:Object.values(result.sources||{});if(sources.length){let details=el('details');details.append(el('summary','','Sources · '+sources.length));for(let source of sources){let url=typeof source==='string'?source:source.url,title=source.title||source.label||source.locator||url||'Saved evidence',p=el('p');try{let parsed=new URL(url);if(['http:','https:'].includes(parsed.protocol))p.append(anchor(title,parsed.href));else p.textContent=title}catch{p.textContent=title}if(source.excerpt)p.append(el('p','help',source.excerpt));if(source.accessed_at||source.retrieved_at)p.append(document.createTextNode(' · '+fmt(source.accessed_at||source.retrieved_at)));details.append(p)}$('career-sources').append(details)}$('career-downloads').replaceChildren();if(result.markdown&&!running){for(let [kind,label] of [['guide_docx','Download guide DOCX'],['guide_pdf','Download guide PDF'],['quick_pdf','Quick sheet PDF'],['quick_docx','Quick sheet DOCX']]){let a=anchor(label,'/api/career-runs/'+encodeURIComponent(id)+'/artifacts/'+kind+'?token='+encodeURIComponent(token));a.className='button small';$('career-downloads').append(a)}}$('career-review-actions').hidden=!result.markdown||running;$('career-practice').hidden=careerFeature!=='interview_prep'||!result.questions?.length||running;$('career-practice-start').hidden=!!careerPractice;if(r.error)careerError(r.error)}
 function renderCareerPractice(){let p=careerPractice;if(!p)return;let question=p.current_question;$('career-practice-start').hidden=true;$('career-practice-content').hidden=false;$('career-practice-question').textContent=question?('Question '+(Number(p.question_index||0)+1)+' of '+p.total+' · '+question.question):'Practice complete. Your saved answers remain in this session.';let answers=(p.answers||[]).filter(a=>a.question_id===question?.id),answer=answers.at(-1);$('career-practice-feedback').textContent=answer?'Practice feedback (rule-based):\n'+careerText(answer.feedback):'';$('career-practice-submit').hidden=!question;$('career-practice-submit').disabled=!!answer&&!careerRetry;$('career-practice-retry').hidden=!answer;$('career-practice-next').hidden=!answer;$('career-practice-answer').disabled=!question||!!answer&&!careerRetry;if(answer&&!careerRetry)$('career-practice-answer').value=answer.answer}
+let preparationJob = null, preparationRun = null, preparationTimer, preparationRequest = 0;
+function preparationPath() { return '/api/jobs/' + encodeURIComponent(preparationJob) + '/preparation'; }
+function renderPreparation(run) {
+  const changed = run?.id !== preparationRun?.id;
+  preparationRun = run;
+  const busy = run?.status === 'running' || run?.mail?.status === 'sending';
+  for (const id of ['preparation-start','preparation-format','preparation-delivery','preparation-deeper']) $(id).disabled = busy;
+  $('preparation-start').textContent = run ? 'Start a new preparation' : 'Start preparation';
+  if (changed) $('preparation-reviewed').checked = false;
+  $('preparation-status').textContent = [run?.step,run?.error].filter(Boolean).join(' · ');
+  $('preparation-fit').textContent = run?.fit_summary || '';
+  const warnings = run?.warnings || [];
+  $('preparation-warnings').hidden = !warnings.length;
+  $('preparation-warnings').replaceChildren(...warnings.map(warning => el('li','',warning)));
+  const files = $('preparation-files');
+  files.replaceChildren();
+  if (run?.status === 'ready') {
+    for (const file of run.files) {
+      const url = preparationPath() + '/' + run.id + '/files/' + encodeURIComponent(file.name) + '?token=' + encodeURIComponent(token);
+      files.append(anchor('Download ' + file.name,url));
+    }
+  }
+  const canEmail = run?.status === 'ready' && run.options.delivery === 'email' && !run.mail;
+  $('preparation-email-box').hidden = !canEmail;
+  $('preparation-email').disabled = !canEmail || !$('preparation-reviewed').checked;
+  const mail = run?.mail;
+  $('preparation-email-status').textContent = !mail ? '' : mail.status === 'sent' ? 'Sent to your Gmail inbox. Attachments verified.' :
+    mail.status === 'sending' ? 'Sending to your inbox…' : 'Check Gmail Sent before retrying. ' + (mail.error || '');
+}
+function watchPreparation(run, request) {
+  if (request !== preparationRequest) return;
+  renderPreparation(run);
+  clearTimeout(preparationTimer);
+  if (run?.status === 'running' || run?.mail?.status === 'sending') {
+    preparationTimer = setTimeout(async () => {
+      if (request !== preparationRequest || !$('preparation-dialog').open) return;
+      try { watchPreparation(await api(preparationPath()),request); }
+      catch (error) { if (request === preparationRequest) $('preparation-status').textContent = error.message; }
+    },1800);
+  } else if (run?.status === 'ready') refresh();
+}
+$('prepare-full-job').onclick = async () => {
+  const row = state.jobs.find(row => row.id === selectedJob);
+  if (!row) return;
+  preparationJob = row.id;
+  const request = ++preparationRequest;
+  $('preparation-role').textContent = (row.reading_view?.title || row.job.title) + ' · ' + (row.reading_view?.employer || row.job.employer);
+  $('preparation-format').value = 'zip';
+  $('preparation-delivery').value = 'download';
+  $('preparation-deeper').checked = false;
+  renderPreparation(null);
+  $('preparation-start').disabled = true;
+  $('preparation-dialog').showModal();
+  try {
+    const run = await api(preparationPath());
+    if (request !== preparationRequest) return;
+    if (run) {
+      $('preparation-format').value = run.options.format;
+      $('preparation-delivery').value = run.options.delivery;
+      $('preparation-deeper').checked = run.options.deeper_fit;
+    }
+    watchPreparation(run,request);
+  } catch(error) { if (request === preparationRequest) $('preparation-status').textContent = error.message; }
+};
+$('preparation-start').onclick = async () => {
+  const request = ++preparationRequest;
+  $('preparation-start').disabled = true;
+  $('preparation-status').textContent = 'Starting preparation…';
+  try {
+    const run = await api(preparationPath(),{format:$('preparation-format').value,delivery:$('preparation-delivery').value,deeper_fit:$('preparation-deeper').checked});
+    watchPreparation(run,request);
+  } catch(error) {
+    if (request !== preparationRequest) return;
+    $('preparation-status').textContent = error.message;
+    $('preparation-start').disabled = false;
+  }
+};
+$('preparation-reviewed').onchange = () => { $('preparation-email').disabled = !$('preparation-reviewed').checked; };
+$('preparation-email').onclick = async () => {
+  const request = ++preparationRequest;
+  $('preparation-email').disabled = true;
+  $('preparation-start').disabled = true;
+  try { watchPreparation(await api(preparationPath() + '/' + preparationRun.id + '/email',{reviewed:$('preparation-reviewed').checked}),request); }
+  catch(error) {
+    if (request !== preparationRequest) return;
+    $('preparation-email-status').textContent = error.message;
+    $('preparation-email').disabled = !$('preparation-reviewed').checked;
+    $('preparation-start').disabled = false;
+  }
+};
+$('preparation-dialog').addEventListener('close', () => { ++preparationRequest; clearTimeout(preparationTimer); });
 $('career-research-job').onclick=()=>openCareer('deep_research');$('career-interview-job').onclick=()=>openCareer('interview_prep');$('career-start').onclick=()=>careerAction(()=>careerStart(false));$('career-refresh').onclick=()=>careerAction(()=>careerStart(true));$('career-cancel').onclick=()=>careerAction(async()=>{await api('/api/career-runs/'+careerRun.id+'/cancel',{});await careerLoad(careerRun.id)});
 for(let [element,disposition] of [['career-reviewed','approved'],['career-needs-changes','changes_requested']])$(element).onclick=()=>careerAction(async()=>{await api('/api/career-runs/'+careerRun.id+'/review',{disposition,output_hash:careerRun.output_hash});await careerLoad(careerRun.id)});
 $('career-practice-start').onclick=()=>careerAction(async()=>{let epoch=careerEpoch,p=await api('/api/career-runs/'+careerRun.id+'/practice',{});if(epoch!==careerEpoch)return;careerPractice=p;careerRetry=false;$('career-practice-answer').value='';renderCareerPractice()});$('career-practice-submit').onclick=()=>careerAction(async()=>{let answer=$('career-practice-answer').value.trim();if(!answer)throw Error('Enter your answer first.');let epoch=careerEpoch,p=await api('/api/career-practice/'+careerPractice.id+'/answer',{answer,retry:careerRetry});if(epoch!==careerEpoch)return;careerPractice=p;careerRetry=false;renderCareerPractice()});$('career-practice-retry').onclick=()=>{careerRetry=true;renderCareerPractice();$('career-practice-answer').focus()};$('career-practice-next').onclick=()=>careerAction(async()=>{let epoch=careerEpoch,p=await api('/api/career-practice/'+careerPractice.id+'/next',{});if(epoch!==careerEpoch)return;careerPractice=p;careerRetry=false;$('career-practice-answer').value='';renderCareerPractice()});$('career-dialog').addEventListener('close',()=>{careerEpoch++;clearTimeout(careerPoll)});
