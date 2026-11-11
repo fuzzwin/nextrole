@@ -332,3 +332,74 @@ def test_technology_preserves_optional_words_and_skips_investors():
                              'Our Australian deployment connects the client’s CRM with Microsoft Fabric.'],
                             'company','public_example',limit=1)
     assert company[0]['quote']=='Our Australian deployment connects the client’s CRM with Microsoft Fabric.'
+
+
+def test_targeted_company_sources_keep_verifiable_passages(tmp_path):
+    s, w = service(tmp_path)
+    original = w.bridge.call
+    links = [
+        {'url': 'https://example.com/about', 'focus': 'provides service'},
+        {'url': 'https://example.com/customers', 'focus': 'Australian customers'},
+    ]
+
+    def focused(name, args):
+        if 'find' not in args:
+            return original(name, args)
+        link = args['find'][0]
+        response = original(name, {'open': [{'ref_id': link['ref_id']}]})
+        response['text'] = response['text'].replace('Source: open(', 'Source: find(')
+        return response
+
+    w.bridge.call = focused
+    try:
+        run = wait(s, s.start('job', 'deep_research', {'company_links': links})['run_id'])
+        result = run['result']
+        assert result['validation']['passed']
+        assert result['quality']['export_ready']
+        assert all(check['readable'] for check in result['assessment']['company_checks'][:2])
+        for claim in result['assessment']['claims']:
+            if claim['kind'] == 'confirmed' and claim['area'] != 'Operating stack and remit':
+                assert claim['text'] in result['sources'][claim['sources'][0]]['excerpt']
+        quick = result['quick_markdown']
+        assert quick.index('## Pay') < quick.index('## Job') < quick.index('## Company')
+    finally:
+        s.close()
+
+
+def test_readable_vacancy_copy_does_not_confirm_availability(tmp_path):
+    s, w = service(tmp_path)
+    original = w.bridge.call
+    copy = 'https://example.com/syndicated-job'
+
+    def archived(name, args):
+        url = args.get('open', [{}])[0].get('ref_id')
+        if url == 'https://example.com/job':
+            return {'text': f'Example ({url})\nSource: open(test)\nL1: Access denied'}
+        return original(name, args)
+
+    w.bridge.call = archived
+    try:
+        run = wait(s, s.start('job', 'deep_research', {'scope': ['role'], 'alternate_vacancy_url': copy})['run_id'])
+        result = run['result']
+        assert result['assessment']['role_research']['source_check'] == 'readable_copy'
+        assert 'Vacancy availability' in result['quality']['gaps']
+        assert result['sources']['alternate_vacancy']['url'] == copy
+        assert result['assessment']['vacancy']['status'] == 'unknown'
+    finally:
+        s.close()
+
+
+def test_role_duties_recover_action_sentences_from_prose():
+    from campus_agent.career_research import _stated_duties, role_matrix
+
+    vacancy = {'title': 'Enablement Partner', 'employer': 'Example'}
+    advert = """What You'll Do
+Get close to the work. Partner with frontline teams to map existing work and find bottlenecks.
+Build alongside the team. Develop low-code tools for the agreed process with frontline staff.
+About You
+- Three years of work in process improvement or business analysis."""
+    rows = role_matrix(advert, vacancy)
+    assert _stated_duties(advert, vacancy, rows) == [
+        'Partner with frontline teams to map existing work and find bottlenecks.',
+        'Develop low-code tools for the agreed process with frontline staff.',
+    ]

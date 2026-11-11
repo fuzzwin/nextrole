@@ -22,7 +22,7 @@ from .career_render import RESEARCH_AREAS, render, check_references, check_decis
 from .career_technology import add_candidate_technology, technology_lines, technology_rows
 
 TERMINAL = {'ready_for_review', 'failed', 'cancelled', 'budget_exhausted'}
-VERSION = 'career-1.3.1'
+VERSION = 'career-1.4.0'
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def encoded(value): return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
@@ -155,7 +155,7 @@ class CareerService:
         if self.closed.is_set(): raise ValueError('Career service is stopping')
         if feature not in {'deep_research','interview_prep'}: raise ValueError('Unknown career feature')
         o=dict(options or {})
-        if set(o)-{'stage','frameworks','max_web_calls','max_seconds','scope','preparation_minutes','communication_preferences','technology_links'}: raise ValueError('Unsupported career options')
+        if set(o)-{'stage','frameworks','max_web_calls','max_seconds','scope','preparation_minutes','communication_preferences','technology_links','company_links','alternate_vacancy_url'}: raise ValueError('Unsupported career options')
         scope=o.get('scope',['employer','role','pay'])
         if not isinstance(scope,list) or not scope or any(x not in {'employer','role','pay'} for x in scope): raise ValueError('Invalid research scope')
         minutes=o.get('preparation_minutes',30)
@@ -171,6 +171,31 @@ class CareerService:
         if any(not url for url in public_links):
             raise ValueError('Technology evidence links need an allowed public HTTPS address.')
         o['technology_links']=list(dict.fromkeys(public_links))
+        company_links=o.get('company_links',[])
+        if not isinstance(company_links,list) or len(company_links)>3:
+            raise ValueError('Enter up to three official employer links.')
+        if company_links and (feature!='deep_research' or 'employer' not in scope):
+            raise ValueError('Select Employer in Deep Research to check employer links.')
+        checked_links=[]
+        for link in company_links:
+            if (not isinstance(link,dict) or set(link)!={'url','focus'} or not isinstance(link['url'],str)
+                or len(link['url'])>1500 or not isinstance(link['focus'],str) or len(link['focus'])>100):
+                raise ValueError('Each employer link needs a public URL and an optional short phrase.')
+            url=readable_public_url(link['url'].strip())
+            if not url:
+                raise ValueError('Employer evidence links need an allowed public HTTPS address.')
+            value={'url':url,'focus':link['focus'].strip()}
+            if value not in checked_links:
+                checked_links.append(value)
+        o['company_links']=checked_links
+        alternate=o.get('alternate_vacancy_url') or ''
+        if not isinstance(alternate,str) or len(alternate)>1500:
+            raise ValueError('Enter a public URL for another copy of the vacancy.')
+        if alternate and (feature!='deep_research' or 'role' not in scope):
+            raise ValueError('Select Role & fit in Deep Research to check another vacancy link.')
+        o['alternate_vacancy_url']=readable_public_url(alternate.strip()) if alternate.strip() else None
+        if alternate.strip() and not o['alternate_vacancy_url']:
+            raise ValueError('The alternate vacancy needs an allowed public HTTPS address.')
         o.update(scope=scope,preparation_minutes=minutes,communication_preferences=preferences)
         stage=o.get('stage','unknown')
         if stage not in {'unknown','recruiter','hiring_manager','panel','technical','practical'}: raise ValueError('Unknown interview stage')
@@ -270,6 +295,8 @@ class CareerService:
                     lambda args: self._web(rid,args,deadline), research_sources,
                     lambda message,done,total: self._update(rid,progress={'message':message,'completed':done,'total':total}),
                     technology_links=r['options'].get('technology_links', []),
+                    company_links=r['options'].get('company_links', []),
+                    alternate_vacancy_url=r['options'].get('alternate_vacancy_url'),
                 )
             add_candidate_technology(report,observed['sources'])
             brief=render(observed,report)
@@ -428,20 +455,26 @@ class CareerService:
         claims=[claim for claim in report['claims'] if claim['kind']=='confirmed']
         if feature=='deep_research':
             lines=['# Job research brief',title]
-            role=report.get('role_research')
-            if role:
-                lines += ['## Vacancy', report['decision'], report['next_step']]
-                if report['employer_pay']:
-                    lines += ['Advertised pay · '+(report['employer_pay'].get('advertised_text') or report['employer_pay']['basis'])]
-                if role['duties']:
-                    lines += ['## What you would deliver',*['- '+duty for duty in role['duties'][:3]]]
-            for claim in claims[:4]:
-                if claim['area']==RESEARCH_AREAS[-1]:
-                    continue
+            pay=report['employer_pay']
+            lines += ['## Pay', (pay.get('advertised_text') or pay['basis']) if pay else 'Advertised pay remains unconfirmed.']
+            role=report.get('role_research') or {}
+            lines += ['## Job', ' · '.join([*vacancy['locations'],vacancy['mode'],vacancy['employment']]),
+                      report['decision'], report['next_step']]
+            lines.append('## Company')
+            public=[c for c in claims if c['area']!=RESEARCH_AREAS[-1]][:2]
+            if not public:
+                lines.append('Company context remains open.')
+            for claim in public:
                 source=observed['sources'][claim['sources'][0]]
-                lines += ['## '+claim['area'],claim['text'],f"[{source['label']}]({source['url']})"]
+                lines += [claim['text'],f"[{source['label']}]({source['url']})"]
+            if role.get('duties'):
+                lines += ['## What they need',*['- '+duty for duty in role['duties'][:2]]]
             lines += technology_lines(report,observed['sources'],compact=True)
-            lines += ['## Ask next',*['- '+question for question in report['questions'][:3]]]
+            lines += ['## Your evidence and next question']
+            linked=next((ref for row in report['fit'] for ref in row['sources'] if ref.startswith('experience_')),None)
+            if linked:
+                lines.append(observed['sources'][linked]['excerpt'])
+            lines.append(report['questions'][0])
             return '\n\n'.join(lines)
         lines=['# Quick rehearsal sheet',title,guide['opening'],'## Examples to rehearse']
         for card in guide['cards'][:3]: lines += [card['answer'],'Cues: '+' → '.join(card['cues'])]

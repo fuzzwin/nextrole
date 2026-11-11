@@ -1,3 +1,8 @@
+## 0.9.37
+
+- Deep Research can reopen a specific passage on an official company page, check another copy of the same job, and recover duties written as prose.
+- Research briefs put pay, job, company, hiring priorities and technology first. The full guide retains checked passages, source scope and questions for unresolved details.
+
 ## 0.9.36
 
 - Preserve specific technology evidence from full sentences within longer advert paragraphs. Read technical qualifications from relevant sections and exclude investor references from employer technology context.
