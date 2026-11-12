@@ -5,6 +5,12 @@
 - Name the criterion and the fix when a reviewed grade cannot be saved.
 - Count a profile bullet from any occupation as delivered work when it opens with a past-tense action. Learning, planning and hedged statements stay at partial credit.
 - Use plainer job-card wording for unreviewed roles, neutral header copy, labelled navigation on phones, and keep Save role visible in the Add a role dialog.
+- Put the fit review before document preparation in the job view, numbered 1 and 2, and collapse the scoring explanation under How scoring works.
+- Keep Save profile reachable with a sticky bar that shows unsaved changes, and replace raw validation text with plain messages.
+- Hide Drive and email counters until an account is connected. Raise small text to at least 11px and enlarge touch targets on phones.
+- Write cover-letter dates as 12 November 2026, turn any past-tense bullet into a first-person sentence, and rank bullets by word stems so related wording is chosen.
+- Draw the page footer after the body so extracted text starts with the name, skip empty résumé sections, and name downloaded PDFs after the person, role and employer.
+- Say how many pages a document runs to and what to change when it exceeds the review limit.
 
 ## 0.9.37
 

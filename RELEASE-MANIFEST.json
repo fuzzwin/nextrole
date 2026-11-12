@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 20840,
-      "sha256": "0955fa9f3b9328c43b3c72679920260c6b0c3f07f45656d6f178a4595a3f8d34",
+      "bytes": 21678,
+      "sha256": "18bcf9b06397e8f27ce684e9e4e6697e077eefc02c544912ce38145a3df4c846",
       "mode": "0o644"
     },
     {
@@ -232,8 +232,8 @@
     },
     {
       "path": "campus_agent/documents.py",
-      "bytes": 6713,
-      "sha256": "dbb5b1f64c9b6004837052da7120f95d9afafea827f05065b39dc0201c13a0a8",
+      "bytes": 7343,
+      "sha256": "fb8e35c30ffe64fee29279c6d1fbcda5cdf33c47b338a34b9b1ced688c462e89",
       "mode": "0o644"
     },
     {
@@ -292,8 +292,8 @@
     },
     {
       "path": "campus_agent/packet_checks.py",
-      "bytes": 9047,
-      "sha256": "c176ad8fd70f620d44ba707094f3fe2339685fbe6971f0b700256c954a4c8288",
+      "bytes": 9444,
+      "sha256": "1c11a5ca3cc45ca3e3765eede6e7327418df82b7a313a053255b09a56ecce627",
       "mode": "0o644"
     },
     {
@@ -364,8 +364,8 @@
     },
     {
       "path": "campus_agent/tailor.py",
-      "bytes": 9590,
-      "sha256": "3d41d5dfeba2e3ed97af6433ec5fcb9593bd0ea70aa04d442bf584b63dc88a27",
+      "bytes": 11537,
+      "sha256": "493dfe54e6562b9ffe974d8dcb362b19940cbf281acb9a1d7508015dec5e6fe1",
       "mode": "0o644"
     },
     {
@@ -376,8 +376,8 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 252930,
-      "sha256": "e6c0d7ca3ff8a73e0211c5953855a15f21f8f1a1b93f4800295b73bc8deb18c4",
+      "bytes": 259527,
+      "sha256": "f4d1ef3d794431f74921c8b270436f901052b03ad59962f3b3892e52f030e4bd",
       "mode": "0o644"
     },
     {
@@ -388,8 +388,8 @@
     },
     {
       "path": "campus_agent/workspace_web.py",
-      "bytes": 22751,
-      "sha256": "6a9ff79627477f9c59791242b34821bb0372af3697706ea85a63154a683384c6",
+      "bytes": 23724,
+      "sha256": "f0bc97d64fdb7d994f2b7b356ff1601c9b8b1a819a3f66929a567cc6e79a0054",
       "mode": "0o644"
     },
     {

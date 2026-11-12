@@ -10,6 +10,7 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, KeepTogether
 from .models import Job, Profile
@@ -29,6 +30,12 @@ def font_names():
                 pdfmetrics.registerFont(TTFont("CampusBold", bold))
             return "Campus", "CampusBold"
     return "Helvetica", "Helvetica-Bold"
+
+def letter_date(timezone: str = "Australia/Melbourne") -> str:
+    """Australian long date without a leading zero, e.g. 12 November 2026."""
+    today = datetime.now(ZoneInfo(timezone))
+    return f"{today.day} {today:%B %Y}"
+
 
 def generate_documents(directory: Path, job: Job, profile: Profile, prepared: dict, timezone: str = "America/Los_Angeles"):
     directory.mkdir(parents=True, exist_ok=True)
@@ -52,23 +59,32 @@ def generate_documents(directory: Path, job: Job, profile: Profile, prepared: di
     def header():
         contact = " | ".join(x for x in [profile.email, profile.phone, profile.location] if x)
         return [para(profile.name,"name"),para(contact,"contact")]
-    def footer(canvas, doc):
+    def footer(canvas):
         canvas.setStrokeColor(colors.black)
         canvas.setLineWidth(0.4)
         canvas.line(48,43,A4[0]-48,43)
         canvas.setFont(regular,8)
         canvas.setFillColor(colors.black)
         canvas.drawString(48,30,profile.name)
-        canvas.drawRightString(A4[0]-48,30,str(doc.page))
+        canvas.drawRightString(A4[0]-48,30,str(canvas.getPageNumber()))
+    class FooterCanvas(Canvas):
+        # Draw the footer after the body so text extraction (and applicant-tracking
+        # systems) read the candidate's name and content before the page number.
+        def showPage(self):
+            footer(self)
+            super().showPage()
     def build(name, flow):
         document = SimpleDocTemplate(str(directory/name), pagesize=A4, rightMargin=48,leftMargin=48,topMargin=45,bottomMargin=56,
                                      title=f"{profile.name} - {job.title}",author=profile.name)
-        document.build(flow,onFirstPage=footer,onLaterPages=footer)
+        document.build(flow,canvasmaker=FooterCanvas)
     resume=header()
     if profile.headline:
         resume.append(para(profile.headline, "role"))
-    resume += [para("PROFILE","section"),para(profile.summary),para("SKILLS","section"),
-               para(" | ".join(prepared["skills"])),para("EXPERIENCE","section")]
+    resume += [para("PROFILE","section"),para(profile.summary)]
+    if prepared["skills"]:
+        resume += [para("SKILLS","section"),para(" | ".join(prepared["skills"]))]
+    if prepared["experience"]:
+        resume += [para("EXPERIENCE","section")]
     for exp in prepared["experience"]:
         resume += [para(" - ".join(x for x in [exp["role"],exp["organization"]] if x),"role")]
         if exp["dates"]:
@@ -83,8 +99,9 @@ def generate_documents(directory: Path, job: Job, profile: Profile, prepared: di
         for project in projects:
             resume += [para(project["title"] + " — " + stage_names[project["stage"]], "role"),
                        para(project["summary"])]
-    resume += [para("EDUCATION","section")]
-    resume += [para(item) for item in profile.education]
+    if profile.education:
+        resume += [para("EDUCATION","section")]
+        resume += [para(item) for item in profile.education]
     if profile.interests:
         resume += [para("INTERESTS","section"),para(" ".join(profile.interests.split()))]
     if profile.availability:
@@ -107,7 +124,7 @@ def generate_documents(directory: Path, job: Job, profile: Profile, prepared: di
             references.extend(entry)
         resume += [KeepTogether(references)]
     build("Resume.pdf",resume)
-    cover=header()+[para(datetime.now(ZoneInfo(timezone)).strftime("%B %d, %Y")),
+    cover=header()+[para(letter_date(timezone)),
                     para(("BRIEF INTRODUCTION: " if prepared.get("application_kind") == "brief_introduction" else "APPLICATION: ")+job.title.upper(),"section"),para(job.employer)]
     cover += [para(p) for p in prepared["cover_letter"]]
     build("Cover Letter.pdf",cover)

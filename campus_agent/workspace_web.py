@@ -15,6 +15,21 @@ from .workspace import Preferences, Workspace
 from .role_types import ROLE_TYPES, custom_role_options
 
 
+def download_name(workspace, row, kind: str) -> str:
+    """Human-friendly, filesystem-safe name shown when the person saves a file."""
+    import json
+    import re
+    label = {"resume": "Resume", "cover": "Cover Letter", "email": "Notification"}[kind]
+    ext = "html" if kind == "email" else "pdf"
+    try:
+        job = json.loads(row.get("payload") or "{}")
+    except ValueError:
+        job = {}
+    parts = [workspace.profile.name if workspace.profile else "", label, job.get("title", ""), job.get("employer", "")]
+    text = " - ".join(re.sub(r"[^\w .,&()+-]", "", str(part)).strip() for part in parts if part)
+    return re.sub(r"\s+", " ", text)[:120].strip(" .-") + "." + ext
+
+
 def create_workspace_app(workspace: Workspace):
     @asynccontextmanager
     async def lifespan(app):
@@ -81,7 +96,9 @@ def create_workspace_app(workspace: Workspace):
 
     @app.get('/api/document-style/samples/{sample_id}/{kind}')
     def sample_pdf(sample_id: str, kind: str):
-        return FileResponse(workspace.sample_file(sample_id, kind), media_type='application/pdf')
+        return FileResponse(workspace.sample_file(sample_id, kind), media_type='application/pdf',
+                            filename='Sample ' + ('Resume' if kind == 'resume' else 'Cover Letter') + '.pdf',
+                            content_disposition_type='inline')
 
     @app.get('/api/document-style/samples/{sample_id}/{kind}/pages/{number}')
     def sample_page(sample_id: str, kind: str, number: int):
@@ -431,7 +448,8 @@ def create_workspace_app(workspace: Workspace):
         path = (Path(row["packet_dir"]) / names[kind]).resolve()
         if not path.is_relative_to(workspace.artifacts) or not path.is_file():
             raise HTTPException(404)
-        return FileResponse(path, media_type="text/html" if kind == "email" else "application/pdf")
+        return FileResponse(path, media_type="text/html" if kind == "email" else "application/pdf",
+                            filename=download_name(workspace, row, kind), content_disposition_type="inline")
 
     return app
 

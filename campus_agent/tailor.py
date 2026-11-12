@@ -20,6 +20,32 @@ def application_kind(job: Job) -> str:
     return "cover_letter"
 
 
+NOT_VERBS = {"experienced", "skilled", "qualified", "registered", "advanced", "detailed", "licensed",
+             "certified", "dedicated", "committed", "accomplished", "enrolled", "need", "speed", "bed"}
+IRREGULAR_PAST = {"led", "ran", "built", "wrote", "taught", "oversaw", "won", "made", "drove", "spoke", "kept",
+                  "held", "began", "grew", "sold", "took", "gave", "brought", "chaired", "undertook", "shaped"}
+
+
+def first_person_summary(profile: Profile) -> str:
+    """Make the saved summary read as a sentence after "I am applying for ...".
+
+    Only rewords the opening; the candidate's own words and facts are kept.
+    """
+    summary = profile.summary.strip()
+    headline = profile.headline.strip()
+    if summary.startswith("IT "):
+        summary = "I am an " + summary
+    elif summary.startswith("Experienced "):
+        summary = "I am an " + summary[0].lower() + summary[1:]
+    elif headline and summary.lower().startswith(headline.lower()) and not summary.startswith("I "):
+        # "Registered nurse with six years..." -> "I am a registered nurse with six years..."
+        first = summary.split(maxsplit=1)[0]
+        lowered = summary if first[1:].upper() == first[1:] and len(first) > 1 else summary[0].lower() + summary[1:]
+        summary = ("I am an " if lowered[0] in "aeiou" else "I am a ") + lowered
+    summary = summary.replace(". Supports ", ". I support ").replace(". Builds ", ". I build ")
+    return summary
+
+
 def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
     """A three-paragraph letter grounded in source facts, not a list of software.
 
@@ -30,12 +56,7 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
     from .document_style import DocumentStyle
     choice = DocumentStyle.model_validate(prepared.get("document_preferences", {}))
     short = application_kind(job) == "brief_introduction"
-    summary = profile.summary.strip()
-    if summary.startswith("IT "):
-        summary = "I am an " + summary
-    elif summary.startswith("Experienced "):
-        summary = "I am an " + summary[0].lower() + summary[1:]
-    summary = summary.replace(". Supports ", ". I support ").replace(". Builds ", ". I build ")
+    summary = first_person_summary(profile)
     facts = [b.strip() for entry in prepared["experience"] if entry["organization"]
              for b in entry["bullets"] if b.strip()][:1 if short else 2]
     verbs = {"created", "delivered", "built", "supported", "simplified", "mapped",
@@ -46,10 +67,15 @@ def grounded_cover(job: Job, profile: Profile, prepared: dict) -> list[str]:
              "implement", "manage", "administer", "deploy", "investigate",
              "run", "lead", "develop", "configure", "coordinate"}
     def sentence(bullet: str) -> str:
+        bullet = bullet.strip()
         first = bullet.split(maxsplit=1)[0]
-        if first.lower() in verbs:
-            return "I " + first.lower() + bullet[len(first):]
-        return bullet
+        word = first.lower().strip(",;:")
+        # Past-tense action verbs ("Precepted", "Recorded", "Led") read in the first
+        # person for any occupation; adjectives such as "Experienced" do not.
+        past = (len(word) > 3 and word.endswith("ed") and word not in NOT_VERBS) or word in IRREGULAR_PAST
+        if word in verbs or past:
+            bullet = "I " + first.lower() + bullet[len(first):]
+        return bullet if bullet[-1:] in ".!?" else bullet + "."
 
     if choice.tone == "direct":
         opening = f"Please consider my application for {job.title} at {job.employer}."
@@ -93,7 +119,20 @@ def terms(value: str) -> set[str]:
     stop = {"the","and","for","with","that","this","from","into","our","your","you","are","was","were","will","have","has","had","their","they","through","across","including","using","used","use","within","work","working","role","team","teams","all","can","who","how","what","not","but","other","more","about","which","been","would"}
     return (set(re.findall(r"[a-z][a-z0-9+#.-]{2,}", value.lower())) | ({"ai"} if re.search(r"\bai\b", value.lower()) else set())) - stop
 
+def stem(word: str) -> str:
+    """Light suffix stripping so "precepting" matches "precepted"."""
+    for suffix in ("ing", "ed", "es", "s"):
+        if len(word) > len(suffix) + 4 and word.endswith(suffix):
+            return word[:-len(suffix)]
+    return word
+
+
+def stems(value: str) -> set[str]:
+    return {stem(word) for word in terms(value)}
+
+
 def local_selection(job: Job, profile: Profile, role_type_id: str | None = None) -> Selection:
+    terms = stems
     target = terms(job.title + " " + job.description)
     title = terms(job.title)
     from .role_types import BY_ID

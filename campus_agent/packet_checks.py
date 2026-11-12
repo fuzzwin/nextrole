@@ -102,7 +102,10 @@ def check_pdfs(directory, job, profile, style=None, prepared=None):
         text = '\n'.join(page.extract_text() or '' for page in reader.pages)
         files[filename] = {'pages': len(reader.pages), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
         if not 1 <= len(reader.pages) <= limit:
-            errors.append(f'{filename}: exceeds the {limit}-page review limit')
+            what = 'The résumé' if filename == 'Resume.pdf' else 'The cover letter'
+            fix = ('choose Focused in Document style, pick the Compact layout, or shorten the longest bullets in your profile'
+                   if filename == 'Resume.pdf' else 'shorten the summary or the longest bullets in your profile')
+            errors.append(f'{filename}: exceeds the {limit}-page review limit. {what} runs to {len(reader.pages)} pages; {fix}, then prepare again.')
         for page in reader.pages:
             if abs(float(page.mediabox.width) - 595.276) > 1 or abs(float(page.mediabox.height) - 841.89) > 1:
                 errors.append(f'{filename}: paper must be A4')
