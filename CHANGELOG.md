@@ -1,3 +1,14 @@
+## 0.11.0
+
+- Make "Review your fit ↓" the single primary button in the job view, placed first, with "Open original listing ↗" beside it. The other three buttons now sit under "More actions" with plainer names: "Re-check advert" (was Revalidate role), "Look for other listings" (was Find another copy) and "Edit details & notes".
+- Replace the long help paragraph under the buttons with one short line inside More actions: "Re-check advert re-reads the saved listing for changes to its text, employer and closing date."
+- Rename the status "Fit review pending" to "Fit not reviewed yet", show it as a button with an outlined-circle icon instead of a bare dash, and let it jump to the fit review. A rated role keeps the percentage gauge and a filled marker.
+- Say "Not matched to your saved search" (with a tooltip: "This role was added or saved outside the search terms you set.") instead of "Outside your current search", and "Matches your saved search" for matches.
+- Plainer pay wording: "Where this pay comes from", "Probably per year — the advert doesn't say" and "Per year assumed — check the advert". Hourly and day rates are still never annualised and conflicting figures are still flagged.
+- Show "Not stated" fact values (such as Posted) in muted text so real facts stand out.
+- Keep the primary button, More actions summary and status chip at least 44px tall on phones. Tab order is Review your fit, Open original listing, More actions.
+- Update the in-app how-to, the user guide and START HERE to the new labels.
+
 ## 0.10.0
 
 - Add a three-step Get started panel for a new workspace: add your experience, add a role, review your fit. Empty maintenance panels and filters stay hidden until a role is saved.

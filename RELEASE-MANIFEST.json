@@ -1,5 +1,5 @@
 {
-  "version": "0.10.0",
+  "version": "0.11.0",
   "platform": "macOS",
   "files": [
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "setup/START HERE.html",
-      "bytes": 67891,
-      "sha256": "c821cc1605cf6734433f1663ba8abbfe6480b61aaa1cb95de7eaac154981434f",
+      "bytes": 67963,
+      "sha256": "c163107f9623750a23c8c581f45f95d2e47dabe3fd05ed0d8229b5a9ba3ed570",
       "mode": "0o644"
     },
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 21678,
-      "sha256": "18bcf9b06397e8f27ce684e9e4e6697e077eefc02c544912ce38145a3df4c846",
+      "bytes": 23211,
+      "sha256": "3b91f5731b1f2b9f062e8e28f3f112bca094992df91ce24031d1ad1c42bb4e9a",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 950,
-      "sha256": "6d67a94137dab816321dc0e73ccbc5ce77dccb49362a4771bf293fd1ab9d9ec3",
+      "sha256": "b19339eda53ff98720496667232b17844267145855322519482a736b3d5fd8f8",
       "mode": "0o644"
     },
     {
@@ -136,8 +136,8 @@
     },
     {
       "path": "docs/USER-GUIDE.md",
-      "bytes": 56138,
-      "sha256": "527ef3d3e68a68169317f766f7363d1f0580026f3fc7fb8c57bee6b009dedfbc",
+      "bytes": 56200,
+      "sha256": "ea7cd9e0734f270118d1615ae5e9a50485bbabb87abf5310185cef1d28d55222",
       "mode": "0o644"
     },
     {
@@ -376,8 +376,8 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 259527,
-      "sha256": "f4d1ef3d794431f74921c8b270436f901052b03ad59962f3b3892e52f030e4bd",
+      "bytes": 261813,
+      "sha256": "e0e97ba374e9be6a85de22a2655bc815c927b40a800f038526f561dc94479d37",
       "mode": "0o644"
     },
     {

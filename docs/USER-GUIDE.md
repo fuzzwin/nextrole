@@ -500,9 +500,9 @@ future and uncertain work evidence does not establish delivered experience.
 These conservative local rules may hold a suitable role for review; confirm the
 actual advert and your source profile. **Your saved pick** is a separate manual pin.
 
-Listed pay preserves its period and currency where stated. Open **Pay source and
-basis** for the exact captured wording. A likely annual basis is labelled inferred;
-hourly/day rates are not silently annualised. Conflicting figures need checking
+Listed pay preserves its period and currency where stated. Open **Where this pay
+comes from** for the exact captured wording. When the advert gives no period, pay
+is shown as "Probably per year" with a note to check the advert; hourly/day rates are not silently annualised. Conflicting figures need checking
 against the original advert. Blocked pages still require pasted employer text.
 
 
@@ -510,7 +510,7 @@ Unread leads, listings with no assessable requirements and unconfirmed employer 
 
 ## Usability improvements (0.9.7)
 
-Use Previous and Next in a role to move through the current filtered and sorted results. A pending assessment tells you what listing information to check. Pay is shown as captured; an inferred annual basis or conflicting figures need verification.
+Use Previous and Next in a role to move through the current filtered and sorted results. A pending assessment tells you what listing information to check. Pay is shown as captured; an assumed annual basis or conflicting figures need verification.
 
 ## Reading and assessing roles (0.9.7)
 
