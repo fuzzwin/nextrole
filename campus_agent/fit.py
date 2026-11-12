@@ -68,8 +68,21 @@ def evidence_value(text):
             r'configure(?:d)?|map(?:ped)?|recreated|coordinat(?:ed)?|led|lead|wrote|write|'
             r'run|ran|investigate(?:d)?|document(?:ed)?|tested|integrated|provided|resolve(?:d)?|troubleshoot(?:ed)?|handled|owned|'
             r'established|operat(?:ed)?|facilitated|trained|completed|simplified)')
-    affirmed=re.match(r'^\s*(?:(?:I|We)\s+)?(?:have\s+)?(?:(?:successfully|independently|personally|currently)\s+)?'+action+r'\b',text,re.I)
+    lead_in=r'^\s*(?:(?:I|We)\s+)?(?:have\s+)?(?:(?:successfully|independently|personally|currently)\s+)?'
+    affirmed=re.match(lead_in+action+r'\b',text,re.I)
+    if not affirmed:
+        # The list above grew from IT résumés. Any occupation's bullet that opens with a past-tense
+        # action ("Recorded care…", "Precepted eight graduates…", "Welded frames…") is delivered work too.
+        # Describing words and learning-only verbs that look the same are excluded.
+        opener=re.match(lead_in+r"([a-z]{3,}ed|taught|sold|drove|held|gave|made|grew|kept|won|oversaw|undertook|bought|cut|laid|sewed|sewn|dug|fed|flew|rode|drew)\b",text,re.I)
+        affirmed=opener and opener[1].lower() not in NOT_ACTIONS
     return 1 if affirmed else 0.5
+
+
+NOT_ACTIONS = set('''advanced experienced registered skilled qualified certified licensed licenced accredited interested motivated
+dedicated detailed talented accomplished seasoned trusted organised organized committed focused related based required
+needed wanted learned studied observed shadowed attended enrolled educated trained exposed introduced
+proposed planned intended expected hoped simulated practised practiced demonstrated'''.split())
 
 
 # Explicit inflections keep action and object obligations comparable.

@@ -165,6 +165,31 @@ def assess(requirements, profile, invoke=semantic.call_model):
     return score([by_id[row['id']] for row in requirements])
 
 
+GRADE_NAMES = {'direct': 'Direct work', 'strong_transfer': 'Strong transfer', 'partial_transfer': 'Partial transfer',
+               'foundation': 'Foundation', 'confirmed_gap': 'Confirmed gap', 'unknown': 'Not documented'}
+
+
+def guard_explanation(requirement, chosen, allowed):
+    """Name the criterion and say what the selected facts can support, so the reviewer knows what to change."""
+    text = requirement['text']
+    quote = text if len(text) <= 90 else text[:87].rstrip() + '…'
+    if re.search(DURATION, text, re.I):
+        why = ('This criterion asks for a length of time. It can be graded only when a saved fact states the duration, '
+               'for example "… for 3 years". Add that to your profile, or leave it as Not documented.')
+    elif CREDENTIAL.search(text) and chosen == 'direct':
+        why = ('This criterion names a licence, registration or qualification. Direct work needs that credential saved '
+               'in your profile.')
+    elif chosen == 'confirmed_gap':
+        why = 'A confirmed gap needs a saved fact that says you do not hold or have not done this.'
+    elif allowed == 'foundation':
+        why = ('The selected facts do not read as delivered work (for example a skill label, study or a hedged statement), '
+               'so the highest supported grade is Foundation.')
+    else:
+        why = 'The selected facts support ' + GRADE_NAMES.get(allowed, allowed) + ' at most.'
+    return ('“' + quote + '” cannot be saved as ' + GRADE_NAMES.get(chosen, chosen) + '. ' + why
+            + ' The prototype, credential, tenure and confirmed-gap rules apply to every review.')
+
+
 def reviewed_fit(requirements, profile, decisions, reviewed_by='user'):
     """Apply explicit criterion judgements while retaining quoted-source guards."""
     if reviewed_by not in {'user', 'assistant'}:
@@ -191,7 +216,7 @@ def reviewed_fit(requirements, profile, decisions, reviewed_by='user'):
             raise ValueError('Select confirmed evidence for each assessed criterion.')
         guarded, evidence = apply_guards(requirement,grade,evidence,facts,scope_reviewed=True)
         if guarded != grade:
-            raise ValueError('The selected evidence does not meet the prototype, credential, tenure or confirmed-gap rules. Revise the grade or evidence.')
+            raise ValueError(guard_explanation(requirement, grade, guarded))
         rows.append({**requirement,'status':grade,'evidence':evidence,'transfer_reason':reason})
     result = score(rows)
     result.update(reviewed_by=reviewed_by, reviewed=True)

@@ -56,6 +56,11 @@ def compare(job, profile, requirements, *, with_qwen=False, invoke=None):
     result = {'rules': score_transfer(rule_rows),
               'qwen': None, 'qwen_error': None, 'matrix': matrix,
               'separate_requirements': [row for row in requirements if row not in assessed_requirements]}
+    from .evidence_suggest import credential_like, suggest
+    # Pointers for the reviewer only; they never set or change a grade.
+    result['suggestions'] = suggest(assessed_requirements, profile)
+    result['credential_criteria'] = [row['id'] for row in assessed_requirements if credential_like(row['text'])]
+    result['duration_criteria'] = [row['id'] for row in assessed_requirements if re.search(DURATION, row['text'], re.I)]
     if with_qwen:
         if not semantic._LOCK.acquire(blocking=False):
             result['qwen_error'] = 'A local model check is already running. Try again after it finishes.'

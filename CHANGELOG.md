@@ -1,3 +1,11 @@
+## 0.10.0
+
+- Add a three-step Get started panel for a new workspace: add your experience, add a role, review your fit. Empty maintenance panels and filters stay hidden until a role is saved.
+- Rebuild the fit review. Each criterion lists up to three profile facts that share its wording, with a progress count, inline checks and a visible save status. Suggestions are pointers only: nothing is graded until you confirm it, and the prototype, credential, tenure and confirmed-gap rules still apply.
+- Name the criterion and the fix when a reviewed grade cannot be saved.
+- Count a profile bullet from any occupation as delivered work when it opens with a past-tense action. Learning, planning and hedged statements stay at partial credit.
+- Use plainer job-card wording for unreviewed roles, neutral header copy, labelled navigation on phones, and keep Save role visible in the Add a role dialog.
+
 ## 0.9.37
 
 - Pay marked as a job-board estimate stays out of employer-stated compensation.

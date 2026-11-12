@@ -221,15 +221,27 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
 @media(max-width:780px){#job-dialog .detail-columns{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:650px){.search-steps,.maintenance-actions{grid-template-columns:minmax(0,1fr)}}
 .gauge-label small{display:block;font-size:10px;color:var(--muted);margin-top:3px;max-width:150px}
+@media(max-width:650px){aside .nav button{font-size:12px;gap:6px;padding:8px 10px;white-space:nowrap;min-height:40px}aside .nav button span{font-size:15px}}
+#edit-dialog{max-height:calc(100dvh - 24px)}#edit-dialog[open]{display:flex;flex-direction:column}#edit-dialog form{display:flex;flex-direction:column;min-height:0;flex:1}#edit-dialog .dialogbody{overflow-y:auto;min-height:0}#edit-dialog .dialoghead,#edit-dialog .dialogfoot{flex:none}
+.get-started{border:1px solid var(--accent-line);background:var(--surface);border-radius:10px;padding:16px 18px;margin:0 0 16px}.get-started h2{margin:0}.start-steps{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.start-steps li{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:12px}.start-steps li>div{display:grid;gap:6px;justify-items:start;min-width:0}.start-steps li span{font-size:13px;color:var(--muted)}.start-mark{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);font-weight:700;font-size:13px;color:var(--ink)!important}.start-steps li.done{background:var(--good-bg);border-color:var(--good-line)}.start-steps li.done .start-mark{background:var(--green);border-color:var(--green);color:var(--surface)!important}.start-steps li.current{border-color:var(--accent-solid);box-shadow:0 0 0 1px var(--accent-solid)}.start-steps li.later button{display:none}.start-steps li.done button{display:none}@media(max-width:860px){.start-steps{grid-template-columns:1fr}}.first-run-hidden{display:none!important}
+.fit-criterion{border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0}.fit-criterion.graded{border-left:4px solid var(--accent-solid)}.fit-criterion h4{margin:0 0 6px;font-size:14px;line-height:1.4}.criterion-badge{display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}.evidence-suggestions{border:0;padding:0;margin:0 0 8px;min-width:0}.evidence-suggestions legend{font-weight:650;font-size:13px;padding:0}.evidence-suggestions .check{display:flex;gap:8px;align-items:flex-start;padding:6px 0;min-height:32px}.evidence-suggestions .check input{margin-top:3px;flex:none;width:18px;height:18px}.fact-text{display:block;font-size:13px;line-height:1.45}.fact-source{display:block;font-size:12px;color:var(--muted)}.review-progress{font-weight:650;position:sticky;top:0;background:var(--surface);padding:6px 0;margin:8px 0;z-index:1}.criterion-problem{color:var(--danger);font-size:13px;margin:6px 0 0}.review-footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}.reason-help{display:block}
 .criterion-review{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:6px}.criterion-review select,.criterion-review textarea{width:100%;margin-top:4px}.criterion-review .check{align-items:flex-start}
 #preparation-dialog{width:min(620px,calc(100% - 24px));max-height:calc(100dvh - 24px)}
 #preparation-dialog .dialogbody{padding:14px 20px;overflow:auto}
 #preparation-files{margin:8px 0;display:flex;flex-wrap:wrap;gap:6px 12px}
 </style></head><body>
 <div class="layout"><aside><div class="brand"><div class="mark">↗</div><div>NextRole<small>YOUR NEXT CHAPTER</small></div></div><nav class="nav" aria-label="Workspace navigation"><button data-view="opportunities" class="active" title="Opportunities"><span aria-hidden="true">▦</span>Opportunities</button><button data-view="applications" title="Applications"><span aria-hidden="true">✓</span>Applications</button><button data-view="profile" title="Profile and sources"><span aria-hidden="true">▤</span>Profile & sources</button><button data-view="document-style" title="Preview, adjust and approve"><span aria-hidden="true">▥</span>Document style</button><button data-view="connections" title="Gmail and Drive"><span aria-hidden="true">⇄</span>Gmail & Drive</button><button data-view="examples" title="Role examples"><span aria-hidden="true">▧</span>Role examples</button><button data-view="activity" title="Activity"><span aria-hidden="true">◷</span>Activity</button><button data-view="settings" title="Search settings"><span aria-hidden="true">⚙</span>Search settings</button></nav><div class="account"><b id="account-name">Your workspace</b><small id="account-email">Connect Gmail and Drive</small></div></aside>
-<main><div class="topbar"><div class="eyebrow">WORKSPACE / AUSTRALIAN JOB SEARCH</div><div class="topbar-actions"><span id="connection-badge" class="pill">Connections not checked</span><button id="open-appearance" class="appearance-trigger" aria-haspopup="dialog"><span aria-hidden="true">◐</span>Appearance</button></div></div><div id="message" class="notice hide" role="status"></div><div id="running" class="notice running" aria-live="polite"></div><div id="approvals"></div>
+<main><div class="topbar"><div class="eyebrow">YOUR JOB SEARCH WORKSPACE</div><div class="topbar-actions"><span id="connection-badge" class="pill">Connections not checked</span><button id="open-appearance" class="appearance-trigger" aria-haspopup="dialog"><span aria-hidden="true">◐</span>Appearance</button></div></div><div id="message" class="notice hide" role="status"></div><div id="running" class="notice running" aria-live="polite"></div><div id="approvals"></div>
 <section id="opportunities" class="section active">
-<div class="heading dashboard-heading"><div><h1>Your opportunities</h1><p id="search-summary">IT, automation and AI enablement in Australia.</p></div><div class="actions"><button id="open-guide" class="quiet" aria-controls="workspace-guide" aria-expanded="false">How to use NextRole</button><button id="add-job" class="quiet">＋ Add a role</button><button id="discover" class="primary">↻ Find jobs</button></div></div>
+<div class="heading dashboard-heading"><div><h1>Your opportunities</h1><p id="search-summary">Match your experience to roles and prepare applications.</p></div><div class="actions"><button id="open-guide" class="quiet" aria-controls="workspace-guide" aria-expanded="false">How to use NextRole</button><button id="add-job" class="quiet">＋ Add a role</button><button id="discover" class="primary">↻ Find jobs</button></div></div>
+<section id="get-started" class="get-started" aria-labelledby="get-started-title" hidden>
+  <div class="guide-top"><div><h2 id="get-started-title">Get started</h2><p class="help" id="get-started-summary"></p></div></div>
+  <ol class="start-steps">
+    <li id="start-profile"><span class="start-mark" aria-hidden="true">1</span><div><b>Add your experience</b><span>Your saved facts are the only evidence NextRole uses. Enter them or import a résumé.</span><button class="small" id="start-profile-action">Add your profile</button></div></li>
+    <li id="start-role"><span class="start-mark" aria-hidden="true">2</span><div><b>Add a role</b><span>Paste an advert you have found. Job search and Gmail are optional and can wait.</span><button class="small" id="start-role-action">Add a role</button></div></li>
+    <li id="start-fit"><span class="start-mark" aria-hidden="true">3</span><div><b>Review your fit</b><span>See each requirement beside the matching parts of your experience, then confirm the grades.</span><button class="small" id="start-fit-action">Review a role</button></div></li>
+  </ol>
+</section>
 <section id="workspace-guide" class="workspace-guide" aria-labelledby="guide-title" hidden>
   <div class="guide-top"><h2 id="guide-title" tabindex="-1">How to use NextRole</h2><button id="close-guide" class="small quiet" aria-label="Hide how-to guide">Hide guide</button></div>
   <ul class="search-steps">
@@ -247,7 +259,7 @@ main{padding:16px 24px}.topbar{padding-bottom:8px;margin-bottom:12px}.topbar but
 <div class="dashboard-meta"><div class="stats" aria-label="Workspace totals"><div class="stat" title="Your saved, unarchived opportunities"><b id="count-jobs">0</b><small>Saved roles</small></div><div class="stat" title="Packets prepared for your review"><b id="count-ready">0</b><small>Prepared</small></div><div class="stat secondary-stat" title="Confirmed files uploaded to Drive"><b id="count-drive">0</b><small>Drive files</small></div><div class="stat secondary-stat" title="Confirmed emails sent to your own inbox"><b id="count-email">0</b><small>Emails sent</small></div></div>
 <div id="automatic-style-hold" class="notice hide"><span>Auto-email paused</span><button class="small quiet" data-goto="document-style" title="Automatic emails stay blocked until you review and approve your sample documents">Review sample →</button></div>
 </div>
-<details id="search-preferences" class="search-preferences"><summary><b>Search setup</b> <span>Change job titles and preferred location</span></summary><div class="panel" id="role-search-panel"><div class="heading" style="margin-bottom:14px"><div><h2>What jobs are you looking for?</h2><p>Enter the job titles you want to find, or choose from the IT presets.</p></div><div class="actions"><button id="extended-search">Extended search</button><button id="save-search" class="primary">Save my search</button></div></div><label for="role-search-mode">Search by</label>
+<details id="search-preferences" class="search-preferences"><summary><b>Search setup</b> <span>Change job titles and preferred location</span></summary><div class="panel" id="role-search-panel"><div class="heading" style="margin-bottom:14px"><div><h2>What jobs are you looking for?</h2><p>Enter the job titles you want to find. IT role presets are also available.</p></div><div class="actions"><button id="extended-search">Extended search</button><button id="save-search" class="primary">Save my search</button></div></div><label for="role-search-mode">Search by</label>
 <select id="role-search-mode"><option value="custom">My job titles</option><option value="presets">IT role presets</option></select>
 <div id="custom-search-fields" hidden>
 <label for="custom-role-titles">Job titles, one per line</label>
@@ -522,6 +534,39 @@ function showGuide(visible, moveFocus = false) {
   }
   if (moveFocus) $(visible ? 'guide-title' : 'open-guide').focus();
 }
+function onboarding() {
+  const profile = !!state.profile && !state.profile.is_example;
+  const role = state.jobs.length > 0;
+  const fit = state.jobs.some(row => row.evidence_preview?.percent != null || row.evidence_comparison?.reviewed);
+  return {profile, role, fit, done: profile && role && fit};
+}
+function renderGetStarted() {
+  const steps = onboarding();
+  $('get-started').hidden = steps.done;
+  // Maintenance tools and filters have nothing to act on until a role is saved.
+  for (const node of [$('list-actions'), $('assessment-status'), document.querySelector('.browse-controls'), document.querySelector('.active-filter-bar')]) {
+    if (node) node.classList.toggle('first-run-hidden', !steps.role);
+  }
+  if (steps.done) return;
+  const order = [['start-profile', steps.profile], ['start-role', steps.role], ['start-fit', steps.fit]];
+  const current = order.find(([, complete]) => !complete)?.[0];
+  for (const [id, complete] of order) {
+    const item = $(id);
+    item.classList.toggle('done', complete);
+    item.classList.toggle('current', id === current);
+    item.classList.toggle('later', !complete && id !== current);
+    item.querySelector('.start-mark').textContent = complete ? '✓' : String(order.findIndex(([key]) => key === id) + 1);
+    if (id === current) item.setAttribute('aria-current', 'step'); else item.removeAttribute('aria-current');
+  }
+  const complete = order.filter(([, value]) => value).length;
+  $('get-started-summary').textContent = complete + ' of 3 done. Everything stays on this computer until you choose to connect an account.';
+}
+$('start-profile-action').onclick = () => view('profile');
+$('start-role-action').onclick = () => editJob();
+$('start-fit-action').onclick = () => {
+  const row = state.jobs.find(job => job.full_description && !job.listing?.closed) || state.jobs[0];
+  if (row) openFitReview(row.id);
+};
 function initializeGuide() {
   if (guideStorageKey) return;
   guideStorageKey = 'nextrole-guide-v1:' + state.path;
@@ -532,6 +577,8 @@ function initializeGuide() {
   $('guide-frequency').value = guidePreferences.frequency;
   $('guide-frequency').disabled = false;
   const {frequency, lastShown} = guidePreferences;
+  // The three-step panel replaces the long guide until the first fit review is saved.
+  if (!onboarding().done) return;
   if (currentView === 'opportunities' && (frequency === 'always' ||
       (frequency === 'daily' && lastShown !== guideDay()))) showGuide(true);
 }
@@ -698,7 +745,7 @@ function skillGauge(row) {
   gauge.append(circle, text);
   return gauge;
 }
-function matchSummary(row){let fit=row.fit||{},line=el('div','card-match-reason'),good=fit.status==='Good match';if(row.evidence_preview?.percent!=null){line.append(el('span','fit-one-line','Open job details to review the criteria and quoted evidence.'));return line;}line.append(el('span','fit-status'+(good?' good':''),row.source_policy?'Excluded source':fit.assessment_state==='rating_pending'?'Coverage pending':fit.percent==null?'Unrated':fit.status||'Needs review'));let why=row.source_policy?row.source_policy.reason:fit.assessment_state==='incomplete'?(fit.assessment_notice||row.assessment_source?.message||'Read the full listing to assess this role.'):good?(fit.strengths||[]).filter(s=>s.kind==='Experience').slice(0,2).map(s=>s.label).join(' · '):fit.reviews?.[0]?.label||'Review the saved evidence and role requirements.';let text=el('span','fit-one-line',why);text.title=why;line.append(text);return line}
+function matchSummary(row){let fit=row.fit||{},line=el('div','card-match-reason'),good=fit.status==='Good match';if(row.evidence_preview?.percent!=null){line.append(el('span','fit-one-line','Open job details to review the criteria and quoted evidence.'));return line;}line.append(el('span','fit-status'+(good?' good':''),row.source_policy?'Excluded source':fit.assessment_state==='rating_pending'?'Fit not reviewed':fit.percent==null?'Unrated':fit.status||'Needs review'));let why=row.source_policy?row.source_policy.reason:fit.assessment_state==='incomplete'?(fit.assessment_notice||row.assessment_source?.message||'Read the full listing to assess this role.'):good?(fit.strengths||[]).filter(s=>s.kind==='Experience').slice(0,2).map(s=>s.label).join(' · '):fit.assessment_state==='rating_pending'?'Choose Assess fit to check this advert against your profile. Nothing is rated until you confirm it.':fit.reviews?.[0]?.label||'Review the saved evidence and role requirements.';let text=el('span','fit-one-line',why);text.title=why;line.append(text);return line}
 
 function cardFacts(row){let d=row.listing||{},l=row.location_info||{},facts=el('dl','card-facts'),salary=(row.reading_view?.facts||[]).find(f=>f.label==='Salary')?.value||'Not stated',types=(row.role_types||[]).map(t=>t.label),posted=d.posted_on?dateOnly(d.posted_on):d.posted_hint||'Not stated',closes=d.closes_on?dateOnly(d.closes_on):d.closing_hint||'Not stated';if(row.reading_view?.salary?.period_inferred)salary+=' · annual basis inferred';if(d.days_to_close===0)closes+=' · Today';else if(d.days_to_close>0&&d.days_to_close<=7)closes+=' · '+d.days_to_close+' days left';let found=new Date(row.seen_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric',timeZone:state.preferences.timezone}),place=(l.stated?l.display:'Not stated')+locationSuffix(l);for(let [label,value] of [['Location',place],['Salary',salary],['Posted',posted],['Closes',closes]]){let item=el('div'),term=el('dt','',label),detail=el('dd','',value);detail.title=value;if(label==='Closes'&&typeof d.days_to_close==='number'&&d.days_to_close>=0&&d.days_to_close<=7)item.classList.add('closing-fact');item.append(term,detail);facts.append(item)}return facts}
 function vacancyIdentity(row){try{let u=new URL(row.job.url);if(u.hostname==='linkedin.com'||u.hostname.endsWith('.linkedin.com')){let m=u.pathname.match(/\/(?:comm\/)?jobs\/view\/(?:[^/]*-)?(\d+)\/?$/);if(m)return 'linkedin:'+m[1]}}catch(_){}return 'saved:'+row.id}
@@ -711,7 +758,7 @@ function filterJobRows(rows,options,today){let cutoff='';if(options.posted){let 
 function pageWindow(total,size,page){let pages=Math.max(1,Math.ceil(total/size)),current=Math.max(1,Math.min(page,pages)),start=(current-1)*size;return {page:current,pages,start,end:Math.min(start+size,total)}}
 function setFilterTab(value){filter=[...new Set(Array.isArray(value)?value:[value])].filter(v=>['top','matches','review','unrated','prepared','saved','applied','archived','excluded'].includes(v))}
 function saveBrowsing(){if(!state)return;try{localStorage.setItem('job-seeker-browse-multi:'+state.path,JSON.stringify(browsingOptions()))}catch(_){}}
-function restoreBrowsing(){if(browseLoaded)return;browseLoaded=true;if(!state.profile){$('search-preferences').open=true;if(!state.preferences.custom_role_titles.length){$('role-search-mode').value='custom';showSearchMode();}}try{let saved=JSON.parse(localStorage.getItem('job-seeker-browse-multi:'+state.path)||localStorage.getItem('job-seeker-browse:'+state.path)||'null');if(!saved)return;saved=normaliseWorkBrowsing(saved);browseWorkModes=saved.workModes;browseLocations=[...new Set(Array.isArray(saved.location)?saved.location:[saved.location])].filter(v=>[...$('job-location-filter').querySelectorAll('input')].some(n=>n.value===v));browseStatuses=(Array.isArray(saved.availability)?saved.availability:[saved.availability]).filter(v=>['not_closed','closing','closed','unknown'].includes(v));$('include-australian-remote').checked=saved.includeAustralianRemote;for(let [key,id] of [['query','job-search'],['minimum','job-min-match'],['posted','job-posted-filter'],['listing','job-listing-filter'],['sort','job-sort'],['size','job-page-size']]){let node=$(id),value=String(saved[key]??'');if(node.tagName==='INPUT'||[...node.options].some(o=>o.value===value))node.value=value}browseTypes=(Array.isArray(saved.types)?saved.types:saved.type?[saved.type]:[]).filter(t=>browseRoleOptions().some(r=>r.id===t));setFilterTab(saved.view);if(!saved.availability&&saved.hideClosed)browseStatuses=['not_closed'];if(saved.view==='closing'){browseStatuses=['closing'];setFilterTab('all')}jobPage=Number.isInteger(saved.page)&&saved.page>0?saved.page:1}catch(_){}}
+function restoreBrowsing(){if(browseLoaded)return;browseLoaded=true;if(!state.profile){if(!state.preferences.custom_role_titles.length){$('role-search-mode').value='custom';showSearchMode();}}try{let saved=JSON.parse(localStorage.getItem('job-seeker-browse-multi:'+state.path)||localStorage.getItem('job-seeker-browse:'+state.path)||'null');if(!saved)return;saved=normaliseWorkBrowsing(saved);browseWorkModes=saved.workModes;browseLocations=[...new Set(Array.isArray(saved.location)?saved.location:[saved.location])].filter(v=>[...$('job-location-filter').querySelectorAll('input')].some(n=>n.value===v));browseStatuses=(Array.isArray(saved.availability)?saved.availability:[saved.availability]).filter(v=>['not_closed','closing','closed','unknown'].includes(v));$('include-australian-remote').checked=saved.includeAustralianRemote;for(let [key,id] of [['query','job-search'],['minimum','job-min-match'],['posted','job-posted-filter'],['listing','job-listing-filter'],['sort','job-sort'],['size','job-page-size']]){let node=$(id),value=String(saved[key]??'');if(node.tagName==='INPUT'||[...node.options].some(o=>o.value===value))node.value=value}browseTypes=(Array.isArray(saved.types)?saved.types:saved.type?[saved.type]:[]).filter(t=>browseRoleOptions().some(r=>r.id===t));setFilterTab(saved.view);if(!saved.availability&&saved.hideClosed)browseStatuses=['not_closed'];if(saved.view==='closing'){browseStatuses=['closing'];setFilterTab('all')}jobPage=Number.isInteger(saved.page)&&saved.page>0?saved.page:1}catch(_){}}
 function renderDetailRefresh(){
     const q=state.detail_refresh;
     const a=state.assessment_overview;
@@ -772,7 +819,7 @@ function goJobPage(page){jobPage=page;renderJobs();$('job-browser-start').scroll
 function renderPagination(range,total){for(let place of ['top','bottom']){let panel=$('job-pagination-'+place);panel.classList.toggle('hide',!total);$('page-prev-'+place).disabled=range.page<=1;$('page-next-'+place).disabled=range.page>=range.pages;let summary='Page '+range.page+' of '+range.pages;if($('page-summary-'+place).textContent!==summary)$('page-summary-'+place).textContent=summary;let numbers=$('page-numbers-'+place),key=range.page+':'+range.pages;if(numbers.dataset.key===key)continue;numbers.dataset.key=key;numbers.replaceChildren();let pages=[...new Set([1,range.page-2,range.page-1,range.page,range.page+1,range.page+2,range.pages].filter(n=>n>=1&&n<=range.pages))].sort((a,b)=>a-b),previous=0;for(let page of pages){if(previous&&page-previous>1)numbers.append(el('span','page-gap','…'));let b=button(String(page),()=>goJobPage(page),'page-number');b.setAttribute('aria-label','Page '+page);if(page===range.page){b.setAttribute('aria-current','page');b.classList.add('selected')}numbers.append(b);previous=page}}}
 function renderActiveFilters(options){let entries=[],add=(key,label)=>entries.push({key,label});if(options.query)add('job-search','Search: '+options.query);for(let loc of browseLocations)add('location:'+loc,'Location: '+(loc==='unknown'?'Location not stated':loc.slice(loc.indexOf(':')+1)));for(let v of filter)add('view:'+v,'View: '+[...$('job-view-filter').querySelectorAll('input')].find(n=>n.value===v).parentElement.textContent);for(let [key,id,prefix] of [['minimum','job-min-match','Match: '],['posted','job-posted-filter','Posted: '],['listing','job-listing-filter','Details: ']])if(options[key])add(id,prefix+$(id).selectedOptions[0].textContent);for(let status of options.availability||[])add('status:'+status,'Status: '+document.querySelector('[data-vacancy-status="'+status+'"]').parentElement.textContent);for(let mode of options.workModes||[])add('work:'+mode,'Work: '+mode);if(options.location&&options.includeAustralianRemote&&(options.workModes||[]).includes('Remote')&&(Array.isArray(options.location)?options.location:[options.location]).some(australianLocationTarget))add('remote-scope','Remote across Australia');if(options.types?.length)add('roles',options.types.length+' role types');let panel=$('active-job-filters'),signature=JSON.stringify(entries);if(panel.dataset.key!==signature){panel.dataset.key=signature;panel.replaceChildren();for(let item of entries){let chip=button(item.label+' ×',()=>{if(item.key.startsWith('location:'))browseLocations=browseLocations.filter(v=>v!==item.key.slice(9));else if(item.key.startsWith('view:'))setFilterTab(filter.filter(v=>v!==item.key.slice(5)));else if(item.key.startsWith('status:'))browseStatuses=browseStatuses.filter(s=>s!==item.key.slice(7));else if(item.key.startsWith('work:'))browseWorkModes=browseWorkModes.filter(m=>m!==item.key.slice(5));else if(item.key==='remote-scope')$('include-australian-remote').checked=false;else if(item.key.startsWith('role:'))browseTypes=browseTypes.filter(t=>t!==item.key.slice(5));else if(item.key==='roles')browseTypes=[];else $(item.key).value='';changeBrowsing()},'filter-chip');chip.setAttribute('aria-label','Remove filter: '+item.label);panel.append(chip)}}$('clear-job-filters').hidden=!entries.length&&!filter.length;let extra=[options.minimum,options.posted,options.listing,options.types?.length].filter(Boolean).length;$('extra-filter-count').textContent=extra?'('+extra+')':''}
 function clearJobFilters(){browseTypes=[];browseWorkModes=[];browseStatuses=[];browseLocations=[];$('include-australian-remote').checked=true;for(let id of ['job-search','job-min-match','job-posted-filter','job-listing-filter'])$(id).value='';setFilterTab('all');changeBrowsing()}
-function renderJobs(){if(!state)return;for(let [id,values,label,empty] of [['location',browseLocations,'locations','All locations'],['view',filter,'views','All saved roles']]){let inputs=[...$('job-'+id+'-filter').querySelectorAll('input')];for(let n of inputs)n.checked=values.includes(n.value);$(id+'-summary').textContent=values.length===1?inputs.find(n=>n.value===values[0])?.parentElement.textContent||values[0]:values.length?values.length+' '+label+' selected':empty;}for(let n of document.querySelectorAll('#job-availability input'))n.checked=browseStatuses.includes(n.dataset.vacancyStatus);$('vacancy-status-summary').textContent=browseStatuses.length?browseStatuses.length===1?document.querySelector('[data-vacancy-status="'+browseStatuses[0]+'"]').parentElement.textContent:browseStatuses.length+' statuses selected':'All statuses';$('top-listing-settings').hidden=!filter.includes('top');$('top-listing-rule').textContent=state.preferences.auto_top_enabled?'Auto top: '+Math.max(70,state.preferences.auto_top_threshold)+'%+ with source and evidence checks.':'Auto top is off. Manually starred roles remain here.';for(let n of document.querySelectorAll('#job-type-filter input'))n.checked=browseTypes.includes(n.value);$('role-filter-summary').textContent=browseTypes.length?browseTypes.length+' role types selected':'All role types';for(let n of document.querySelectorAll('#job-work-mode-filter input'))n.checked=browseWorkModes.includes(n.dataset.workMode);$('work-arrangement-summary').textContent=browseWorkModes.length<=2?browseWorkModes.join(' + ')||'All arrangements':browseWorkModes.length+' arrangements';let options=browsingOptions(),today=new Intl.DateTimeFormat('en-CA',{timeZone:state.preferences.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),jobs=groupVacancyRows(filterJobRows(state.jobs,options,today));sortJobRows(jobs,options.sort);let range=pageWindow(jobs.length,options.size,jobPage);jobPage=range.page;let label=jobs.length?'Showing '+(range.start+1)+'–'+range.end+' of '+jobs.length+' roles':'0 matching roles';const pending=jobs.filter(row=>stageMatches(row,'unrated')).length;label+=' · '+fitCountText(fitCounts(jobs))+' · '+pending+' without a score';if($('job-results-count').textContent!==label)$('job-results-count').textContent=label;renderMetadataRefresh(jobs);renderActiveFilters(options);renderPagination(range,jobs.length);$('jobs').replaceChildren();if(!jobs.length){let empty=el('div','empty');empty.append(el('b','',state.jobs.length?'No roles match these filters.':'Your next search starts here.'),el('p','',state.jobs.length?'Clear a filter or try a different search. Your saved roles are still here.':'Choose Find jobs to discover roles, or add a listing you found.'));if(state.jobs.length)empty.append(button('Clear filters',clearJobFilters));$('jobs').append(empty)}else for(let row of jobs.slice(range.start,range.end))$('jobs').append(renderJobCard(row));saveBrowsing()}
+function renderJobs(){if(!state)return;renderGetStarted();for(let [id,values,label,empty] of [['location',browseLocations,'locations','All locations'],['view',filter,'views','All saved roles']]){let inputs=[...$('job-'+id+'-filter').querySelectorAll('input')];for(let n of inputs)n.checked=values.includes(n.value);$(id+'-summary').textContent=values.length===1?inputs.find(n=>n.value===values[0])?.parentElement.textContent||values[0]:values.length?values.length+' '+label+' selected':empty;}for(let n of document.querySelectorAll('#job-availability input'))n.checked=browseStatuses.includes(n.dataset.vacancyStatus);$('vacancy-status-summary').textContent=browseStatuses.length?browseStatuses.length===1?document.querySelector('[data-vacancy-status="'+browseStatuses[0]+'"]').parentElement.textContent:browseStatuses.length+' statuses selected':'All statuses';$('top-listing-settings').hidden=!filter.includes('top');$('top-listing-rule').textContent=state.preferences.auto_top_enabled?'Auto top: '+Math.max(70,state.preferences.auto_top_threshold)+'%+ with source and evidence checks.':'Auto top is off. Manually starred roles remain here.';for(let n of document.querySelectorAll('#job-type-filter input'))n.checked=browseTypes.includes(n.value);$('role-filter-summary').textContent=browseTypes.length?browseTypes.length+' role types selected':'All role types';for(let n of document.querySelectorAll('#job-work-mode-filter input'))n.checked=browseWorkModes.includes(n.dataset.workMode);$('work-arrangement-summary').textContent=browseWorkModes.length<=2?browseWorkModes.join(' + ')||'All arrangements':browseWorkModes.length+' arrangements';let options=browsingOptions(),today=new Intl.DateTimeFormat('en-CA',{timeZone:state.preferences.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),jobs=groupVacancyRows(filterJobRows(state.jobs,options,today));sortJobRows(jobs,options.sort);let range=pageWindow(jobs.length,options.size,jobPage);jobPage=range.page;let label=jobs.length?'Showing '+(range.start+1)+'–'+range.end+' of '+jobs.length+' roles':'0 matching roles';const pending=jobs.filter(row=>stageMatches(row,'unrated')).length;label+=' · '+fitCountText(fitCounts(jobs))+' · '+pending+' without a score';if($('job-results-count').textContent!==label)$('job-results-count').textContent=label;renderMetadataRefresh(jobs);renderActiveFilters(options);renderPagination(range,jobs.length);$('jobs').replaceChildren();if(!jobs.length){let empty=el('div','empty');empty.append(el('b','',state.jobs.length?'No roles match these filters.':'Your next search starts here.'),el('p','',state.jobs.length?'Clear a filter or try a different search. Your saved roles are still here.':'Add a role you have found to see how it lines up with your experience. Find jobs is available once a search is set up.'));if(state.jobs.length)empty.append(button('Clear filters',clearJobFilters));$('jobs').append(empty)}else for(let row of jobs.slice(range.start,range.end))$('jobs').append(renderJobCard(row));saveBrowsing()}
 
 function experience(exp={organization:'',role:'',dates:'',bullets:[]}){let box=el('div','experience');for(let [key,label] of [['role','Role'],['organization','Organisation'],['dates','Dates'],['bullets','Original facts · one bullet per line']]){let id='exp-'+Math.random().toString(36).slice(2),lab=el('label','',label),field=el(key==='bullets'?'textarea':'input');lab.htmlFor=id;field.id=id;field.dataset.field=key;field.value=key==='bullets'?exp.bullets.join('\n'):exp[key];if(key==='bullets')field.rows=8;box.append(lab,field);field.style.marginBottom='12px'}box.append(button('Remove this entry',()=>box.remove()));$('experiences').append(box)}
 function referee(ref={name:'',role:'',organization:'',relationship:'',email:'',phone:'',sharing_confirmed:false}){let box=el('div','referee experience');for(let [key,label] of [['name','Referee name'],['role','Role'],['organization','Organisation'],['relationship','Relationship to you'],['email','Email'],['phone','Phone']]){let id='ref-'+Math.random().toString(36).slice(2),lab=el('label','',label),field=el('input');lab.htmlFor=id;field.id=id;field.dataset.ref=key;field.value=ref[key]||'';field.style.marginBottom='10px';if(key==='email')field.type='email';box.append(lab,field)}let label=el('label','check'),check=el('input');check.type='checkbox';check.dataset.ref='sharing_confirmed';check.checked=!!ref.sharing_confirmed;label.append(check,document.createTextNode('This referee agreed I can share these details.'));box.append(label,button('Remove referee',()=>box.remove()));$('referees').append(box)}
@@ -1046,63 +1093,144 @@ function renderComparison(result) {
     if (result.reviewed) host.append(el('p','comparison-totals',
       (result.reviewed.reviewed_by === 'assistant' ? 'Assistant-reviewed' : 'Reviewed') + ' · ' + fitLabel(result.reviewed) +
       ' · assessed ' + result.reviewed.evidence_coverage_percent + '% · provisional'));
-    for (const [index, criterion] of result.rules.requirements.entries()) {
-      const item = el('details','fit-evidence');
-      item.append(el('summary','',criterion.quote));
-      for (const [label, row] of [['Rules only',criterion],['Qwen suggestion',result.qwen?.requirements.find(row => row.id === criterion.id)],['Reviewed fit',result.reviewed?.requirements.find(row => row.id === criterion.id)]]) {
-        if (!row) continue;
-        item.append(el('p','help',label+' · '+row.status));
-        for (const fact of row.evidence) item.append(el('blockquote','',fact.text));
-        if (row.unconfirmed_scope?.length) item.append(el('p','help',
-          'Group scope needs review. The literal cross-check could not confirm: ' + row.unconfirmed_scope.join(', ') + '. Equivalent wording may need your confirmation.'));
+    const criteria = result.rules.requirements;
+    const progress = el('p','review-progress');
+    progress.setAttribute('role','status');
+    host.append(progress);
+    const updateProgress = () => {
+      const graded = [...host.querySelectorAll('.review-grade')].filter(grade => grade.value !== 'unknown').length;
+      progress.textContent = graded + ' of ' + criteria.length + ' criteria graded. For each one, tick the evidence that is true, choose a grade, then save.';
+    };
+    const credentialIds = new Set(result.credential_criteria || []);
+    const durationIds = new Set(result.duration_criteria || []);
+    const factLine = fact => [fact.role, fact.organisation].filter(Boolean).join(' · ');
+    const factOption = (fact, checked, matched) => {
+      const option = el('label','check');
+      const input = el('input'); input.type='checkbox'; input.value=fact.id; input.checked=checked;
+      const body = el('span','');
+      body.append(el('span','fact-text',fact.text));
+      const detail = [factLine(fact), matched?.length ? 'Shared wording: ' + matched.join(', ') : ''].filter(Boolean).join(' — ');
+      if (detail) body.append(el('small','fact-source',detail));
+      option.append(input, body);
+      return option;
+    };
+    for (const [index, criterion] of criteria.entries()) {
+      const item = el('section','fit-criterion');
+      const title = el('h4','', (index + 1) + '. ' + criterion.quote);
+      if (criterion.importance === 'essential') title.append(el('span','criterion-badge','Essential · counts twice'));
+      item.append(title);
+      const qwenRow = result.qwen?.requirements.find(row => row.id === criterion.id);
+      const reviewedRow = result.reviewed?.requirements.find(row => row.id === criterion.id);
+      const checks = [['Exact-wording check',criterion],['Qwen suggestion',qwenRow],['Reviewed fit',reviewedRow]].filter(([, row]) => row);
+      if (qwenRow || reviewedRow || criterion.evidence.length) {
+        const found = el('details','fit-evidence');
+        found.append(el('summary','','Earlier results for this criterion'));
+        for (const [label, row] of checks) {
+          found.append(el('p','help',label+' · '+row.status));
+          for (const fact of row.evidence) found.append(el('blockquote','',fact.text));
+          if (row.unconfirmed_scope?.length) found.append(el('p','help',
+            'Group scope needs review. The literal cross-check could not confirm: ' + row.unconfirmed_scope.join(', ') + '. Equivalent wording may need your confirmation.'));
+        }
+        item.append(found);
       }
-      const selected = result.reviewed?.requirements.find(row => row.id === criterion.id) || result.qwen?.requirements.find(row => row.id === criterion.id) || criterion;
+      const selected = reviewedRow || qwenRow || criterion;
       const review = el('div','criterion-review');
       review.dataset.criterionId = criterion.id;
+      const evidenceIds = new Set(selected.evidence.map(fact => fact.id));
+      const suggestions = result.suggestions?.[criterion.id] || [];
+      const suggestedIds = new Set(suggestions.map(fact => fact.id));
+      const group = el('fieldset','evidence-suggestions');
+      group.append(el('legend','', suggestions.length ? 'Possible evidence from your profile' : 'Evidence from your profile'));
+      if (suggestions.length) {
+        group.append(el('p','help','Found by shared wording, not graded. Tick only what is true for this criterion.'));
+        for (const fact of suggestions) group.append(factOption(fact, evidenceIds.has(fact.id), fact.matched));
+      } else {
+        group.append(el('p','help', credentialIds.has(criterion.id)
+          ? 'This reads as a licence, registration or check. If you hold it, add it under Profile & sources → Licences & registrations, then review again.'
+          : 'No saved fact shares this wording. Choose one below if your experience applies, or leave it as Not documented.'));
+      }
+      for (const fact of (state.profile_evidence || []).filter(fact => evidenceIds.has(fact.id) && !suggestedIds.has(fact.id))) {
+        group.append(factOption(fact, true));
+      }
+      const others = (state.profile_evidence || []).filter(fact => !suggestedIds.has(fact.id) && !evidenceIds.has(fact.id));
+      if (others.length) {
+        const evidencePicker = el('details','fit-evidence');
+        evidencePicker.append(el('summary','','Choose from all ' + (state.profile_evidence || []).length + ' saved facts'));
+        for (const fact of others) evidencePicker.append(factOption(fact, false));
+        group.append(evidencePicker);
+      }
+      review.append(group);
+      if (durationIds.has(criterion.id)) review.append(el('p','help criterion-note','This asks for a length of time. It can be graded only when a saved fact states the duration, for example “… for 3 years”. Otherwise leave it as Not documented.'));
       const label = el('label','','Your assessment');
       const grade = el('select');
       grade.className = 'review-grade';
-      for (const [value, text] of [['direct','Direct work · 100%'],['strong_transfer','Strong transfer · 75%'],['partial_transfer','Partial transfer · 50%'],['foundation','Foundation · 25%'],['confirmed_gap','Confirmed gap · 0%'],['unknown','Not documented']]) {
+      for (const [value, text] of [['unknown','Not documented · left out of the fit'],['direct','Direct work · 100%'],['strong_transfer','Strong transfer · 75%'],['partial_transfer','Partial transfer · 50%'],['foundation','Foundation · 25%'],['confirmed_gap','Confirmed gap · 0%']]) {
         const option = el('option','',text); option.value=value; grade.append(option);
       }
-      grade.value=selected.evidence_state;
+      grade.value = selected.evidence_state;
       label.append(grade); review.append(label);
-      const evidencePicker=el('details','fit-evidence');
-      evidencePicker.append(el('summary','','Choose confirmed evidence'));
-      const evidenceIds=new Set(selected.evidence.map(fact=>fact.id));
-      for (const fact of state.profile_evidence || []) {
-        const option=el('label','check');const input=el('input');input.type='checkbox';input.value=fact.id;input.checked=evidenceIds.has(fact.id);
-        option.append(input,el('span','',fact.text));evidencePicker.append(option);
-      }
-      review.append(evidencePicker);
-      const explanation=el('label','','Why this experience applies');const reason=el('textarea');reason.className='review-reason';reason.rows=3;
-      reason.value=selected.transfer_reason || ''; reason.placeholder='Explain what your confirmed work establishes and what still needs development.';
-      explanation.append(reason);review.append(explanation);item.append(review);
+      const explanation = el('label','','Why this experience applies');
+      const reason = el('textarea'); reason.className='review-reason'; reason.rows=2;
+      reason.value = selected.transfer_reason || '';
+      const reasonHelp = el('small','help reason-help','');
+      const syncReason = () => {
+        const transfer = ['strong_transfer','partial_transfer','foundation'].includes(grade.value);
+        explanation.hidden = grade.value === 'unknown';
+        reason.placeholder = transfer ? 'Say how this experience carries over and what you would still need to learn.' : 'Optional note.';
+        reasonHelp.textContent = transfer ? 'Needed for a transfer grade.' : 'Optional for this grade.';
+        item.classList.toggle('graded', grade.value !== 'unknown');
+        updateProgress();
+      };
+      grade.onchange = syncReason;
+      explanation.append(reason, reasonHelp); review.append(explanation);
+      const problem = el('p','criterion-problem'); problem.setAttribute('role','alert'); problem.hidden = true; review.append(problem);
+      item.append(review);
       host.append(item);
+      syncReason();
     }
-    const save=el('button','small','Save reviewed fit');save.onclick=()=>saveReviewedFit();host.append(save);
+    updateProgress();
+    const footer = el('div','review-footer');
+    const save = el('button','small primary','Save reviewed fit'); save.onclick = () => saveReviewedFit();
+    const saveStatus = el('span','help'); saveStatus.id = 'review-save-status'; saveStatus.setAttribute('role','status');
+    footer.append(save, saveStatus); host.append(footer);
 }
 async function saveReviewedFit() {
   const jobId = selectedJob;
   const request = comparisonRequest;
+  const saveStatus = document.getElementById('review-save-status');
+  const say = text => { $('compare-status').textContent = text; if (saveStatus) saveStatus.textContent = text; };
+  let firstProblem = null;
   const decisions = [...$('compare-results').querySelectorAll('.criterion-review')].map(row => {
     const status = row.querySelector('.review-grade').value;
-    const reason = row.querySelector('.review-reason').value.trim();
-    return {
-      id: row.dataset.criterionId, status,
-      evidence_ids: [...row.querySelectorAll('input:checked')].map(input => input.value),
-      reason: reason || (status === 'unknown' ? 'No confirmed evidence recorded for this criterion.' : ''),
-    };
+    let reason = row.querySelector('.review-reason').value.trim();
+    const evidence_ids = [...row.querySelectorAll('input:checked')].map(input => input.value);
+    const problem = row.querySelector('.criterion-problem');
+    let issue = '';
+    if (status !== 'unknown' && !evidence_ids.length) issue = 'Tick at least one saved fact for this grade, or set it to Not documented.';
+    else if (['strong_transfer','partial_transfer','foundation'].includes(status) && reason.length < 3) issue = 'Add a short note on how this experience carries over.';
+    problem.textContent = issue; problem.hidden = !issue;
+    if (issue && !firstProblem) firstProblem = row;
+    if (!reason) reason = status === 'unknown' ? 'No confirmed evidence recorded for this criterion.'
+      : status === 'direct' ? 'Reviewed as direct experience against the selected saved facts.'
+      : status === 'confirmed_gap' ? 'Reviewed as a confirmed gap against the selected saved facts.' : '';
+    return {id: row.dataset.criterionId, status, evidence_ids, reason};
   });
+  if (firstProblem) {
+    say('Some criteria need one more detail before saving.');
+    firstProblem.scrollIntoView({block:'center'});
+    firstProblem.querySelector('.review-grade').focus();
+    return;
+  }
   try {
     const result = await api('/api/jobs/' + jobId + '/compare-evidence', {with_qwen:false, reviewed_decisions:decisions, reviewed_by:'user'});
     await refresh();
     if (request === comparisonRequest && selectedJob === jobId) {
       renderComparison(result);
       $('compare-status').textContent = 'Reviewed fit saved.';
+      const status = document.getElementById('review-save-status'); if (status) status.textContent = 'Reviewed fit saved.';
     }
   } catch (error) {
-    if (request === comparisonRequest && selectedJob === jobId) $('compare-status').textContent = error.message;
+    if (request === comparisonRequest && selectedJob === jobId) say(error.message);
   }
 }
 $('compare-rules').onclick=()=>compareEvidence(false);

@@ -1,5 +1,5 @@
 {
-  "version": "0.9.37",
+  "version": "0.10.0",
   "platform": "macOS",
   "files": [
     {
@@ -64,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 19943,
-      "sha256": "f0d773a2c01ab2a85e2875ac1d97004556c988fcc91b9a8e0b0f26c41a04d838",
+      "bytes": 20840,
+      "sha256": "0955fa9f3b9328c43b3c72679920260c6b0c3f07f45656d6f178a4595a3f8d34",
       "mode": "0o644"
     },
     {
@@ -83,7 +83,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 950,
-      "sha256": "f1f4547b9c36f6874a1b415de73d21290e80b848ef14c8bfc0e56858eaf3db65",
+      "sha256": "6d67a94137dab816321dc0e73ccbc5ce77dccb49362a4771bf293fd1ab9d9ec3",
       "mode": "0o644"
     },
     {
@@ -154,8 +154,8 @@
     },
     {
       "path": "scripts/build_release.py",
-      "bytes": 6691,
-      "sha256": "3d80d9ef95cb3e19e88dfe93217f73ddb21b3a9ac7318d4de14a92e82b65e4a9",
+      "bytes": 6714,
+      "sha256": "ed68b78a99224aa78942e3820f229fe4eeae4f4ab178efc8d91b24d001c2a638",
       "mode": "0o644"
     },
     {
@@ -238,8 +238,8 @@
     },
     {
       "path": "campus_agent/fit.py",
-      "bytes": 55892,
-      "sha256": "98ad8c343073437dd55ae8bf21a03c6ab465904d977735b545b76af758735b16",
+      "bytes": 56924,
+      "sha256": "fbcffd9546faefe5d3f130910fd6f2856c172c10cad67504b698d524676b8ee9",
       "mode": "0o644"
     },
     {
@@ -334,8 +334,8 @@
     },
     {
       "path": "campus_agent/scoring_comparison.py",
-      "bytes": 5970,
-      "sha256": "db61790f3a9f20c854654b8551b64dbaa8e59726321a05b2e97be4741a4a2346",
+      "bytes": 6403,
+      "sha256": "46797232796b6e783f55235106969287d872e037465d656863fa56d8af3707ba",
       "mode": "0o644"
     },
     {
@@ -345,9 +345,15 @@
       "mode": "0o644"
     },
     {
+      "path": "campus_agent/evidence_suggest.py",
+      "bytes": 5658,
+      "sha256": "3dbedffb86bcab722da77c21a185874fad7aab26fbbd23cc4d96d7860b218d36",
+      "mode": "0o644"
+    },
+    {
       "path": "campus_agent/transfer_fit.py",
-      "bytes": 16181,
-      "sha256": "6f39a58c061d60d5d197944f39325c8a5a342abfcdaf157d0de743e31f6cd18d",
+      "bytes": 17737,
+      "sha256": "56a63b5e918d99345152be2988a30fef8885f1a0f0765146c4c59c9158df095f",
       "mode": "0o644"
     },
     {
@@ -370,8 +376,8 @@
     },
     {
       "path": "campus_agent/workspace.html",
-      "bytes": 241592,
-      "sha256": "caf6b64c4e79ec2a3733971778b83c726342a6281bf008581df41fb5f09aeb58",
+      "bytes": 252930,
+      "sha256": "e6c0d7ca3ff8a73e0211c5953855a15f21f8f1a1b93f4800295b73bc8deb18c4",
       "mode": "0o644"
     },
     {
