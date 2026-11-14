@@ -1,0 +1,18 @@
+# Repository-specific Gemini Code Assist GitHub PR review settings.
+# Requires installation through Google Cloud > Gemini Code Assist > Agents & Tools.
+have_fun: false
+ignore_patterns:
+  - "dist/**"
+  - "build/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+
+code_review:
+  disable: false
+  comment_severity_threshold: MEDIUM
+  max_review_comments: 20
+  pull_request_opened:
+    help: false
+    summary: true
+    code_review: true
+    include_drafts: false
