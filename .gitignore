@@ -28,3 +28,7 @@ evidence/
 
 # Local proof-loop logs and reviewer evidence
 .proof/
+
+# Generated Gemini CLI project settings and temporary GitHub App credentials
+.gemini/
+gha-creds-*.json
